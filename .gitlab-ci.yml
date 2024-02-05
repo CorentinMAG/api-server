@@ -1,0 +1,54 @@
+stages:
+  - docker
+  - delivery
+
+variables:
+  DTR_VERSION: 1.1.0
+
+.configure_alpine: &configure_alpine
+  - echo "https://${AFORGE_USER}:${AFORGE_PASSWORD}@${AFORGE_HOST}/artifactory/${AFORGE_ALPINE_REPO}/main" > /etc/apk/repositories
+  - echo "https://${AFORGE_USER}:${AFORGE_PASSWORD}@${AFORGE_HOST}/artifactory/${AFORGE_ALPINE_REPO}/community" >> /etc/apk/repositories
+
+
+build:docker:
+  image: 
+    name: ${AFORGE_HOST}/${AFORGE_DOCKER_GCR_REPO}/kaniko-project/executor:v1.9.1-debug
+    entrypoint: [""]
+  stage: docker
+  tags:
+    - pfi-core-dtr
+  before_script:
+    - echo "{\"auths\":{\"${AFORGE_HOST}\":{\"auth\":\"$(printf "%s:%s" "${AFORGE_USER}" "${AFORGE_PASSWORD}" | base64 | tr -d '\n')\"}}}" > /kaniko/.docker/config.json
+    - echo "10.95.223.36 ${AFORGE_HOST}" >> /etc/hosts
+  script:
+    - >
+      /kaniko/executor
+      --build-arg=AFORGE_HOST
+      --build-arg=AFORGE_USER
+      --build-arg=AFORGE_PASSWORD
+      --build-arg=AFORGE_PIP_REPO
+      --build-arg=AFORGE_ALPINE_REPO
+      --context "${CI_PROJECT_DIR}"
+      --registry-certificate ${AFORGE_HOST}=${AFORGE_CA_BUNDLE}
+      --dockerfile "${CI_PROJECT_DIR}/Dockerfile"
+      --destination "${AFORGE_HOST}/${AFORGE_DOCKER_REPO_DTR}/${CI_PROJECT_NAME}:latest"
+      --destination "${AFORGE_HOST}/${AFORGE_DOCKER_REPO_DTR}/${CI_PROJECT_NAME}:${CI_COMMIT_TAG}"
+  rules:
+  - if: $CI_COMMIT_TAG
+
+delivery:
+  stage: delivery
+  tags:
+  - pfi-core-dtr-dind
+  before_script:
+  - *configure_alpine
+  - apk --no-check-certificate update
+  - apk --no-check-certificate add curl
+  - cat $AFORGE_CA_BUNDLE > /etc/ssl/certs/ca-certificates.crt
+  - echo $AFORGE_PASSWORD | docker login $AFORGE_HOST --username $AFORGE_USER --password-stdin
+  script:
+  - docker pull $AFORGE_HOST/$AFORGE_DOCKER_REPO_DTR/${CI_PROJECT_NAME}:${CI_COMMIT_TAG}
+  - docker save $AFORGE_HOST/$AFORGE_DOCKER_REPO_DTR/${CI_PROJECT_NAME}:${CI_COMMIT_TAG} > ${CI_PROJECT_NAME}-${CI_COMMIT_TAG}.tar
+  - curl -u${AFORGE_POLEOS_USER}:${AFORGE_POLEOS_PASSWORD} -T ${CI_PROJECT_NAME}-${CI_COMMIT_TAG}.tar https://$AFORGE_HOST/artifactory/${AFORGE_POLEOS_GENERIC}/dtr/$DTR_VERSION/images/${CI_PROJECT_NAME}-${CI_COMMIT_TAG}.tar
+  rules:
+  - if: $CI_COMMIT_TAG
