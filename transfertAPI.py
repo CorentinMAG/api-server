@@ -2,7 +2,7 @@ from flask import Flask, request, jsonify
 import json
 import uuid
 from business_rules import *
-from log import JsonFormatter
+from common.logs.formatter import JsonFormatter
 from datetime import datetime
 import logging
 
