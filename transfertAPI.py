@@ -19,7 +19,6 @@ logger.addHandler(stream_handler)
 
 @app.route('/dtr/transfer-request', methods=['POST'])
 def TransferCmd():
-    LOG.print_log("DEBUG","TransferCmd start")
     record = json.loads(request.data)
     tp_name = record['transfer-policy']
     file = record['path']
@@ -31,8 +30,6 @@ def TransferCmd():
     timestamp = record['timestamp']
     queue = Queue()
     trsf_id = queue.QueueRequestCmd(tp_name,file, uid,timestamp)
-    if trsf_id > 0:
-        LOG.print_log(f"INFO","TransferCmd {trsf_id} ")
     res = dict()
     res["transfer_id"] = trsf_id
     return res
