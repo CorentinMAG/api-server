@@ -1,60 +1,34 @@
 from . import database
-from ..models.notification_servers import NotificationServer
+from ..models import NotificationServer, Queue, DataType, Target, TransferPolicy, GlobalParameters
 
 def configure(payload: dict):
     database.flush()
 
     global_params = payload.get("parameters", None)
+    nparams = GlobalParameters(**global_params)
+    nparams.upsert()
 
     queues = payload.get("queues", None)
+    for queue in queues:
+        nqueue = Queue(**queue)
+        nqueue.upsert()
 
     notification_servers = payload.get("notificationServers", None)
     for server in notification_servers:
-        nserver = NotificationServer(server)
-        nserver.commit()
+        nserver = NotificationServer(**server)
+        nserver.upsert()
 
     data_types = payload.get("dataTypes", None)
+    for dtype in data_types:
+        ndtype = DataType(**dtype)
+        ndtype.upsert()
 
     targets = payload.get("targets", None)
+    for target in targets:
+        ntarget = Target(**target)
+        ntarget.upsert()
 
     transfer_policies = payload.get("transferPolicies", None)
-
-    # global_params = payload["Parameters"]
-    # gp  = GlobalParameters()
-    # gp.Set(global_params)
-    # gp.DBUpdateAll()
-
-    # queues = payload["Queues"]
-    # for it in queues:
-    #     q  = Queue()
-    #     q.Set(it)
-    #     q.DbCreate()
-    #     db.Commit()
-
-    # notification_servers = payload["NotificationServers"]
-    # for it in notification_servers:
-    #     ns  = NotificationServer()
-    #     ns.Set(it)
-    #     ns.DbCreate()
-    #     db.Commit()
-
-    # dataTypes = payload["DataTypes"]
-    # for it in dataTypes:
-    #     dt  = DataType()
-    #     dt.Set(it)
-    #     dt.DbCreate()
-    #     db.Commit()
-
-    # targets = payload["Targets"]
-    # for it in targets:
-    #     tg  = Target()
-    #     tg.Set(it)
-    #     tg.DbCreate()
-    #     db.Commit()
-
-    # transferPolicies = payload["TransferPolicies"]
-    # for it in transferPolicies:
-    #     tp  = TransferPolicy()
-    #     tp.Set(it)
-    #     tp.DbCreate()
-    #     db.Commit()
+    for tr_policy in transfer_policies:
+        ntr_policy = TransferPolicy(**tr_policy)
+        ntr_policy.upsert()
