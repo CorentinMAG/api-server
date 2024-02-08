@@ -29,6 +29,7 @@ build:docker:
       --build-arg=AFORGE_PASSWORD
       --build-arg=AFORGE_PIP_REPO
       --build-arg=AFORGE_ALPINE_REPO
+      --build-arg DOCKER_TAG=${CI_COMMIT_TAG}
       --context "${CI_PROJECT_DIR}"
       --registry-certificate ${AFORGE_HOST}=${AFORGE_CA_BUNDLE}
       --dockerfile "${CI_PROJECT_DIR}/Dockerfile"
