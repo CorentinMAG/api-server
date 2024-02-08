@@ -2,7 +2,7 @@ from __future__ import annotations
 from pydantic import BaseModel
 from .. import db
 from .base import BaseModel as Base
-import api.models.credential as credentials
+import api.models.credentials as cred
 from typing import cast
 
 class Target(BaseModel, Base):
@@ -12,16 +12,17 @@ class Target(BaseModel, Base):
     hostname: str
     port: int
     bucket: str | None = None
-    credentials: credentials.Credentials | None = None
+    credentials: dict | None = None
 
     def __init__(self, **kwargs) -> None:
         dcredentials = cast(dict | None, kwargs.pop("credentials", None))
         if dcredentials is not None:
             credentials_type = cast(str, dcredentials.pop("type", "password"))
-            ncredentials = cast(credentials.Credentials, (credentials, f"{credentials_type.capitalize()}Credentials"))
+            ncredentials = cast(cred.Credentials, (cred, f"{credentials_type.capitalize()}Credentials"))
             ncredentials.upsert()
-            kwargs["credentials"] = ncredentials
+
         super().__init__(**kwargs)
+        self.credentials = ncredentials
 
     def upsert(self) -> int:
         conn = db.get_db()

@@ -14,7 +14,7 @@ class GlobalParameters(BaseModel, Base):
     def upsert(self) -> int:
         return 1
 
-    def remove(self) -> None:
+    def delete(self) -> None:
         pass
 
 

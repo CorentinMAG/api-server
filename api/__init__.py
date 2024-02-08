@@ -28,13 +28,11 @@ def create_app():
         response = e.get_response()
         app.logger.error(e.description)
         return response
-    
-    from . import db
-    db.init_app(app)
 
     from . import routing
     app.register_blueprint(routing.bp)
 
-
+    from . import db
+    db.init_app(app)
 
     return app
