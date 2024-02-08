@@ -2,20 +2,18 @@ from flask import Flask, request, jsonify
 import json
 import uuid
 from business_rules import *
-from common.logs.formatter import JsonFormatter
+from common.logs.logger import create_logger
 from datetime import datetime
-import logging
+import os
 
 DTR_OFFLINE = False
 
 app = Flask(__name__)
 
-logger = logging.getLogger("api")
-logger.setLevel(logging.INFO)
-stream_handler = logging.StreamHandler()
-formatter = JsonFormatter("DTR", "api", "1.1.0")
-stream_handler.setFormatter(formatter)
-logger.addHandler(stream_handler)
+log_lvl = os.environ.get("DTR_LOG_LEVEL", "INFO")
+version = os.environ.get("DTR_API_VERSION")
+
+logger = create_logger("api", log_lvl, "DTR", version)
 
 @app.route('/dtr/transfer-request', methods=['POST'])
 def TransferCmd():
