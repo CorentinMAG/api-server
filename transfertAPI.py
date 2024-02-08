@@ -11,7 +11,7 @@ DTR_OFFLINE = False
 app = Flask(__name__)
 
 log_lvl = os.environ.get("DTR_LOG_LEVEL", "INFO")
-version = os.environ.get("DTR_API_VERSION")
+version = os.environ["DTR_API_VERSION"]
 
 logger = create_logger("api", log_lvl, "DTR", version)
 
