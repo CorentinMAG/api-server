@@ -119,7 +119,6 @@ class Topic(Entity):
             ns_id = ns.GetDbId(self.NotificationServer)
             super().SetAttrib("NotificationServerid",ns_id)
 
-            print(super().Dump())
             return super().DbCreate()
 
     def DbLoad(self, id):
@@ -128,7 +127,6 @@ class Topic(Entity):
         s = "select  name from NotificationServer  where NotificationServerID = %s ;"
         arg = list()
         ns_id = super().GetAttrib("NotificationServerid").value
-        print(ns_id)
         arg.append(ns_id)
         cur = db.Exec(s,arg)
         records = cur.fetchall()
@@ -182,7 +180,6 @@ class Notification(Entity):
     def DbLoad(self, id):
         self.id = id
         super().DbLoad(id)
-        print(super().GetAttrib("topicid").value)
         topic_id = super().GetAttrib("topicid").value
         self.topic.DbLoad(topic_id)
         super().SetAttrib("topic",  self.topic.GetAttrib("topic").value)
@@ -386,7 +383,6 @@ class Credential(Entity):
                 self.token.SetAttrib(k,val)
             else:
                 self.type.Set("login")
-                LOG.print_log("ERROR","credential error")
                 
         super().SetAttrib("CredentialType",self.type.Get())
               
@@ -731,7 +727,6 @@ class TransferPolicy(Entity):
         res["DestinationPolicy"] = self.destinationPolicy.Jsonify()
         if self.fNotification:
             notifs = []
-            print("notif")
             for n in self.Notifications :
                 notifs.append(n.Jsonify())
 
@@ -902,7 +897,6 @@ class TransferRequest(Entity):
         else :
             gp  = GlobalParameters()
             retentionDays =  gp.DBGet("DatabaseRetentionDays")
-            print(retentionDays)
 
         return retentionDays
 
@@ -915,11 +909,8 @@ class TransferRequest(Entity):
         arg = list()
         arg.append(minDate)
         arg.append(tpid)
-        print(minDate)
 
-        print(tpid)
         s = "DELETE  FROM TransferRequest USING ExecutionSlot  where ExecutionSlot.TransferRequestID = TransferRequest.TransferRequestID and ExecutionSlot.ExecutionEnd < %s  and TransferRequest.transferpolicyid = %s;"
-        print(s)
         db.Exec(s,arg)
         db.Commit()
 
