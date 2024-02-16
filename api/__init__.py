@@ -1,4 +1,4 @@
-from flask import Flask
+from flask import Flask, request
 from werkzeug.exceptions import HTTPException
 import logging
 from .common.logs.formatter import JsonFormatter
@@ -13,7 +13,7 @@ def create_app():
     stream_handler = logging.StreamHandler()
     stream_handler.setFormatter(formatter)
     app.logger.addHandler(stream_handler)
-    #app.logger.removeHandler(default_handler)
+    app.logger.removeHandler(default_handler)
 
     @app.route("/", methods = ["GET"])
     def index():
@@ -28,6 +28,10 @@ def create_app():
         response = e.get_response()
         app.logger.error(e.description)
         return response
+    
+    @app.before_request
+    def log_request():
+        app.logger.debug("headers: %s, body: %s", request.headers, request.json)
 
     from . import routing
     app.register_blueprint(routing.bp)

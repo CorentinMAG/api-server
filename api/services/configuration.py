@@ -117,4 +117,3 @@ def configure(payload: ConfigurationJson):
                         server_repository.update(nserver)
                     else:
                         raise NotImplementedError(f"only 'kafka' server is emplemented (not {nserver.type})")
-

@@ -32,9 +32,7 @@ class GlobalParameters(SQLBase):
     __tablename__ = "global_parameters"
 
     id: Mapped[int] = mapped_column(primary_key=True)
-    max_retry: Mapped[int] = mapped_column(nullable=True)
-    retry_delay: Mapped[int] = mapped_column(nullable=True)
-    src_purge: Mapped[bool] = mapped_column(nullable=True)
+    mode: Mapped[str] = mapped_column(default="online")
 
 class KafkaParameters(SQLBase):
     __tablename__ = "kafka_parameters"
