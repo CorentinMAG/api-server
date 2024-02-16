@@ -123,7 +123,7 @@ def GetTransferToNotify():
         res["transfer-policy"] = tr.GetAttrib("TransferPolicyID").value
         res["filename"] = tr.GetAttrib("Filename").value
         res["transfer_id"] = tr.GetAttrib("TransferrequestID").value
-        res["status"] = "Completed"
+        res["status"] = "succeed" if not tr.GetAttrib("FailedStep").value else "failed"
         res["reason"] = tr.GetAttrib("RequestState").value
         res["timestamp"] = tr.GetAttrib("Updated").value
 
