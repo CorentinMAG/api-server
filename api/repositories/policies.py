@@ -14,10 +14,13 @@ class TransferPolicyRepository(BaseRepository):
     def get_all(self) -> list[TransferPolicy]:
         return self.db.session.query(TransferPolicy).all()
 
-    def add(self, policy: TransferPolicy) -> int:
+    def add(self, policy: TransferPolicy) -> TransferPolicy:
         self.db.session.add(policy)
         self.db.session.commit()
         return policy
+    
+    def update(self, policy: TransferPolicy) -> int:
+        self.db.session.commit()
 
     def remove(self, policy: TransferPolicy) -> None:
         self.db.session.delete(policy)

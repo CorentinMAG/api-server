@@ -7,12 +7,13 @@ class TransferParameters(SQLBase):
     __tablename__ = "transfer_parameters"
 
     id: Mapped[int] = mapped_column(primary_key=True)
-    max_retry: Mapped[bool]
-    retry_delay: Mapped[bool]
-    retentions: Mapped[int]
+    max_retry: Mapped[int] = mapped_column(default=5)
+    retry_delay: Mapped[int] = mapped_column(default=30)
+    retentions: Mapped[int] = mapped_column(default=30)
     pattern: Mapped[str]
     compress: Mapped[bool] = mapped_column(default=False)
-    compress_type: Mapped[str]
+    compress_type: Mapped[str | None]
+    data_type: Mapped[str]
 
     policy_id: Mapped[int] = mapped_column(ForeignKey("transfer_policies.id"))
 

@@ -17,7 +17,7 @@ class ServerRepository(BaseRepository):
     def get_all(self) -> list[NotificationServer]:
         return self.db.session.query(NotificationServer).all()
 
-    def add(self, server: NotificationServer) -> int:
+    def add(self, server: NotificationServer) -> NotificationServer:
         self.db.session.add(server)
         self.db.session.commit()
         return server

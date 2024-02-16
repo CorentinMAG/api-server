@@ -11,10 +11,13 @@ class QueueRepository(BaseRepository):
     def get_by_id(self, id: int) -> Queue:
         return self.db.session.query(Queue).get(id)
     
+    def get_by_name(self, name: str) -> Queue:
+        return self.db.session.query(Queue).where(Queue.name == name).first()
+    
     def get_all(self) -> list[Queue]:
         return self.db.session.query(Queue).all()
 
-    def add(self, queue: Queue) -> int:
+    def add(self, queue: Queue) -> Queue:
         self.db.session.add(queue)
         self.db.session.commit()
         return queue

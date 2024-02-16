@@ -17,7 +17,7 @@ class TargetRepository(BaseRepository):
     def get_all(self) -> list[Target]:
         return self.db.session.query(Target).all()
 
-    def add(self, target: Target) -> int:
+    def add(self, target: Target) -> Target:
         self.db.session.add(target)
         self.db.session.commit()
         return target

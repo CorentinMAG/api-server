@@ -22,11 +22,10 @@ class TransferPolicy(SQLBase):
 
     id: Mapped[int] = mapped_column(primary_key=True)
     name: Mapped[str] = mapped_column(String(30), unique = True)
-    enabled: Mapped[bool] = mapped_column(default= True)
+    enabled: Mapped[bool] = mapped_column(default = True)
     type: Mapped[str]
-    data_type: Mapped[str]
 
-    notification: Mapped[list["NotificationServer"]] = relationship(secondary=association_table2)
+    servers: Mapped[list["NotificationServer"]] = relationship(secondary=association_table2)
 
     src: Mapped["SourcePolicy"] = relationship()
     src_id: Mapped[int] = mapped_column(ForeignKey("source_policies.id", ondelete="CASCADE"))
@@ -44,7 +43,7 @@ class SourcePolicy(SQLBase):
 
     id: Mapped[int] = mapped_column(primary_key=True)
     purge: Mapped[bool] = mapped_column(default=False)
-    path: Mapped[str]
+    path: Mapped[str | None]
 
     src_id: Mapped[int] = mapped_column(ForeignKey("targets.id", ondelete="CASCADE"))
     src: Mapped["Target"] = relationship()
@@ -53,7 +52,7 @@ class DestinationPolicy(SQLBase):
     __tablename__ = "destination_policies"
 
     id: Mapped[int] = mapped_column(primary_key=True)
-    path: Mapped[str]
+    path: Mapped[str | None]
 
     dest_id: Mapped[int] = mapped_column(ForeignKey("targets.id", ondelete="CASCADE"))
     dest: Mapped["Target"] = relationship()
