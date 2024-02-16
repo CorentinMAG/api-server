@@ -1,0 +1,20 @@
+from __future__ import annotations
+from ..db import Base as SQLBase
+from sqlalchemy.orm import Mapped, mapped_column, relationship
+from sqlalchemy import Integer, String, ForeignKey, DateTime
+from datetime import datetime
+import uuid
+
+class TransferRequest(SQLBase):
+    __tablename__ = "transfer_requests"
+
+    id: Mapped[int] = mapped_column(primary_key=True)
+    filename: Mapped[str] = mapped_column(String(30))
+    size: Mapped[int] = mapped_column(Integer)
+    uid: Mapped[uuid.UUID] = mapped_column(default=uuid.uuid4, unique=True)
+    state: Mapped["State"] = relationship()
+    queue: Mapped["Queue"] = relationship()
+    queue_id: Mapped[int] = mapped_column(ForeignKey("queues.id", ondelete="SET NULL"))
+    policy_id: Mapped[int] = mapped_column(ForeignKey("transfer_policies.id", ondelete="SET NULL"))
+    nb_retry: Mapped[int]
+    date: Mapped[str] = mapped_column(DateTime, default=datetime.utcnow)

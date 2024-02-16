@@ -47,6 +47,8 @@ def connect_ftps() -> MYFTPS:
     if FTP_SERVER.get("subdir"):
         subdirs = FTP_SERVER["subdir"].strip("/").split("/")
         for dir in subdirs:
+            ldirs = ftps.nlst()
+
             ftps.mkd(dir)
             ftps.cwd(dir)
     return ftps

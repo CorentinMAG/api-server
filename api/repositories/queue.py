@@ -1,11 +1,30 @@
-from ..utils import Singleton
-from ..db import db
 from ..models import Queue
+from .base import BaseRepository
+from flask_sqlalchemy import SQLAlchemy
+from ..db import db
 
-class QueueRepository(Singleton):
+class QueueRepository(BaseRepository):
 
-    def getById(self, id: int):
-        queues = db.session.execute(db.select(Queue)).all()
-        print(queues[1][0].queueid)
+    def __init__(self, db: SQLAlchemy) -> None:
+        self.db = db
 
-repository = QueueRepository()
+    def get_by_id(self, id: int) -> Queue:
+        return self.db.session.query(Queue).get(id)
+    
+    def get_all(self) -> list[Queue]:
+        return self.db.session.query(Queue).all()
+
+    def add(self, queue: Queue) -> int:
+        self.db.session.add(queue)
+        self.db.session.commit()
+        return queue
+
+    def remove(self, queue: Queue) -> None:
+        self.db.session.delete(queue)
+        self.db.session.commit()
+    
+    def flush(self) -> None:
+        self.db.session.query(Queue).delete()
+        self.db.session.commit()
+
+repository = QueueRepository(db)

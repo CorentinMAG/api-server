@@ -1,39 +1,59 @@
 from __future__ import annotations
-from pydantic import BaseModel
-from .. import db
-from .base import BaseModel as Base
-from .queue import Queue
-from .data_type import DataType
+from ..db import Base as SQLBase
+from sqlalchemy.orm import Mapped, mapped_column, relationship
+from sqlalchemy import String, ForeignKey, Table, Column
 
-class DestinationPolicy(BaseModel, Base):
-    pass
+assocation_table = Table(
+    "association_table",
+    SQLBase.metadata,
+    Column("transfer_policy_id", ForeignKey("transfer_policies.id")),
+    Column("queue_id", ForeignKey("queues.id"))
+)
 
-class SourcePolicy(BaseModel, Base):
-    pass
+association_table2 = Table(
+    "policy_server",
+    SQLBase.metadata,
+    Column("transfer_policy_id", ForeignKey("transfer_policies.id")),
+    Column("notification_servers.id", ForeignKey("notification_servers.id"))
+)
 
-class TransferPolicy(Base):
-    logicalName: str
-    transferRequestType: str
-    queue: Queue
-    dataType: DataType
-    sourcePolicy: dict
-    destinationPolicy: dict
+class TransferPolicy(SQLBase):
+    __tablename__ = "transfer_policies"
 
-    def __init__(self, **kwargs) -> None:
-        queue_id = kwargs.pop("queueId")
-        dataType_name = kwargs.pop("dataType")
+    id: Mapped[int] = mapped_column(primary_key=True)
+    name: Mapped[str] = mapped_column(String(30), unique = True)
+    enabled: Mapped[bool] = mapped_column(default= True)
+    type: Mapped[str]
+    data_type: Mapped[str]
 
-        queue = 1
+    notification: Mapped[list["NotificationServer"]] = relationship(secondary=association_table2)
 
-        source_policy_json = kwargs.pop("source_policy")
-        destination_policy_json = kwargs.pop("destination_policy")
+    src: Mapped["SourcePolicy"] = relationship()
+    src_id: Mapped[int] = mapped_column(ForeignKey("source_policies.id", ondelete="CASCADE"))
 
-        source_policy = SourcePolicy(source_policy_json)
-        destination_policy = DestinationPolicy(destination_policy_json)
-        source_policy.upsert()
-        destination_policy.upsert()
+    dest: Mapped["DestinationPolicy"] = relationship()
+    dest_id: Mapped[int] = mapped_column(ForeignKey("destination_policies.id", ondelete="CASCADE"))
 
-        kwargs["sourcePolicy"] = source_policy
-        kwargs["destinationPolicy"] = destination_policy
-        kwargs["queue"]
-        super().__init__(**kwargs)
+    parameters: Mapped["TransferParameters"] = relationship()
+    queues: Mapped[list["Queue"]] = relationship(secondary=assocation_table)
+    transfers: Mapped[list["TransferRequest"]] = relationship()
+
+
+class SourcePolicy(SQLBase):
+    __tablename__ = "source_policies"
+
+    id: Mapped[int] = mapped_column(primary_key=True)
+    purge: Mapped[bool] = mapped_column(default=False)
+    path: Mapped[str]
+
+    src_id: Mapped[int] = mapped_column(ForeignKey("targets.id", ondelete="CASCADE"))
+    src: Mapped["Target"] = relationship()
+
+class DestinationPolicy(SQLBase):
+    __tablename__ = "destination_policies"
+
+    id: Mapped[int] = mapped_column(primary_key=True)
+    path: Mapped[str]
+
+    dest_id: Mapped[int] = mapped_column(ForeignKey("targets.id", ondelete="CASCADE"))
+    dest: Mapped["Target"] = relationship()

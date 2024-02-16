@@ -1,0 +1,57 @@
+from typing import TypedDict, Literal
+
+class CredentialsJson(TypedDict):
+    login: str
+    password: str
+    type: str
+    token: str
+
+class NotificationServerJson(TypedDict):
+    name: str
+    type: str
+    host: str
+    port: int
+    timeout: str
+    credentials: CredentialsJson
+
+class TargetJson(TypedDict):
+    name: str
+    protocol: Literal["FTPS", "SFTP", "S3"]
+    host: str
+    port: int
+    credentials: CredentialsJson
+
+class KafkaServerParametersJson(TypedDict):
+    server: str
+    topic: str
+    replica: int
+    partitions: int
+
+class SrcPolicyJson(TypedDict):
+    target: str
+    path: str
+    purge: str
+
+class DestPolicyJson(TypedDict):
+    target: str
+    path: str
+
+class PeriodicalParametersJson(TypedDict):
+    polling_interval: int
+
+class TransferPolicyJson(TypedDict):
+    name: str
+    type: str
+    queue: str
+    data_type: Literal["file", "directory"]
+    notifications: list[KafkaServerParametersJson]
+    periodical: PeriodicalParametersJson
+    pattern: str
+    src: SrcPolicyJson
+    dest: DestPolicyJson
+
+
+class ConfigurationJson(TypedDict):
+    notification_servers: list[NotificationServerJson]
+    targets: list[TargetJson]
+    transfer_policies: list[TransferPolicyJson]
