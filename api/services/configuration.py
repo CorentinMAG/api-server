@@ -18,6 +18,7 @@ from ..repositories import (
     tr_repository
 )
 from ..utils.jsontypes import ConfigurationJson
+from ..db import db
 
 def configure(payload: ConfigurationJson):
 
@@ -117,3 +118,12 @@ def configure(payload: ConfigurationJson):
                         server_repository.update(nserver)
                     else:
                         raise NotImplementedError(f"only 'kafka' server is emplemented (not {nserver.type})")
+
+
+def unconfigure(keep: list[str] | None = None) -> None:
+    tables = db.metadata.sorted_tables
+    for table in reversed(tables):
+        if keep is not None and table.name in keep:
+            continue
+        db.session.execute(table.delete())
+    db.session.commit()

@@ -1,9 +1,11 @@
 from __future__ import annotations
 from ..db import Base as SQLBase
 from sqlalchemy.orm import Mapped, mapped_column, relationship
-from sqlalchemy import ForeignKey
+from sqlalchemy import ForeignKey, DateTime
+from datetime import datetime
+from sqlalchemy_serializer import SerializerMixin
 
-class TransferParameters(SQLBase):
+class TransferParameters(SQLBase, SerializerMixin):
     __tablename__ = "transfer_parameters"
 
     id: Mapped[int] = mapped_column(primary_key=True)
@@ -19,7 +21,7 @@ class TransferParameters(SQLBase):
 
     periodical: Mapped["PeriodicalParameters"] = relationship()
 
-class PeriodicalParameters(SQLBase):
+class PeriodicalParameters(SQLBase, SerializerMixin):
     __tablename__ = "periodical_parameters"
 
     id: Mapped[int] = mapped_column(primary_key=True)
@@ -28,13 +30,14 @@ class PeriodicalParameters(SQLBase):
     parameters_id: Mapped[int] = mapped_column(ForeignKey("transfer_parameters.id"))
 
 
-class GlobalParameters(SQLBase):
+class GlobalParameters(SQLBase, SerializerMixin):
     __tablename__ = "global_parameters"
 
     id: Mapped[int] = mapped_column(primary_key=True)
     mode: Mapped[str] = mapped_column(default="online")
+    updated_at: Mapped[str] = mapped_column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
 
-class KafkaParameters(SQLBase):
+class KafkaParameters(SQLBase, SerializerMixin):
     __tablename__ = "kafka_parameters"
 
     id: Mapped[int] = mapped_column(primary_key=True)

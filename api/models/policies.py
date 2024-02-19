@@ -1,7 +1,9 @@
 from __future__ import annotations
 from ..db import Base as SQLBase
 from sqlalchemy.orm import Mapped, mapped_column, relationship
-from sqlalchemy import String, ForeignKey, Table, Column
+from sqlalchemy import String, ForeignKey, Table, Column, DateTime
+from datetime import datetime
+from sqlalchemy_serializer import SerializerMixin
 
 assocation_table = Table(
     "association_table",
@@ -17,7 +19,7 @@ association_table2 = Table(
     Column("notification_servers.id", ForeignKey("notification_servers.id"))
 )
 
-class TransferPolicy(SQLBase):
+class TransferPolicy(SQLBase, SerializerMixin):
     __tablename__ = "transfer_policies"
 
     id: Mapped[int] = mapped_column(primary_key=True)
@@ -36,9 +38,10 @@ class TransferPolicy(SQLBase):
     parameters: Mapped["TransferParameters"] = relationship()
     queues: Mapped[list["Queue"]] = relationship(secondary=assocation_table)
     transfers: Mapped[list["TransferRequest"]] = relationship()
+    created_at: Mapped[str] = mapped_column(DateTime, default=datetime.utcnow)
 
 
-class SourcePolicy(SQLBase):
+class SourcePolicy(SQLBase, SerializerMixin):
     __tablename__ = "source_policies"
 
     id: Mapped[int] = mapped_column(primary_key=True)
@@ -46,13 +49,13 @@ class SourcePolicy(SQLBase):
     path: Mapped[str | None]
 
     src_id: Mapped[int] = mapped_column(ForeignKey("targets.id", ondelete="CASCADE"))
-    src: Mapped["Target"] = relationship()
+    target: Mapped["Target"] = relationship()
 
-class DestinationPolicy(SQLBase):
+class DestinationPolicy(SQLBase, SerializerMixin):
     __tablename__ = "destination_policies"
 
     id: Mapped[int] = mapped_column(primary_key=True)
     path: Mapped[str | None]
 
     dest_id: Mapped[int] = mapped_column(ForeignKey("targets.id", ondelete="CASCADE"))
-    dest: Mapped["Target"] = relationship()
+    target: Mapped["Target"] = relationship()

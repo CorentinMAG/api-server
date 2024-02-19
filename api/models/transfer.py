@@ -4,8 +4,9 @@ from sqlalchemy.orm import Mapped, mapped_column, relationship
 from sqlalchemy import Integer, String, ForeignKey, DateTime
 from datetime import datetime
 import uuid
+from sqlalchemy_serializer import SerializerMixin
 
-class TransferRequest(SQLBase):
+class TransferRequest(SQLBase, SerializerMixin):
     __tablename__ = "transfer_requests"
 
     id: Mapped[int] = mapped_column(primary_key=True)

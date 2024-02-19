@@ -60,3 +60,8 @@ class ConfigurationJson(TypedDict):
     queues: list[QueueJson]
     targets: list[TargetJson]
     transfer_policies: list[TransferPolicyJson]
+
+class FilterPolicyParams(TypedDict):
+    enabled: bool
+    type: Literal["periodical", "commanded"]
+    dataType: Literal["file", "folder"] 

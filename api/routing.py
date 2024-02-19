@@ -1,41 +1,73 @@
 from flask import request, Blueprint
-from .services.configuration import configure as set_configuration
+from .services.configuration import configure as set_configuration, unconfigure as del_configuration
+from .services.mode import switch_mode, get_mode
+from .services.policies import filter_policies
+from .utils.common import parse_params
+from sqlalchemy_pagination import paginate
 
 bp = Blueprint("api", __name__, url_prefix= "/api")
 
-
 @bp.route("/configure", methods = ["POST"])
 def configure():
+    """
+    delete the previous configuration and apply a new one
+    """
     payload = request.json
+    del_configuration(keep = ["transfer_requests"])
     set_configuration(payload)
     return "", 201
 
 @bp.route("/configure", methods = ["DELETE"])
 def unconfigure():
-    payload = request.json
-    # TODO: delete all records (but transfer requests, based on the body) in the db
-    pass
+    # delete all records from all tables (but transfer requests, based on the body) in the db
+    if request.data:
+        payload = request.json
+        if payload["requests"] == True:
+            del_configuration()
+        else:
+            del_configuration(keep=["transfer_requests"])
+    del_configuration(keep = ["transfer_requests"])
+    return "", 200
 
 @bp.route("/offline", methods = ["POST"])
 def offline():
-    # TODO: set DTR to offline mode if in online mode
-    pass
+    # set DTR to offline mode if in online mode
+    switch_mode("offline")
+    return "", 200
 
 @bp.route("/online", methods = ["POST"])
 def online():
-    # TODO: set DTR to online mode if in offline mode
-    pass
+    # set DTR to online mode if in offline mode
+    switch_mode("online")
+    return "", 200
 
 @bp.route("/status", methods = ["GET"])
 def status():
-    # TODO: return DTR status (online or offline)
-    pass
+    # return DTR status (online or offline)
+    return {"mode": get_mode()}, 200
 
 @bp.route("/policies", methods = ["GET"])
 def policies():
-    params = request.args.to_dict()
-    # TODO: list all transfer policies
-    pass
+    # list all transfer policies
+    # we can filtrate by using query parameters
+    # - type: (periodical / commanded)
+    # - dataType: (file / folder)
+    # - enabled: (true / false)
+    # - src
+    # - dest
+    page = request.args.get("page", type=int, default=1)
+    page_size = request.args.get("page_size", type=int, default=10)
+
+    parsed_params = parse_params(request.args.to_dict())
+
+    query = filter_policies(parsed_params)
+    result = paginate(query, page = page, page_size = page_size)
+    return {
+        "policies": [p.to_dict() for p in result.items], 
+        "page": page, 
+        "page_size": page_size, 
+        "total": result.total
+        }, 200
 
 @bp.route("/requests", methods = ["GET"])
 def requests():

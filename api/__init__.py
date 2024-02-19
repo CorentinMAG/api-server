@@ -8,7 +8,7 @@ def create_app():
 
     app = Flask(__name__, instance_relative_config=False)
 
-    app.logger.setLevel(logging.INFO)
+    app.logger.setLevel(logging.DEBUG)
     formatter = JsonFormatter("DTR", "api", "1.1.0")
     stream_handler = logging.StreamHandler()
     stream_handler.setFormatter(formatter)
@@ -31,7 +31,8 @@ def create_app():
     
     @app.before_request
     def log_request():
-        app.logger.debug("headers: %s, body: %s", request.headers, request.json)
+        body = request.json if request.is_json else "NO BODY"
+        app.logger.debug("headers: %s body: %s", dict(request.headers), body)
 
     from . import routing
     app.register_blueprint(routing.bp)

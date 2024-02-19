@@ -2,8 +2,9 @@ from __future__ import annotations
 from ..db import Base as SQLBase
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 from sqlalchemy import Integer, String
+from sqlalchemy_serializer import SerializerMixin
 
-class Target(SQLBase):
+class Target(SQLBase, SerializerMixin):
     __tablename__ = "targets"
 
     id: Mapped[int] = mapped_column(primary_key=True)

@@ -2,8 +2,9 @@ from __future__ import annotations
 from ..db import Base as SQLBase
 from sqlalchemy.orm import Mapped, mapped_column
 from sqlalchemy import String, ForeignKey
+from sqlalchemy_serializer import SerializerMixin
 
-class Credentials(SQLBase):
+class Credentials(SQLBase, SerializerMixin):
     __tablename__ = "credentials"
 
     id: Mapped[int] = mapped_column(primary_key=True)

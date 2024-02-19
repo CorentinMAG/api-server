@@ -3,8 +3,9 @@ from ..db import Base as SQLBase
 from sqlalchemy.orm import Mapped, mapped_column
 from sqlalchemy import Integer, String
 import uuid
+from sqlalchemy_serializer import SerializerMixin
 
-class Queue(SQLBase):
+class Queue(SQLBase, SerializerMixin):
     __tablename__ = "queues"
 
     id: Mapped[int] = mapped_column(primary_key=True)

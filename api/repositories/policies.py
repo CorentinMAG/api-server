@@ -1,7 +1,9 @@
 from ..models import TransferPolicy, SourcePolicy, DestinationPolicy
 from .base import BaseRepository
 from flask_sqlalchemy import SQLAlchemy
+from sqlalchemy import func
 from ..db import db
+from ..utils.jsontypes import FilterPolicyParams
 
 class TransferPolicyRepository(BaseRepository):
 
@@ -19,6 +21,10 @@ class TransferPolicyRepository(BaseRepository):
         self.db.session.commit()
         return policy
     
+    @property
+    def counts(self) -> int:
+        return self.db.session.query(func.count(TransferPolicy))
+
     def update(self, policy: TransferPolicy) -> int:
         self.db.session.commit()
 
