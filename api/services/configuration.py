@@ -17,7 +17,7 @@ from ..repositories import (
     target_repository,
     tr_repository
 )
-from ..utils.jsontypes import ConfigurationJson
+from common.jsontypes import ConfigurationJson
 from ..db import db
 
 def configure(payload: ConfigurationJson):
@@ -64,7 +64,7 @@ def configure(payload: ConfigurationJson):
 
             src_policy = tr_policy_copy.pop("src")
             dest_policy = tr_policy_copy.pop("dest")
-            queues = tr_policy_copy.pop("queues")
+            queue = tr_policy_copy.pop("queue")
 
             tr_name = tr_policy_copy.pop("name")
             tr_type = tr_policy_copy.pop("type")
@@ -76,7 +76,7 @@ def configure(payload: ConfigurationJson):
                 nperiod_params = PeriodicalParameters(**periodical_parameters)
                 ntr_params.periodical = nperiod_params
 
-            ntr_queues = [q for q in nqueues if q.name in queues]
+            ntr_queue = next(filter(lambda q: q.name == queue, queues))
 
             src_target = src_policy.pop("target")
             dest_target = dest_policy.pop("target")
@@ -91,7 +91,7 @@ def configure(payload: ConfigurationJson):
                 name = tr_name,
                 type = tr_type,
                 enabled = tr_enabled,
-                queues = ntr_queues, 
+                queue = ntr_queue, 
                 parameters = ntr_params,
                 src = nsrc_policy,
                 dest = ndest_policy

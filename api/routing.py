@@ -111,6 +111,16 @@ def requests():
         "total": result.total
     }, 200
 
+@bp.route("/requests", methods = ["POST"])
+def new_requests():
+    payload = request.json()
+
+    files = payload["files"]
+    policy = payload["policy"]
+    queue = payload["queue"]
+
+    
+
 @bp.route("/configuration/notifier", methods = ["GET"])
 def notifier():
     """

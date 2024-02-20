@@ -3,7 +3,6 @@ from .base import BaseRepository
 from flask_sqlalchemy import SQLAlchemy
 from sqlalchemy import func
 from ..db import db
-from ..utils.jsontypes import FilterPolicyParams
 
 class TransferPolicyRepository(BaseRepository):
 

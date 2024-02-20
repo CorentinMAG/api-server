@@ -1,5 +1,5 @@
 from ..models import TransferPolicy, TransferParameters, Target, SourcePolicy, DestinationPolicy, Queue
-from ..utils.jsontypes import FilterPolicyParams
+from common.jsontypes import FilterPolicyParams
 from ..db import db
 
 def filter_policies(params: FilterPolicyParams):

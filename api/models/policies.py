@@ -5,13 +5,6 @@ from sqlalchemy import String, ForeignKey, Table, Column, DateTime
 from datetime import datetime
 from sqlalchemy_serializer import SerializerMixin
 
-assocation_table = Table(
-    "association_table",
-    SQLBase.metadata,
-    Column("transfer_policy_id", ForeignKey("transfer_policies.id")),
-    Column("queue_id", ForeignKey("queues.id"))
-)
-
 association_table2 = Table(
     "policy_server",
     SQLBase.metadata,
@@ -36,7 +29,7 @@ class TransferPolicy(SQLBase, SerializerMixin):
     dest_id: Mapped[int] = mapped_column(ForeignKey("destination_policies.id", ondelete="CASCADE"))
 
     parameters: Mapped["TransferParameters"] = relationship()
-    queues: Mapped[list["Queue"]] = relationship(secondary=assocation_table)
+    queues: Mapped["Queue"] = relationship()
     transfers: Mapped[list["TransferRequest"]] = relationship()
     created_at: Mapped[str] = mapped_column(DateTime, default=datetime.utcnow)
 
