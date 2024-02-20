@@ -65,3 +65,8 @@ class FilterPolicyParams(TypedDict):
     enabled: bool
     type: Literal["periodical", "commanded"]
     dataType: Literal["file", "folder"] 
+    queues: str
+
+class FilterRequestsParams(TypedDict):
+    queues: str
+    state: Literal["queued", "in_progress", "completed", "failed", "cancelled"]

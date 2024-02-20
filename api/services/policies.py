@@ -1,4 +1,4 @@
-from ..models import TransferPolicy, TransferParameters, Target, SourcePolicy, DestinationPolicy
+from ..models import TransferPolicy, TransferParameters, Target, SourcePolicy, DestinationPolicy, Queue
 from ..utils.jsontypes import FilterPolicyParams
 from ..db import db
 
@@ -16,6 +16,11 @@ def filter_policies(params: FilterPolicyParams):
         base = base.join(SourcePolicy).join(Target).filter(Target.name == params["src"])
     if params.get("dest", None) is not None:
         base = base.join(DestinationPolicy).join(Target).filter(Target.name == params["dest"])
+    if params.get("queues", None) is not None:
+        queues = params["queues"].split(",")
+        base = base.join(TransferPolicy.queues)
+        for queue in queues:
+            base = base.filter(Queue.name == queue)
     base.order_by(TransferPolicy.created_at)
     
     return base

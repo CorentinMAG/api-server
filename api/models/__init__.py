@@ -4,5 +4,5 @@ from .target import Target
 from .credentials import Credentials
 from .policies import TransferPolicy, SourcePolicy, DestinationPolicy
 from .parameters import GlobalParameters, TransferParameters, KafkaParameters, PeriodicalParameters
-from .transfer import TransferRequest
+from .request import TransferRequest
 from .states import State

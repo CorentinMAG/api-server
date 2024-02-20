@@ -10,9 +10,9 @@ def switch_mode(mode: str) -> None:
         params.mode = mode
         db.session.commit()
 
-def get_mode() -> str:
+def get_mode() -> GlobalParameters:
     params = db.session.query(GlobalParameters).first()
     if params is None:
         app.logger.error("no global parameters, the DTR doesn't know how to fetch the mode")
     else:
-        return params.mode
+        return params
