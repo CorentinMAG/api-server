@@ -11,8 +11,7 @@ def filter_requests(params: FilterRequestsParams):
 
     if params.get("queues", None) is not None:
         queues = params["queues"].split(",")
-        for queue in queues:
-            base = base.filter(Queue.name == queue)
+        base = base.filter(Queue.name.in_(queues))
 
     base.order_by(Queue.priority)
     base.order_by(TransferRequest.date) 
