@@ -1,6 +1,6 @@
 from flask import Flask, request
 from werkzeug.exceptions import HTTPException
-from common.logs.logger import create_logger
+from .common.logs.logger import create_logger
 import os
 
 def create_app():
