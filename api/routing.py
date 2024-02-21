@@ -2,8 +2,9 @@ from flask import request, Blueprint
 from .services.configuration import configure as set_configuration, unconfigure as del_configuration
 from .services.mode import switch_mode, get_mode
 from .services.policies import filter_policies
-from .services.requests import filter_requests
+from .services.requests import filter_requests, create_request
 from common.utils import parse_params
+from common.jsontypes import CreateRequestJson
 from sqlalchemy_pagination import paginate
 from .repositories.server import repository as server_repository
 
@@ -113,13 +114,14 @@ def requests():
 
 @bp.route("/requests", methods = ["POST"])
 def new_requests():
-    payload = request.json()
+    payload: CreateRequestJson = request.json()
 
     files = payload["files"]
-    policy = payload["policy"]
-    queue = payload["queue"]
+    policy_id = payload["policy"]
 
-    
+    create_request(policy_id, files)
+    return "", 201
+
 
 @bp.route("/configuration/notifier", methods = ["GET"])
 def notifier():

@@ -29,7 +29,7 @@ class TransferPolicy(SQLBase, SerializerMixin):
     dest_id: Mapped[int] = mapped_column(ForeignKey("destination_policies.id", ondelete="CASCADE"))
 
     parameters: Mapped["TransferParameters"] = relationship()
-    queues: Mapped["Queue"] = relationship()
+    queue: Mapped["Queue"] = relationship()
     transfers: Mapped[list["TransferRequest"]] = relationship()
     created_at: Mapped[str] = mapped_column(DateTime, default=datetime.utcnow)
 
