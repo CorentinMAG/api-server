@@ -1,19 +1,16 @@
 from flask import Flask, request
 from werkzeug.exceptions import HTTPException
-import logging
-from .common.logs.formatter import JsonFormatter
-from flask.logging import default_handler
+from common.logs.logger import create_logger
+import os
 
 def create_app():
 
     app = Flask(__name__, instance_relative_config=False)
+    
+    log_lvl = os.environ.get("DTR_LOG_LEVEL", "INFO")
+    version = os.environ["DTR_API_VERSION"]
 
-    app.logger.setLevel(logging.DEBUG)
-    formatter = JsonFormatter("DTR", "api", "1.1.0")
-    stream_handler = logging.StreamHandler()
-    stream_handler.setFormatter(formatter)
-    app.logger.addHandler(stream_handler)
-    app.logger.removeHandler(default_handler)
+    app.logger = create_logger("api", log_lvl, "DTR", version)
 
     @app.route("/", methods = ["GET"])
     def index():
