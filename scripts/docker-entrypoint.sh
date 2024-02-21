@@ -1,4 +1,4 @@
-#!bin/sh
+#!/bin/sh
 
 if [ "$DTR_DB_USER" = "**" ]; then
   echo "You must set the DTR_DB_USER variable!"
