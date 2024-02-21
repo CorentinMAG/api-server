@@ -12,5 +12,4 @@ class Target(SQLBase, SerializerMixin):
     protocol: Mapped[str] = mapped_column(String(10))
     port: Mapped[int] = mapped_column(Integer)
     host: Mapped[str] = mapped_column(String(50))
-    bucket: Mapped[str] = mapped_column(String(30), nullable=True)
     credentials: Mapped["Credentials"] = relationship()
