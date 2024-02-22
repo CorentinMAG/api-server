@@ -13,4 +13,4 @@ class Queue(SQLBase, SerializerMixin):
     uid: Mapped[uuid.UUID] = mapped_column(default=uuid.uuid4, unique=True)
     max_requests: Mapped[int] = mapped_column(Integer)
     priority: Mapped[int] = mapped_column(Integer)
-    policy_id: Mapped[int] = mapped_column(ForeignKey("transfer_policies.id"))
+    policy_id: Mapped[int | None] = mapped_column(ForeignKey("transfer_policies.id"))

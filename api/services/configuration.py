@@ -76,7 +76,7 @@ def configure(payload: ConfigurationJson):
                 nperiod_params = PeriodicalParameters(**periodical_parameters)
                 ntr_params.periodical = nperiod_params
 
-            ntr_queue = next(filter(lambda q: q.name == queue, queues))
+            ntr_queue = next(filter(lambda q: q.name == queue, nqueues))
 
             src_target = src_policy.pop("target")
             dest_target = dest_policy.pop("target")
