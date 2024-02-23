@@ -10,7 +10,7 @@ class TransferRequest(SQLBase, SerializerMixin):
     __tablename__ = "transfer_requests"
 
     id: Mapped[int] = mapped_column(primary_key=True)
-    filename: Mapped[str] = mapped_column(String(30))
+    filename: Mapped[str] = mapped_column(String(50))
     size: Mapped[int | None] = mapped_column(Integer)
     uid: Mapped[uuid.UUID] = mapped_column(default=uuid.uuid4, unique=True)
     states: Mapped[list["State"]] = relationship()
