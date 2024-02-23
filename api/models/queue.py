@@ -1,7 +1,7 @@
 from __future__ import annotations
 from ..db import Base as SQLBase
 from sqlalchemy.orm import Mapped, mapped_column
-from sqlalchemy import Integer, String, ForeignKey
+from sqlalchemy import Integer, String
 import uuid
 from sqlalchemy_serializer import SerializerMixin
 
