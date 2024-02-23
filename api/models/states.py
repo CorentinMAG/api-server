@@ -3,8 +3,9 @@ from ..db import Base as SQLBase
 from sqlalchemy.orm import Mapped, mapped_column
 from sqlalchemy import String, DateTime, ForeignKey
 from datetime import datetime
+from sqlalchemy_serializer import SerializerMixin
 
-class State(SQLBase):
+class State(SQLBase, SerializerMixin):
     __tablename__ = "states"
 
     id: Mapped[int] = mapped_column(primary_key=True)
