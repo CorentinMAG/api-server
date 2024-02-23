@@ -35,5 +35,5 @@ def create_request(policy_id: int, files: list[str]) -> None:
             )
         nrequests.append(nrequest)
 
-    npolicy.transfers.extend(nrequest)
+    npolicy.transfers.extend(nrequests)
     db.session.commit()

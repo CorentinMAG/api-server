@@ -114,7 +114,7 @@ def requests():
 
 @bp.route("/requests", methods = ["POST"])
 def new_requests():
-    payload: CreateRequestJson = request.json()
+    payload: CreateRequestJson = request.json
 
     files = payload["files"]
     policy_id = payload["policy"]
