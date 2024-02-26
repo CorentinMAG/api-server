@@ -2,9 +2,10 @@ from flask import request, Blueprint
 from .services.configuration import configure as set_configuration, unconfigure as del_configuration, create_policies
 from .services.mode import switch_mode, get_mode
 from .services.policies import filter_policies
-from .services.requests import filter_requests, create_request
+from .services.requests import filter_requests, create_request, update_request
 from common.utils import parse_params
-from common.jsontypes import CreateRequestJson
+from common.jsontypes import CreateRequestJson, FilterRequestParams, FilterPolicyParams, UpdateRequestJson
+from typing import cast
 from sqlalchemy_pagination import paginate
 from .db import db
 from .models import NotificationServer
@@ -70,6 +71,7 @@ def policies():
     list all transfer policies.
     output can be filtered by using query params:
     - id: int
+    - ids: str
     - type: periodical / commanded
     - dataType: file / folder
     - enabled: true / false
@@ -81,12 +83,12 @@ def policies():
     page = request.args.get("page", type=int, default=1)
     page_size = request.args.get("page_size", type=int, default=10)
 
-    parsed_params = parse_params(request.args.to_dict())
+    parsed_params = cast(FilterPolicyParams, parse_params(request.args.to_dict()))
 
     query = filter_policies(parsed_params)
     result = paginate(query, page = page, page_size = page_size)
     return {
-        "policies": [p.to_dict() for p in result.items], 
+        "policies": [p.to_dict(rules=("-transfers.policy",)) for p in result.items], 
         "page": page, 
         "page_size": page_size, 
         "total": result.total
@@ -111,13 +113,13 @@ def requests():
     page = request.args.get("page", type=int, default=1)
     page_size = request.args.get("page_size", type=int, default=10)
 
-    parsed_params = parse_params(request.args.to_dict())
+    parsed_params = cast(FilterRequestParams, parse_params(request.args.to_dict()))
 
     query = filter_requests(parsed_params)
     result = paginate(query, page = page, page_size = page_size)
 
     return {
-        "requests": [r.to_dict() for r in result.items],
+        "requests": [r.to_dict(rules=("-policy.transfers",)) for r in result.items],
         "page": page,
         "page_size": page_size,
         "total": result.total
@@ -133,6 +135,16 @@ def new_requests():
     create_request(policy_id, files)
     return "", 201
 
+@bp.route("/requests", methods = ["PUT"])
+def update_requests():
+    payload: UpdateRequestJson = request.json
+
+    request_id = payload["request_id"]
+    status = payload["status"]
+
+    update_request(request_id, status)
+    return "", 200
+
 
 @bp.route("/configuration/notifier", methods = ["GET"])
 def notifier():
@@ -141,6 +153,25 @@ def notifier():
     """
     servers = db.session.query(NotificationServer).all()
     return [s.to_dict(only=("name", "type", "host", "port", "timeout", "credentials")) for s in servers]
+
+@bp.route("/notification", methods = ["GET"])
+def notification():
+    page = request.args.get("page", type=int, default=1)
+    page_size = request.args.get("page_size", type=int, default=10)
+
+    params = {
+        "state": "notify"
+    }
+
+    query = filter_requests(params)
+    result = paginate(query, page = page, page_size = page_size)
+
+    return {
+        "requests": [r.to_dict(rules=("-policy.transfers",)) for r in result.items],
+        "page": page,
+        "page_size": page_size,
+        "total": result.total
+    }, 200
 
 @bp.route("/configuration/trigger", methods = ["GET"])
 def trigger():

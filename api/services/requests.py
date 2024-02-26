@@ -1,14 +1,15 @@
 from ..models import TransferRequest, State, Queue, TransferPolicy
-from common.jsontypes import FilterRequestsParams
-from typing import cast
+from common.jsontypes import FilterRequestParams
+from typing import cast, Literal
 from flask import current_app as app
 from common.constantes import State as StateEnum
 from ..db import db
 
-def filter_requests(params: FilterRequestsParams):
+def filter_requests(params: FilterRequestParams):
     base = (
         db.session
         .query(TransferRequest)
+        .join(TransferPolicy)
         .join(Queue)
         .order_by(Queue.priority.desc())
         .order_by(TransferRequest.date.asc())
@@ -40,3 +41,9 @@ def create_request(policy_id: int, files: list[str]) -> None:
         db.session.commit()
     else:
         app.logger.error("policy id: %d doesn't exist", policy_id)
+
+def update_request(request_id: int, status: Literal["queued", "in_progress", "completed", "failed", "notify"]) -> None:
+    nrequest = cast(TransferRequest, db.session.query(TransferRequest).get(request_id))
+    nstate = State(state = status)
+    nrequest.states.append(nstate)
+    db.session.commit()

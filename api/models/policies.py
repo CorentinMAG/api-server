@@ -14,7 +14,7 @@ class TransferPolicy(SQLBase, SerializerMixin):
     enabled: Mapped[bool] = mapped_column(default = True)
     type: Mapped[str]
 
-    kafka: Mapped[list["KafkaParameters"]] = relationship()
+    kafka: Mapped[list["KafkaParameters"] | None] = relationship()
 
     src: Mapped["SourcePolicy"] = relationship()
     src_id: Mapped[int] = mapped_column(ForeignKey("source_policies.id", ondelete="CASCADE"))
@@ -27,6 +27,10 @@ class TransferPolicy(SQLBase, SerializerMixin):
     queue: Mapped["Queue"] = relationship()
     transfers: Mapped[list["TransferRequest"]] = relationship(back_populates="policy")
     created_at: Mapped[str] = mapped_column(DateTime, default=datetime.utcnow)
+
+    @property
+    def has_notifications(self) -> bool:
+        return bool(self.kafka)
 
 
 class SourcePolicy(SQLBase, SerializerMixin):
