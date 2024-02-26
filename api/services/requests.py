@@ -26,16 +26,13 @@ def filter_requests(params: FilterRequestsParams):
 def create_request(policy_id: int, files: list[str]) -> None:
     npolicy = cast(TransferPolicy | None, db.session.query(TransferPolicy).get(policy_id))
     if npolicy is not None:
-        nqueue = cast(Queue, npolicy.queue)
-
         nrequests = []
 
         for file in files:
             nstate = State(state = StateEnum.QUEUED.value)
             nrequest = TransferRequest(
                 filename = file,
-                states = [nstate],
-                queue = nqueue
+                states = [nstate]
                 )
             nrequests.append(nrequest)
 
