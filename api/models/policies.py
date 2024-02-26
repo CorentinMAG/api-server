@@ -1,16 +1,10 @@
 from __future__ import annotations
 from ..db import Base as SQLBase
 from sqlalchemy.orm import Mapped, mapped_column, relationship
-from sqlalchemy import String, ForeignKey, Table, Column, DateTime
+from sqlalchemy import String, ForeignKey, DateTime
 from datetime import datetime
 from sqlalchemy_serializer import SerializerMixin
 
-association_table2 = Table(
-    "policy_server",
-    SQLBase.metadata,
-    Column("transfer_policy_id", ForeignKey("transfer_policies.id")),
-    Column("notification_servers.id", ForeignKey("notification_servers.id"))
-)
 
 class TransferPolicy(SQLBase, SerializerMixin):
     __tablename__ = "transfer_policies"
@@ -20,7 +14,7 @@ class TransferPolicy(SQLBase, SerializerMixin):
     enabled: Mapped[bool] = mapped_column(default = True)
     type: Mapped[str]
 
-    servers: Mapped[list["NotificationServer"]] = relationship(secondary=association_table2)
+    kafka: Mapped[list["KafkaParameters"]] = relationship()
 
     src: Mapped["SourcePolicy"] = relationship()
     src_id: Mapped[int] = mapped_column(ForeignKey("source_policies.id", ondelete="CASCADE"))
@@ -31,7 +25,7 @@ class TransferPolicy(SQLBase, SerializerMixin):
     parameters: Mapped["TransferParameters"] = relationship()
     queue_id: Mapped[int] = mapped_column(ForeignKey("queues.id"))
     queue: Mapped["Queue"] = relationship()
-    transfers: Mapped[list["TransferRequest"]] = relationship()
+    transfers: Mapped[list["TransferRequest"]] = relationship(back_populates="policy")
     created_at: Mapped[str] = mapped_column(DateTime, default=datetime.utcnow)
 
 

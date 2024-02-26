@@ -14,6 +14,5 @@ class NotificationServer(SQLBase, SerializerMixin):
     port: Mapped[int]
     credentials: Mapped["Credentials"] = relationship()
     timeout: Mapped[int] = mapped_column(default=40)
-    parameters: Mapped[list["KafkaParameters"]] = relationship()
 
 

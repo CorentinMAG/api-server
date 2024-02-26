@@ -18,7 +18,13 @@ def filter_policies(params: FilterPolicyParams):
         base = base.join(DestinationPolicy).join(Target).filter(Target.name == params["dest"])
     if params.get("queues", None) is not None:
         queues = params["queues"].split(",")
-        base = base.join(TransferPolicy.queues).filter(Queue.name.in_(queues))
+        base = base.join(TransferPolicy.queue).filter(Queue.name.in_(queues))
+    if params.get("id", None) is not None:
+        base = base.filter(TransferPolicy.id == params["id"])
+    if params.get("ids", None) is not None:
+        policies_id = params["ids"].split(",")
+        policies_id = map(lambda i: int(i), policies_id)
+        base = base.filter(TransferPolicy.id.in_(policies_id))
     base.order_by(TransferPolicy.created_at)
     
     return base

@@ -45,5 +45,6 @@ class KafkaParameters(SQLBase, SerializerMixin):
     replica: Mapped[int] = mapped_column(default=1)
     partitions: Mapped[int] = mapped_column(default=1)
     server_id: Mapped[int] = mapped_column(ForeignKey("notification_servers.id"))
+    server: Mapped["NotificationServer"] = relationship()
     policy_id: Mapped[int] = mapped_column(ForeignKey("transfer_policies.id"))
 

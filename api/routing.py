@@ -1,12 +1,13 @@
 from flask import request, Blueprint
-from .services.configuration import configure as set_configuration, unconfigure as del_configuration
+from .services.configuration import configure as set_configuration, unconfigure as del_configuration, create_policies
 from .services.mode import switch_mode, get_mode
 from .services.policies import filter_policies
 from .services.requests import filter_requests, create_request
 from common.utils import parse_params
 from common.jsontypes import CreateRequestJson
 from sqlalchemy_pagination import paginate
-from .repositories.server import repository as server_repository
+from .db import db
+from .models import NotificationServer
 
 bp = Blueprint("api", __name__, url_prefix= "/api/v1")
 
@@ -16,6 +17,7 @@ def configure():
     delete the previous configuration and apply a new one
     """
     payload = request.json
+
     del_configuration(keep = ["transfer_requests"])
     set_configuration(payload)
     return "", 201
@@ -67,6 +69,7 @@ def policies():
     """
     list all transfer policies.
     output can be filtered by using query params:
+    - id: int
     - type: periodical / commanded
     - dataType: file / folder
     - enabled: true / false
@@ -89,6 +92,13 @@ def policies():
         "total": result.total
         }, 200
 
+@bp.route("/policies", methods = ["POST"])
+def create_policies():
+    # TODO: create policies programatically
+    payload = request.json
+    policies = payload["policies"]
+    create_policies(policies)
+
 @bp.route("/requests", methods = ["GET"])
 def requests():
     """
@@ -105,6 +115,7 @@ def requests():
 
     query = filter_requests(parsed_params)
     result = paginate(query, page = page, page_size = page_size)
+
     return {
         "requests": [r.to_dict() for r in result.items],
         "page": page,
@@ -128,7 +139,7 @@ def notifier():
     """
     return server configuration
     """
-    servers = server_repository.get_all()
+    servers = db.session.query(NotificationServer).all()
     return [s.to_dict(only=("name", "type", "host", "port", "timeout", "credentials")) for s in servers]
 
 @bp.route("/configuration/trigger", methods = ["GET"])
