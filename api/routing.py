@@ -152,7 +152,7 @@ def trigger():
     page = request.args.get("page", type=int, default=1)
     page_size = request.args.get("page_size", type=int, default=10)
     params = {
-        "activated": True,
+        "enabled": True,
         "type": "periodical"
     }
     query = filter_policies(params)
