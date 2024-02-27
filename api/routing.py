@@ -141,8 +141,9 @@ def update_requests():
 
     request_id = payload["request_id"]
     status = payload["status"]
+    reason = payload.get("reason", None)
 
-    update_request(request_id, status)
+    update_request(request_id, status, reason)
     return "", 200
 
 

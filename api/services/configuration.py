@@ -60,7 +60,7 @@ def create_policies(policies: list[TransferPolicyJson]) -> list[TransferPolicy]:
         policy_copy = deepcopy(policy)
 
         period_params = policy_copy.pop("periodical", None)
-        notifications = policy_copy.pop("notifications", None)
+        notifications = policy_copy.pop("kafka", None)
 
         src_policy = policy_copy.pop("src")
         dest_policy = policy_copy.pop("dest")

@@ -11,12 +11,13 @@ def filter_requests(params: FilterRequestParams):
         .query(TransferRequest)
         .join(TransferPolicy)
         .join(Queue)
+        .join(State)
         .order_by(Queue.priority.desc())
-        .order_by(TransferRequest.date.asc())
+        .order_by(TransferRequest.created_at.asc())
         )
 
     if params.get("state", None)  is not None:
-        base = base.filter(State.state == params["state"])
+        base = base.filter(TransferRequest.last_state == params["state"])
 
     if params.get("queues", None) is not None:
         queues = params["queues"].split(",")
@@ -42,7 +43,7 @@ def create_request(policy_id: int, files: list[str]) -> None:
     else:
         app.logger.error("policy id: %d doesn't exist", policy_id)
 
-def update_request(request_id: int, status: Literal["queued", "in_progress", "completed", "failed", "notify"]) -> None:
+def update_request(request_id: int, status: Literal["queued", "in_progress", "completed", "failed", "notify"], reason: str | None = None) -> None:
     nrequest = cast(TransferRequest, db.session.query(TransferRequest).get(request_id))
     nstate = State(state = status)
     nrequest.states.append(nstate)
