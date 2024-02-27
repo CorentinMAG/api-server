@@ -45,6 +45,6 @@ def create_request(policy_id: int, files: list[str]) -> None:
 
 def update_request(request_id: int, status: Literal["queued", "in_progress", "completed", "failed", "notify"], reason: str | None = None) -> None:
     nrequest = cast(TransferRequest, db.session.query(TransferRequest).get(request_id))
-    nstate = State(state = status)
+    nstate = State(state = status, reason = reason)
     nrequest.states.append(nstate)
     db.session.commit()
