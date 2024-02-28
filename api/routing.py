@@ -190,7 +190,7 @@ def trigger():
     query = filter_policies(params)
     result = paginate(query, page = page, page_size = page_size)
     return {
-        "policies": [p.to_dict() for p in result.items], 
+        "policies": [p.to_dict(rules=("-transfers.policy",)) for p in result.items], 
         "page": page, 
         "page_size": page_size, 
         "total": result.total
