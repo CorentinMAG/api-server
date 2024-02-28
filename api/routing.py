@@ -146,16 +146,7 @@ def update_requests():
     update_request(request_id, status, reason)
     return "", 200
 
-
-@bp.route("/configuration/notifier", methods = ["GET"])
-def notifier():
-    """
-    return server configuration
-    """
-    servers = db.session.query(NotificationServer).all()
-    return [s.to_dict(only=("name", "type", "host", "port", "timeout", "credentials")) for s in servers]
-
-@bp.route("/notification", methods = ["GET"])
+@bp.route("/notifications", methods = ["GET"])
 def notification():
     page = request.args.get("page", type=int, default=1)
     page_size = request.args.get("page_size", type=int, default=10)

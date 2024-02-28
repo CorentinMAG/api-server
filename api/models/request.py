@@ -35,3 +35,12 @@ class TransferRequest(SQLBase, SerializerMixin):
         .correlate_except(State)
         .scalar_subquery()
     )
+
+    reason = column_property(
+        select(State.reason)
+        .where(State.request_id == id)
+        .order_by(State.created_at.desc())
+        .limit(1)
+        .correlate_except(State)
+        .scalar_subquery()
+    )
