@@ -1,9 +1,13 @@
 from __future__ import annotations
-from ..db import Base as SQLBase
-from sqlalchemy.orm import Mapped, mapped_column
-from sqlalchemy import String, DateTime, ForeignKey
+
 from datetime import datetime
+
+from sqlalchemy import DateTime, ForeignKey, String
+from sqlalchemy.orm import Mapped, mapped_column
 from sqlalchemy_serializer import SerializerMixin
+
+from ..db import Base as SQLBase
+
 
 class State(SQLBase, SerializerMixin):
     __tablename__ = "states"

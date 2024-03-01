@@ -1,9 +1,13 @@
 from __future__ import annotations
-from ..db import Base as SQLBase
-from sqlalchemy.orm import Mapped, mapped_column
-from sqlalchemy import Integer, String
+
 import uuid
+
+from sqlalchemy import Integer, String
+from sqlalchemy.orm import Mapped, mapped_column
 from sqlalchemy_serializer import SerializerMixin
+
+from ..db import Base as SQLBase
+
 
 class Queue(SQLBase, SerializerMixin):
     __tablename__ = "queues"

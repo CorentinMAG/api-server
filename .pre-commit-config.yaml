@@ -1,0 +1,29 @@
+default_stages: [pre-commit]
+minimum_pre_commit_version: "3.0.0"
+default_language_version:
+  python: python3.10
+repos:
+  - repo: local
+    hooks:
+      - id: formatter
+        name: ruff-formatter
+        entry: ruff format
+        language: python
+        types: [python]
+        require_serial: true
+        verbose: true
+      - id: linter
+        name: ruff-linter
+        entry: ruff check
+        language: python
+        types: [python]
+        require_serial: true
+        verbose: true
+      - id: checker
+        name: type-checker
+        entry: mypy
+        language: python
+        types: [python]
+        require_serial: true
+        verbose: true
+      

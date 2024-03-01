@@ -1,9 +1,17 @@
-from ..models import TransferPolicy, TransferParameters, Target, SourcePolicy, DestinationPolicy, Queue
 from common.jsontypes import FilterPolicyParams
+
 from ..db import db
+from ..models import (
+    DestinationPolicy,
+    Queue,
+    SourcePolicy,
+    Target,
+    TransferParameters,
+    TransferPolicy,
+)
+
 
 def filter_policies(params: FilterPolicyParams):
-
     base = db.session.query(TransferPolicy)
 
     if params.get("enabled", None) is not None:
@@ -26,5 +34,5 @@ def filter_policies(params: FilterPolicyParams):
         policies_id = map(lambda i: int(i), policies_id)
         base = base.filter(TransferPolicy.id.in_(policies_id))
     base.order_by(TransferPolicy.created_at)
-    
+
     return base

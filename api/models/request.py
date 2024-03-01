@@ -1,11 +1,19 @@
 from __future__ import annotations
+
+import uuid
+from datetime import datetime
+from typing import TYPE_CHECKING
+
+from sqlalchemy import DateTime, ForeignKey, Integer, String, func, select
+from sqlalchemy.orm import Mapped, column_property, mapped_column, relationship
+from sqlalchemy_serializer import SerializerMixin
+
 from ..db import Base as SQLBase
 from .states import State
-from sqlalchemy.orm import Mapped, mapped_column, relationship, column_property
-from sqlalchemy import Integer, String, ForeignKey, DateTime, select, func
-from datetime import datetime
-import uuid
-from sqlalchemy_serializer import SerializerMixin
+
+if TYPE_CHECKING:
+    from .policies import TransferPolicy
+
 
 class TransferRequest(SQLBase, SerializerMixin):
     __tablename__ = "transfer_requests"
@@ -16,7 +24,7 @@ class TransferRequest(SQLBase, SerializerMixin):
     uid: Mapped[uuid.UUID] = mapped_column(default=uuid.uuid4, unique=True)
     states: Mapped[list["State"]] = relationship()
     policy_id: Mapped[int] = mapped_column(ForeignKey("transfer_policies.id", ondelete="SET NULL"))
-    policy: Mapped["TransferPolicy"] = relationship(back_populates="transfers")
+    policy: Mapped[TransferPolicy] = relationship(back_populates="transfers")
     created_at: Mapped[str] = mapped_column(DateTime, default=datetime.utcnow)
 
     last_state = column_property(

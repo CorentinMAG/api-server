@@ -1,21 +1,30 @@
+from copy import deepcopy
+
+from common.jsontypes import (
+    ConfigurationJson,
+    NotificationServerJson,
+    QueueJson,
+    TargetJson,
+    TransferPolicyJson,
+)
+
+from ..db import db
 from ..models import (
-    NotificationServer, 
-    Queue, 
-    Target, 
-    TransferPolicy, 
     Credentials,
-    SourcePolicy,
     DestinationPolicy,
     KafkaParameters,
+    NotificationServer,
     PeriodicalParameters,
-    TransferParameters
+    Queue,
+    SourcePolicy,
+    Target,
+    TransferParameters,
+    TransferPolicy,
 )
-from copy import deepcopy
-from common.jsontypes import ConfigurationJson, NotificationServerJson, QueueJson, TargetJson, TransferPolicyJson
-from ..db import db
+
 
 def create_servers(servers: list[NotificationServerJson]) -> list[NotificationServer]:
-    nservers = []
+    nservers: list[NotificationServer] = []
     for server in servers:
         server_copy = deepcopy(server)
         credentials = server_copy.get("credentials", None)
@@ -27,8 +36,9 @@ def create_servers(servers: list[NotificationServerJson]) -> list[NotificationSe
     db.session.commit()
     return nservers
 
+
 def create_queues(queues: list[QueueJson]) -> list[Queue]:
-    nqueues = []
+    nqueues: list[Queue] = []
     for queue in queues:
         nqueue = Queue(**queue)
         nqueues.append(nqueue)
@@ -36,8 +46,9 @@ def create_queues(queues: list[QueueJson]) -> list[Queue]:
     db.session.commit()
     return nqueues
 
+
 def create_targets(targets: list[TargetJson]) -> list[Target]:
-    ntargets = []
+    ntargets: list[Target] = []
     for target in targets:
         target_copy = deepcopy(target)
         credentials = target_copy.get("credentials", None)
@@ -49,12 +60,14 @@ def create_targets(targets: list[TargetJson]) -> list[Target]:
     db.session.commit()
     return ntargets
 
-def create_policies(policies: list[TransferPolicyJson]) -> list[TransferPolicy]:
 
+def create_policies(policies: list[TransferPolicyJson]) -> list[TransferPolicy]:
     # prerequisities
     nqueues = db.session.query(Queue).all()
     ntargets = db.session.query(Target).all()
     nservers = db.session.query(NotificationServer).all()
+
+    npolicies: list[TransferPolicy] = []
 
     for policy in policies:
         policy_copy = deepcopy(policy)
@@ -87,20 +100,17 @@ def create_policies(policies: list[TransferPolicyJson]) -> list[TransferPolicy]:
         nsrc_policy = SourcePolicy(**src_policy)
         ndest_policy = DestinationPolicy(**dest_policy)
 
-        ntr_policy = TransferPolicy(
-            name = tr_name,
-            type = tr_type,
-            enabled = tr_enabled,
-            queue = ntr_queue, 
-            parameters = ntr_params,
-            src = nsrc_policy,
-            dest = ndest_policy
+        npolicy = TransferPolicy(
+            name=tr_name,
+            type=tr_type,
+            enabled=tr_enabled,
+            queue=ntr_queue,
+            parameters=ntr_params,
+            src=nsrc_policy,
+            dest=ndest_policy,
         )
 
-        db.session.add(ntr_policy)
-
         if notifications is not None:
-
             for notification in notifications:
                 notification_copy = deepcopy(notification)
                 server_name = notification_copy.pop("server")
@@ -111,18 +121,23 @@ def create_policies(policies: list[TransferPolicyJson]) -> list[TransferPolicy]:
                     if topics is not None:
                         for topic in topics:
                             if isinstance(topic, dict):
-                                nparameters = KafkaParameters(policy_id = ntr_policy.id, **topic)
+                                nparameters = KafkaParameters(**topic)
                             else:
-                                nparameters = KafkaParameters(policy_id = ntr_policy.id, topic = topic)
+                                nparameters = KafkaParameters(topic=topic)
                             nparameters.server_id = nserver.id
-                            ntr_policy.kafka.append(nparameters)
+                            npolicy.kafka.append(nparameters)
                 else:
                     raise NotImplementedError(f"only 'kafka' server is emplemented (not {nserver.type})")
-                db.session.commit()
+
+        npolicies.append(npolicy)
+
+    db.session.add_all(npolicies)
+    db.session.commit()
+
+    return npolicies
 
 
 def configure(payload: ConfigurationJson):
-
     servers = payload.get("notification_servers", None)
     if servers is not None:
         create_servers(servers)
@@ -138,6 +153,7 @@ def configure(payload: ConfigurationJson):
     policies = payload.get("transfer_policies", None)
     if policies is not None:
         create_policies(policies)
+
 
 def unconfigure(keep: list[str] | None = None) -> None:
     tables = db.metadata.sorted_tables
