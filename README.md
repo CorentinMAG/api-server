@@ -30,6 +30,21 @@ $ export DTR_DB_NAME=...
 $ flask run --app api --debug
 ```
 
+## start in docker
+
+```bash
+$ docker build -t api-server \
+> --build-arg AFORGE_HOST=... \
+> --build-arg AFORGE_USER=... \
+> --build-arg AFORGE_PASSWORD=... \
+> --build-arg AFORGE_ALPINE_REPO=... \
+> --build-arg AFORGE_PIP_REPO=... \
+> --build-arg DOCKER_TAG=... \
+> .
+
+$ docker run -dp 80:80 api-server
+```
+
 ## start in docker-compose
 
 check out the `dtr/dtr` repository
