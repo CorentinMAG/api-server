@@ -13,7 +13,8 @@ ENV DTR_DB_NAME=dtr \
     DTR_DB_HOST=localhost \
     DTR_DB_PORT=5432 \
     DTR_API_VERSION=$DOCKER_TAG \
-    DTR_DB_CREATE=false
+    DTR_DB_CREATE=false \
+    DTR_LOG_LEVEL=INFO
 
 WORKDIR /opt/api
 
