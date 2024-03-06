@@ -29,6 +29,6 @@ def unconfigure():
         if delete_requests:
             del_configuration()
         else:
-            del_configuration(keep=["transfer_requests"])
-    del_configuration(keep=["transfer_requests"])
+            del_configuration(keep=["transfer_requests", "global_parameters"])
+    del_configuration(keep=["transfer_requests", "global_parameters"])
     return "", 200

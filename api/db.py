@@ -25,11 +25,5 @@ def init_app(app: Flask):
     db.init_app(app)
 
     if create_db is not None and create_db == "true":
-        from .models.parameters import GlobalParameters
-        from common.constantes import Mode
-
         with app.app_context():
             db.create_all()
-            param = GlobalParameters(mode=Mode.ONLINE)
-            db.session.add(param)
-            db.session.commit()
