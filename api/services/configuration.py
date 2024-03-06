@@ -1,12 +1,7 @@
 from copy import deepcopy
 
-from common.jsontypes import (
-    ConfigurationJson,
-    NotificationServerJson,
-    QueueJson,
-    TargetJson,
-    TransferPolicyJson,
-)
+from common.types.configuration import ConfigurationJson, TransferPolicyConf
+from common.types.models import QueueJson, TargetJson, NotificationServerJson
 
 from ..db import db
 from ..models import (
@@ -61,7 +56,7 @@ def create_targets(targets: list[TargetJson]) -> list[Target]:
     return ntargets
 
 
-def create_policies(policies: list[TransferPolicyJson]) -> list[TransferPolicy]:
+def create_policies(policies: list[TransferPolicyConf]) -> list[TransferPolicy]:
     # prerequisities
     nqueues = db.session.query(Queue).all()
     ntargets = db.session.query(Target).all()

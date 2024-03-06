@@ -33,9 +33,9 @@ def create_app():
         body = request.json if request.is_json else "NO BODY"
         app.logger.debug("headers: %s body: %s", dict(request.headers), body)
 
-    from . import routing
+    from api.routes import v1
 
-    app.register_blueprint(routing.bp)
+    app.register_blueprint(v1, url_prefix="/api/v1")
 
     from . import db
 

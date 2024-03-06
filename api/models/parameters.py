@@ -34,7 +34,7 @@ class TransferParameters(SQLBase, SerializerMixin):
     compress_type: Mapped[str | None]
     data_type: Mapped[str]
 
-    policy_id: Mapped[int] = mapped_column(ForeignKey("transfer_policies.id"))
+    policy_id: Mapped[int] = mapped_column(ForeignKey("transfer_policies.id", ondelete="CASCADE"))
 
     periodical: Mapped[PeriodicalParameters] = relationship()
 
@@ -54,6 +54,6 @@ class KafkaParameters(SQLBase, SerializerMixin):
     topic: Mapped[str]
     replica: Mapped[int] = mapped_column(default=1)
     partitions: Mapped[int] = mapped_column(default=1)
-    server_id: Mapped[int] = mapped_column(ForeignKey("notification_servers.id"))
+    server_id: Mapped[int] = mapped_column(ForeignKey("notification_servers.id", ondelete="CASCADE"))
     server: Mapped[NotificationServer] = relationship()
-    policy_id: Mapped[int] = mapped_column(ForeignKey("transfer_policies.id"))
+    policy_id: Mapped[int] = mapped_column(ForeignKey("transfer_policies.id", ondelete="CASCADE"))
