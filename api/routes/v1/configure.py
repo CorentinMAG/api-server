@@ -11,7 +11,7 @@ def configure():
     """
     payload = request.json
 
-    del_configuration(keep=["transfer_requests"])
+    del_configuration(keep=["transfer_requests", "global_parameters"])
     set_configuration(payload)
     return "", 201
 
