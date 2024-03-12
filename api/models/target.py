@@ -16,8 +16,8 @@ class Target(SQLBase, SerializerMixin):
     __tablename__ = "targets"
 
     id: Mapped[int] = mapped_column(primary_key=True)
-    name: Mapped[str] = mapped_column(String(30), unique=True)
-    protocol: Mapped[str] = mapped_column(String(10))
-    port: Mapped[int] = mapped_column(Integer)
-    host: Mapped[str] = mapped_column(String(50))
+    name: Mapped[str] = mapped_column(unique=True)
+    protocol: Mapped[str]
+    port: Mapped[int]
+    host: Mapped[str]
     credentials: Mapped[Credentials] = relationship()

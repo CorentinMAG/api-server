@@ -16,9 +16,9 @@ class NotificationServer(SQLBase, SerializerMixin):
     __tablename__ = "notification_servers"
 
     id: Mapped[int] = mapped_column(primary_key=True)
-    name: Mapped[str] = mapped_column(String(20), unique=True)
-    type: Mapped[str] = mapped_column(String(10))
-    host: Mapped[str] = mapped_column(String(30))
+    name: Mapped[str] = mapped_column(unique=True)
+    type: Mapped[str]
+    host: Mapped[str]
     port: Mapped[int]
     credentials: Mapped[Credentials] = relationship()
     timeout: Mapped[int] = mapped_column(default=40)

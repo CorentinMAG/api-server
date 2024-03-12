@@ -22,7 +22,7 @@ class SourcePolicy(SQLBase, SerializerMixin):
     id: Mapped[int] = mapped_column(primary_key=True)
     purge: Mapped[bool] = mapped_column(default=False)
     path: Mapped[str | None]
-    bucket: Mapped[str | None] = mapped_column(String(30))
+    bucket: Mapped[str | None]
 
     src_id: Mapped[int] = mapped_column(ForeignKey("targets.id", ondelete="CASCADE"))
     target: Mapped[Target] = relationship()
@@ -33,7 +33,7 @@ class DestinationPolicy(SQLBase, SerializerMixin):
 
     id: Mapped[int] = mapped_column(primary_key=True)
     path: Mapped[str | None]
-    bucket: Mapped[str | None] = mapped_column(String(30))
+    bucket: Mapped[str | None]
 
     dest_id: Mapped[int] = mapped_column(ForeignKey("targets.id", ondelete="CASCADE"))
     target: Mapped[Target] = relationship()
