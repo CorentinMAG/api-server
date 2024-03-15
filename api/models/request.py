@@ -23,7 +23,7 @@ class TransferRequest(SQLBase, SerializerMixin):
     size: Mapped[int | None]
     uid: Mapped[uuid.UUID] = mapped_column(default=uuid.uuid4, unique=True)
     states: Mapped[list[State]] = relationship()
-    policy_id: Mapped[int] = mapped_column(ForeignKey("transfer_policies.id", ondelete="SET NULL"))
+    policy_id: Mapped[int | None] = mapped_column(ForeignKey("transfer_policies.id", ondelete="SET NULL"))
     policy: Mapped[TransferPolicy] = relationship(back_populates="transfers")
     created_at: Mapped[str] = mapped_column(DateTime, default=datetime.utcnow)
 
