@@ -14,16 +14,33 @@ Now, when you commit your files the linter/formatter pipeline will be executed
 
 | name | description | default value |
 |------|-------------|---------------|
-| **DTR_DB_NAME** | database name | `N/A` |
-| **DTR_DB_USER** | database user | `N/A` |
+| **DTR_DB_NAME** | database name | `dtr` |
+| **DTR_DB_USER** | database user | `postgres` |
 | **DTR_DB_PASSWORD** | database user password | `N/A` |
-| **DTR_DB_HOST** | database host | `localhost` |
+| **DTR_DB_HOST** | database host | `127.0.0.1` |
 | **DTR_DB_PORT** | database port | `5432` |
 | **DTR_DB_CREATE** | wether to create the database schema or not | `false` |
 | **DTR_API_VERSION** | API version | `$DOCKER_TAG` (generated when the docker image is built) |
 | **DTR_LOG_LEVEL** | the log level| `INFO` |
 
 ## start in local environment
+
+1. create virtual environment
+```bash
+$ python3 -m venv ~/Envs/dtr/api
+$ source ~/Envs/dtr/api/bin/activate
+$ pip install -r requirements.txt -r requirements-dev.txt
+$ pip install -r api/common/requirements.txt
+$ deactivate
+``` 
+
+2. run the api
+```bash
+$ source ~/Envs/dtr/api/bin/activate
+$ export DTR_DB_NAME=...
+## define all environment variables
+$ flask --app api run --debug # set the debug flag if you want hot reload
+```
 
 ```
 $ export DTR_DB_NAME=...
