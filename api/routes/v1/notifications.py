@@ -12,13 +12,13 @@ def notification():
     nglobal_parameters = get_mode()
     mode = nglobal_parameters.mode
 
-    if mode == Mode.OFFLINE.value:
+    if mode == Mode.OFFLINE:
         return {"requests": []}
 
     page = request.args.get("page", type=int, default=1)
     page_size = request.args.get("page_size", type=int, default=10)
 
-    params = {"state": "notify"}
+    params = {"states": "notify,cancelled"}
 
     query = filter_requests(params)
     result = paginate(query, page=page, page_size=page_size)

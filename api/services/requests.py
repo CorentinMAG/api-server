@@ -1,4 +1,4 @@
-from typing import Literal, cast
+from typing import cast
 
 from common.constantes import State as StateEnum
 from common.types.filter import FilterRequestParams
@@ -20,6 +20,9 @@ def filter_requests(params: FilterRequestParams):
 
     if params.get("state") is not None:
         base = base.filter(TransferRequest.last_state == params["state"])
+    if params.get("states") is not None:
+        states = params["states"].split(",")
+        base = base.filter(TransferRequest.last_state.in_(states))
 
     if params.get("queues") is not None:
         queues = params["queues"].split(",")
@@ -34,7 +37,7 @@ def create_request(policy_id: int, files: list[str]) -> None:
         nrequests: list[TransferRequest] = []
 
         for file in files:
-            nstate = State(state=StateEnum.QUEUED.value)
+            nstate = State(state=StateEnum.QUEUED)
             nrequest = TransferRequest(filename=file, states=[nstate])
             nrequests.append(nrequest)
 
@@ -48,11 +51,14 @@ def create_request(policy_id: int, files: list[str]) -> None:
 
 def update_request(
     request_id: int,
-    status: Literal["queued", "in_progress", "completed", "failed", "notify"],
+    status: StateEnum,
     reason: str | None = None,
 ) -> None:
     nrequest = cast(TransferRequest, db.session.query(TransferRequest).get(request_id))
-    nstate = State(state=status, reason=reason)
-    app.logger.info("[%s] request has been updated to state %s", nrequest.uid, status)
+    if nrequest.last_state == StateEnum.FAILED and nrequest.policy.parameters.max_retry == nrequest.nb_retry:
+        nstate = State(state=StateEnum.CANCELLED, reason="Too many failed attempt")
+    else:
+        nstate = State(state=status, reason=reason)
+    app.logger.info("[%s] request has been updated to state %s", nrequest.uid, nstate.state)
     nrequest.states.append(nstate)
     db.session.commit()
