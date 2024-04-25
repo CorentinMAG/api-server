@@ -2,6 +2,7 @@ from copy import deepcopy
 
 from common.types.configuration import ConfigurationJson, TransferPolicyConf
 from common.types.models import QueueJson, TargetJson, NotificationServerJson
+from typing import cast
 
 from ..db import db
 from ..models import (
@@ -58,9 +59,9 @@ def create_targets(targets: list[TargetJson]) -> list[Target]:
 
 def create_policies(policies: list[TransferPolicyConf]) -> list[TransferPolicy]:
     # prerequisities
-    nqueues = db.session.query(Queue).all()
-    ntargets = db.session.query(Target).all()
-    nservers = db.session.query(NotificationServer).all()
+    nqueues = cast(list[Queue], db.session.query(Queue).all())
+    ntargets = cast(list[Target], db.session.query(Target).all())
+    nservers = cast(list[NotificationServer], db.session.query(NotificationServer).all())
 
     npolicies: list[TransferPolicy] = []
 
