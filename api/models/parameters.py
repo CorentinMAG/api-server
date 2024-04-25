@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from datetime import datetime
 from typing import TYPE_CHECKING
-
+from common.constantes import Mode
 from sqlalchemy import DateTime, ForeignKey
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 from sqlalchemy_serializer import SerializerMixin
@@ -43,7 +43,7 @@ class GlobalParameters(SQLBase, SerializerMixin):
     __tablename__ = "global_parameters"
 
     id: Mapped[int] = mapped_column(primary_key=True)
-    mode: Mapped[str] = mapped_column(default="online")
+    mode: Mapped[Mode] = mapped_column(default=Mode.ONLINE)
     updated_at: Mapped[str] = mapped_column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
 
 

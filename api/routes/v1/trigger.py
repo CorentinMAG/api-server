@@ -18,7 +18,7 @@ def trigger():
     nglobal_parameters = get_mode()
     mode = nglobal_parameters.mode
 
-    if mode == Mode.OFFLINE.value:
+    if mode == Mode.OFFLINE:
         return {"requests": []}
 
     page = request.args.get("page", type=int, default=1)
