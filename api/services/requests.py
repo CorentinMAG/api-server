@@ -19,9 +19,9 @@ def filter_requests(params: FilterRequestParams):
     )
 
     if params.get("state") is not None:
-        base = base.filter(TransferRequest.last_state == params["state"])
+        base = base.filter(TransferRequest.last_state == params["state"].upper())
     if params.get("states") is not None:
-        states = params["states"].split(",")
+        states = list(map(lambda x: x.upper(), params["states"].split(",")))
         base = base.filter(TransferRequest.last_state.in_(states))
 
     if params.get("queues") is not None:
@@ -37,16 +37,17 @@ def create_request(policy_id: int, files: list[str]) -> None:
         nrequests: list[TransferRequest] = []
 
         for file in files:
+            # checked nb items in the queue, if the queue is full do not create policy
             nstate = State(state=StateEnum.QUEUED)
             nrequest = TransferRequest(filename=file, states=[nstate])
-            nrequests.append(nrequest)
-
+            nrequests.append(nrequest)     
         npolicy.transfers.extend(nrequests)
         db.session.commit()
         for nrequest in nrequests:
             app.logger.info("[%s] request has been created", nrequest.uid)
     else:
         app.logger.error("policy id: %d doesn't exist", policy_id)
+        raise Exception(" policy does not exists") # create class to format exception
 
 
 def update_request(
@@ -54,11 +55,22 @@ def update_request(
     status: StateEnum,
     reason: str | None = None,
 ) -> None:
+    nstates  = []
     nrequest = cast(TransferRequest, db.session.query(TransferRequest).get(request_id))
-    if nrequest.last_state == StateEnum.FAILED and nrequest.policy.parameters.max_retry == nrequest.nb_retry:
+
+    if status == StateEnum.FAILED and nrequest.policy.parameters.max_retry == nrequest.nb_retry:
         nstate = State(state=StateEnum.CANCELLED, reason="Too many failed attempt")
+        nstates.append(nstate)
+    elif status == StateEnum.FAILED and nrequest.policy.parameters.max_retry > nrequest.nb_retry:
+        nstate_failed = State(state=StateEnum.FAILED, reason=reason)
+        nstate_queued = State(state=StateEnum.QUEUED)
+        nstates.extend([nstate_failed, nstate_queued])
     else:
         nstate = State(state=status, reason=reason)
-    app.logger.info("[%s] request has been updated to state %s", nrequest.uid, nstate.state)
-    nrequest.states.append(nstate)
+        nstates.append(nstate)
+    
+    nrequest.states.extend(nstates)
     db.session.commit()
+    app.logger.info("[%s] request has been updated to state %s", nrequest.uid, nrequest.last_state)
+
+

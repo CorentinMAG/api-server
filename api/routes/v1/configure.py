@@ -22,13 +22,5 @@ def unconfigure():
     delete all records from all tables in the database
     we can specify in the body if we want to delete all transfer requests
     """
-
-    if request.data:
-        payload = request.json
-        delete_requests = payload.get("requests", None)
-        if delete_requests:
-            del_configuration()
-        else:
-            del_configuration(keep=["transfer_requests", "global_parameters"])
     del_configuration(keep=["transfer_requests", "global_parameters"])
     return "", 200

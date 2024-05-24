@@ -54,3 +54,5 @@ def post_policies():
     payload: CreatePoliciesJson = request.json
     policies = payload["policies"]
     create_policies(policies)
+
+    return "", 201

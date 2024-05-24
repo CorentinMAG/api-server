@@ -1,5 +1,6 @@
 from flask import Blueprint
 from api.services.mode import switch_mode, get_mode
+from common.constantes import Mode
 
 bp = Blueprint("mode", __name__, url_prefix="/mode")
 
@@ -9,7 +10,7 @@ def offline():
     """
     set DTR to offline mode
     """
-    switch_mode("offline")
+    switch_mode(Mode.OFFLINE)
     return "", 200
 
 
@@ -19,7 +20,7 @@ def online():
     set DTR to online mode
     """
 
-    switch_mode("online")
+    switch_mode(Mode.ONLINE)
     return "", 200
 
 

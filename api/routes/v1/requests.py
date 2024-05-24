@@ -2,7 +2,7 @@ from flask import Blueprint, request
 from typing import cast
 from api.services.mode import get_mode
 from api.services.requests import filter_requests, create_request, update_request
-from common.constantes import Mode
+from common.constantes import Mode, State
 from common.utils import parse_params
 from common.types.filter import FilterRequestParams
 from common.types.requests import CreateRequestJson, UpdateRequestJson
@@ -58,6 +58,8 @@ def update_requests():
     payload: UpdateRequestJson = request.json
 
     request_id = payload["request_id"]
+    print(payload["status"])
+    
     status = payload["status"]
     reason = payload.get("reason", None)
 

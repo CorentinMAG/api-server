@@ -32,3 +32,5 @@ def trigger():
         "page_size": page_size,
         "total": result.total,
     }, 200
+
+# add route to config worker
