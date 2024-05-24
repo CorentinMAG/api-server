@@ -1,4 +1,4 @@
-from flask import request, Blueprint
+from flask import request, Blueprint, current_app as app
 from api.services.mode import get_mode
 from common.constantes import Mode
 from api.services.requests import filter_requests
@@ -9,6 +9,7 @@ bp = Blueprint("notification", __name__)
 
 @bp.route("/notifications", methods=["GET"])
 def notification():
+    app.logger.info("Get notifications")
     nglobal_parameters = get_mode()
     mode = nglobal_parameters.mode
 

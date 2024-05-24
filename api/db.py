@@ -5,7 +5,7 @@ from flask_sqlalchemy import SQLAlchemy
 from sqlalchemy.orm import DeclarativeBase
 from common.constantes import Mode
 from sqlalchemy import  create_engine
-# from sqlalchemy_utils import database_exits, create_database
+# from sqlalchemy_utils import database_exits, create_database  
 
 
 class Base(DeclarativeBase):
