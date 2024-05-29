@@ -5,7 +5,7 @@ from datetime import datetime
 from sqlalchemy import DateTime, ForeignKey
 from sqlalchemy.orm import Mapped, mapped_column
 from sqlalchemy_serializer import SerializerMixin
-from common.constantes import State as StateEnum
+from dtr_common.constantes import State as StateEnum
 
 from ..db import Base as SQLBase
 

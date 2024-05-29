@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from datetime import datetime
 from typing import TYPE_CHECKING
-from common.constantes import Mode
+from dtr_common.constantes import Mode
 from sqlalchemy import DateTime, ForeignKey
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 from sqlalchemy_serializer import SerializerMixin
@@ -19,7 +19,8 @@ class PeriodicalParameters(SQLBase, SerializerMixin):
     id: Mapped[int] = mapped_column(primary_key=True)
     polling_interval: Mapped[int]
 
-    parameters_id: Mapped[int] = mapped_column(ForeignKey("transfer_parameters.id"))
+    parameters_id: Mapped[int] = mapped_column(ForeignKey("transfer_parameters.id", ondelete='CASCADE'))
+    
 
 
 class TransferParameters(SQLBase, SerializerMixin):

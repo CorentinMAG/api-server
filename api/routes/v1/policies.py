@@ -1,10 +1,10 @@
 from flask import Blueprint, request
 from api.services.mode import get_mode
-from common.constantes import Mode
+from dtr_common.constantes import Mode
 from typing import cast
-from common.types.filter import FilterPolicyParams
-from common.types.requests import CreatePoliciesJson
-from common.utils import parse_params
+from dtr_common.types.filter import FilterPolicyParams
+from dtr_common.types.requests import CreatePoliciesJson
+from dtr_common.utils import parse_params
 from api.services.policies import filter_policies
 from api.services.configuration import create_policies
 from sqlalchemy_pagination import paginate

@@ -1,6 +1,6 @@
 from flask import Blueprint, request
 from api.services.mode import get_mode
-from common.constantes import Mode
+from dtr_common.constantes import Mode
 from api.services.policies import filter_policies
 from sqlalchemy_pagination import paginate
 
@@ -27,7 +27,7 @@ def trigger():
     query = filter_policies(params)
     result = paginate(query, page=page, page_size=page_size)
     return {
-        "policies": [p.to_dict(rules=("-transfers.policy",)) for p in result.items],
+        "policies": [p.to_dict(rules=("-transfers",)) for p in result.items],
         "page": page,
         "page_size": page_size,
         "total": result.total,

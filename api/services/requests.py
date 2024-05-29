@@ -1,7 +1,7 @@
 from typing import cast
 
-from common.constantes import State as StateEnum
-from common.types.filter import FilterRequestParams
+from dtr_common.constantes import State as StateEnum
+from dtr_common.types.filter import FilterRequestParams
 from flask import current_app as app
 
 from ..db import db

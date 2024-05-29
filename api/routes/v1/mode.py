@@ -1,6 +1,6 @@
 from flask import Blueprint
 from api.services.mode import switch_mode, get_mode
-from common.constantes import Mode
+from dtr_common.constantes import Mode
 
 bp = Blueprint("mode", __name__, url_prefix="/mode")
 

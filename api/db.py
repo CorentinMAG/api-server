@@ -3,9 +3,9 @@ import os
 from flask import Flask
 from flask_sqlalchemy import SQLAlchemy
 from sqlalchemy.orm import DeclarativeBase
-from common.constantes import Mode
+from dtr_common.constantes import Mode
 from sqlalchemy import  create_engine
-# from sqlalchemy_utils import database_exits, create_database  
+from sqlalchemy_utils import database_exists, create_database  
 
 
 class Base(DeclarativeBase):
@@ -30,12 +30,12 @@ def init_app(app: Flask):
 
     if create_db is not None and create_db == "true":
         #create database if it does not exists
-        # engine = create_engine(url, echo=true)
-        # if not database_exits(engine.url):
-        #     create_database(engine.url)
-        # else:
-        #     # Connect to the database if exits
-        #     engine.connect()
+        engine = create_engine(url)
+        if not database_exists(engine.url):
+            create_database(engine.url)
+        else:
+            # Connect to the database if exits
+            engine.connect()
 
         with app.app_context():
             db.create_all()

@@ -3,7 +3,8 @@ import os
 from flask import Flask, request
 from werkzeug.exceptions import HTTPException
 
-from .common.logs.logger import create_logger
+
+from dtr_common.logs.logger import create_logger
 from sqlalchemy.exc import SQLAlchemyError
 
 

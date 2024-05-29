@@ -7,7 +7,7 @@ from typing import TYPE_CHECKING
 from sqlalchemy import DateTime, ForeignKey, func, select
 from sqlalchemy.orm import Mapped, column_property, mapped_column, relationship
 from sqlalchemy_serializer import SerializerMixin
-from common.constantes import State as StateEnum
+from dtr_common.constantes import State as StateEnum
 
 from ..db import Base as SQLBase
 from .states import State

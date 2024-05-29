@@ -1,6 +1,6 @@
 from flask import request, Blueprint, current_app as app
 from api.services.mode import get_mode
-from common.constantes import Mode
+from dtr_common.constantes import Mode
 from api.services.requests import filter_requests
 from sqlalchemy_pagination import paginate
 
