@@ -2,10 +2,10 @@ from flask import Blueprint, request
 from typing import cast
 from api.services.mode import get_mode
 from api.services.requests import filter_requests, create_request, update_request
-from common.constantes import Mode
-from common.utils import parse_params
-from common.types.filter import FilterRequestParams
-from common.types.requests import CreateRequestJson, UpdateRequestJson
+from dtr_common.constantes import Mode, State
+from dtr_common.utils import parse_params
+from dtr_common.types.filter import FilterRequestParams
+from dtr_common.types.requests import CreateRequestJson, UpdateRequestJson
 from sqlalchemy_pagination import paginate
 
 bp = Blueprint("requests", __name__)
@@ -58,6 +58,7 @@ def update_requests():
     payload: UpdateRequestJson = request.json
 
     request_id = payload["request_id"]
+    
     status = payload["status"]
     reason = payload.get("reason", None)
 

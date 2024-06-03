@@ -1,4 +1,4 @@
-from common.types.filter import FilterPolicyParams
+from dtr_common.types.filter import FilterPolicyParams
 
 from ..db import db
 from ..models import (
@@ -19,7 +19,7 @@ def filter_policies(params: FilterPolicyParams):
     if params.get("dataType", None) is not None:
         base = base.filter(TransferParameters.data_type == params["dataType"])
     if params.get("type") is not None:
-        base = base.filter(TransferPolicy.type == params["type"])
+        base = base.filter(TransferPolicy.type == params["type"].upper())
     if params.get("src") is not None:
         base = base.join(SourcePolicy).join(Target).filter(Target.name == params["src"])
     if params.get("dest") is not None:

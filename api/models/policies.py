@@ -8,6 +8,7 @@ from sqlalchemy.orm import Mapped, mapped_column, relationship
 from sqlalchemy_serializer import SerializerMixin
 
 from ..db import Base as SQLBase
+from dtr_common.constantes import Type 
 
 if TYPE_CHECKING:
     from .parameters import KafkaParameters, TransferParameters
@@ -45,7 +46,7 @@ class TransferPolicy(SQLBase, SerializerMixin):
     id: Mapped[int] = mapped_column(primary_key=True)
     name: Mapped[str] = mapped_column(String(30), unique=True)
     enabled: Mapped[bool] = mapped_column(default=True)
-    type: Mapped[str]
+    type: Mapped[Type]
 
     kafka: Mapped[list[KafkaParameters]] = relationship()
 

@@ -1,8 +1,9 @@
 from copy import deepcopy
 
-from common.types.configuration import ConfigurationJson, TransferPolicyConf
-from common.types.models import QueueJson, TargetJson, NotificationServerJson
+from dtr_common.types.configuration import ConfigurationJson, TransferPolicyConf
+from dtr_common.types.models import QueueJson, TargetJson, NotificationServerJson
 from typing import cast
+from dtr_common.constantes import Type
 
 from ..db import db
 from ..models import (
@@ -76,12 +77,12 @@ def create_policies(policies: list[TransferPolicyConf]) -> list[TransferPolicy]:
         queue = policy_copy.pop("queue")
 
         tr_name = policy_copy.pop("name")
-        tr_type = policy_copy.pop("type")
+        tr_type = Type[policy_copy.pop("type").upper()]
         tr_enabled = policy_copy.pop("enabled", True)
 
         ntr_params = TransferParameters(**policy_copy)
 
-        if period_params is not None and tr_type == "periodical":
+        if period_params is not None and tr_type == Type.PERIODICAL:
             nperiod_params = PeriodicalParameters(**period_params)
             ntr_params.periodical = nperiod_params
 
