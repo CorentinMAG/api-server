@@ -13,6 +13,7 @@ def create_app():
 
     log_lvl = os.environ.get("DTR_LOG_LEVEL", "INFO")
     version = os.environ["DTR_API_VERSION"]
+    ssystem_version = os.environ["DTR_VERSION"]
 
     app.logger = create_logger("api", log_lvl, "DTR", version)
 

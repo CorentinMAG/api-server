@@ -20,7 +20,6 @@ from ..models import (
     GlobalParameters,
 )
 
-
 def create_servers(servers: list[NotificationServerJson]) -> list[NotificationServer]:
     nservers: list[NotificationServer] = []
     for server in servers:
@@ -80,7 +79,6 @@ def create_policies(policies: list[TransferPolicyConf]) -> list[TransferPolicy]:
         tr_name = policy_copy.pop("name")
         tr_type = Type[policy_copy.pop("type").upper()]
         tr_enabled = policy_copy.pop("enabled", True)
-
         ntr_params = TransferPolicyParameters(**policy_copy)
 
         if period_params is not None and tr_type == Type.PERIODICAL:
@@ -133,6 +131,18 @@ def create_policies(policies: list[TransferPolicyConf]) -> list[TransferPolicy]:
     db.session.commit()
 
     return npolicies
+
+def create_global_params(global_params: GlobalParameters) -> None:
+    """
+        Create global params
+    """
+
+    if global_params is not None:
+        params = GlobalParameters(**global_params)
+        db.session.add(params)
+        db.session.commit()
+    return 
+
 
 
 def create_global_params(global_params: GlobalParameters) -> GlobalParameters:

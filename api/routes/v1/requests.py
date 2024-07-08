@@ -63,7 +63,6 @@ def update_requests():
     payload: UpdateRequestJson = request.json
 
     request_id = payload["request_id"]
-    
     status = payload["status"]
     sub_status = payload.get("sub_status", None)
     failure_reason = payload.get("failure_reason", None)

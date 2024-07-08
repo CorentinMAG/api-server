@@ -9,7 +9,6 @@ from api.services.filters import set_transfer_policy_params
 import datetime
 from sqlalchemy import or_
 
-
 def filter_requests(params: FilterRequestParams):
     base = (
         db.session.query(TransferRequest)
