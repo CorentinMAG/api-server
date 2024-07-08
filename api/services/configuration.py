@@ -20,6 +20,7 @@ from ..models import (
     GlobalParameters,
 )
 
+
 def create_servers(servers: list[NotificationServerJson]) -> list[NotificationServer]:
     nservers: list[NotificationServer] = []
     for server in servers:
@@ -132,17 +133,16 @@ def create_policies(policies: list[TransferPolicyConf]) -> list[TransferPolicy]:
 
     return npolicies
 
-def create_global_params(global_params: GlobalParameters) -> None:
+
+def create_global_params(global_params: GlobalParameters) -> GlobalParameters:
     """
-        Create global params
+    Create global params
     """
 
-    if global_params is not None:
-        params = GlobalParameters(**global_params)
-        db.session.add(params)
-        db.session.commit()
-    return 
-
+    nparams = GlobalParameters(**global_params)
+    db.session.add(nparams)
+    db.session.commit()
+    return nparams
 
 
 def create_global_params(global_params: GlobalParameters) -> GlobalParameters:

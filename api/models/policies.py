@@ -64,9 +64,7 @@ class TransferPolicy(SQLBase, SerializerMixin):
     queue: Mapped[Queue] = relationship()
     transfers: Mapped[list[TransferRequest]] = relationship(back_populates="policy")
     created_at: Mapped[str] = mapped_column(DateTime, default=datetime.utcnow)
-  
 
     @property
     def has_notifications(self) -> bool:
         return bool(self.kafka)
-    

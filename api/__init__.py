@@ -13,7 +13,6 @@ def create_app():
 
     log_lvl = os.environ.get("DTR_LOG_LEVEL", "INFO")
     version = os.environ["DTR_API_VERSION"]
-    ssystem_version = os.environ["DTR_VERSION"]
 
     app.logger = create_logger("api", log_lvl, "DTR", version)
 
@@ -30,11 +29,11 @@ def create_app():
         response = e.get_response()
         app.logger.error(e.description)
         return response
-    
+
     @app.errorhandler(SQLAlchemyError)
     def handle_sql_exception(e: SQLAlchemyError):
         app.logger.error(e)
-        return "", 500
+        return {"error": str(e)}
 
     @app.errorhandler(SQLAlchemyError)
     def handle_sql_exception(e: SQLAlchemyError):
