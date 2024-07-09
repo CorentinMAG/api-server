@@ -3,7 +3,7 @@ stages:
   - delivery
 
 variables:
-  DTR_VERSION: 1.1.0
+  DTR_VERSION: 1.1.5
   GIT_SUBMODULE_STRATEGY: recursive
 
 .configure_alpine: &configure_alpine
