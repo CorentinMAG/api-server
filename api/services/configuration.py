@@ -80,7 +80,6 @@ def create_policies(policies: list[TransferPolicyConf]) -> list[TransferPolicy]:
         tr_name = policy_copy.pop("name")
         tr_type = Type[policy_copy.pop("type").upper()]
         tr_enabled = policy_copy.pop("enabled", True)
-
         ntr_params = TransferPolicyParameters(**policy_copy)
 
         if period_params is not None and tr_type == Type.PERIODICAL:
@@ -133,6 +132,17 @@ def create_policies(policies: list[TransferPolicyConf]) -> list[TransferPolicy]:
     db.session.commit()
 
     return npolicies
+
+
+def create_global_params(global_params: GlobalParameters) -> GlobalParameters:
+    """
+    Create global params
+    """
+
+    nparams = GlobalParameters(**global_params)
+    db.session.add(nparams)
+    db.session.commit()
+    return nparams
 
 
 def create_global_params(global_params: GlobalParameters) -> GlobalParameters:

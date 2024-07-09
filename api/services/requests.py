@@ -187,6 +187,7 @@ def update_request(
         nstates.append(nstate)
     nrequest.states.extend(nstates)
     nrequest.nb_retry = nb_retry
+    nrequest.next_retry_min_time = next_retry_min_time
     db.session.commit()
     app.logger.debug(
         "[%s] request has been updated to state %s", nrequest.uid, nrequest.last_state.value.upper()
