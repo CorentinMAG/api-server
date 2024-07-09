@@ -12,7 +12,6 @@ def update_parameters():
     """
     payload: UpdateParamsJson = request.json
     payload = request.json
-
     param_id = payload["param_id"]
     next_polling_min_time = payload["next_polling_min_time"]
     update_params(param_id, next_polling_min_time)

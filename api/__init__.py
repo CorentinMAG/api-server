@@ -35,6 +35,11 @@ def create_app():
         app.logger.error(e)
         return {"error": str(e)}
 
+    @app.errorhandler(SQLAlchemyError)
+    def handle_sql_exception(e: SQLAlchemyError):
+        app.logger.error(e)
+        return {"error": str(e)}
+
     @app.before_request
     def log_request():
         body = request.json if request.is_json else "NO BODY"
