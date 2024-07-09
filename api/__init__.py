@@ -3,7 +3,9 @@ import os
 from flask import Flask, request
 from werkzeug.exceptions import HTTPException
 
-from .common.logs.logger import create_logger
+
+from dtr_common.logs.logger import create_logger
+from sqlalchemy.exc import SQLAlchemyError
 
 
 def create_app():
@@ -23,10 +25,15 @@ def create_app():
         return {"message": "healthy"}
 
     @app.errorhandler(HTTPException)
-    def handle_exception(e: HTTPException):
+    def handle_http_exception(e: HTTPException):
         response = e.get_response()
         app.logger.error(e.description)
         return response
+
+    @app.errorhandler(SQLAlchemyError)
+    def handle_sql_exception(e: SQLAlchemyError):
+        app.logger.error(e)
+        return {"error": str(e)}
 
     @app.before_request
     def log_request():

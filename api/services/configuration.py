@@ -1,20 +1,23 @@
 from copy import deepcopy
 
-from common.types.configuration import ConfigurationJson, TransferPolicyConf
-from common.types.models import QueueJson, TargetJson, NotificationServerJson
+from dtr_common.types.configuration import ConfigurationJson, TransferPolicyConf
+from dtr_common.types.models import QueueJson, TargetJson, NotificationServerJson
+from typing import cast
+from dtr_common.constantes import Type
 
 from ..db import db
 from ..models import (
     Credentials,
     DestinationPolicy,
-    KafkaParameters,
+    KafkaTopicParameters,
     NotificationServer,
     PeriodicalParameters,
     Queue,
     SourcePolicy,
     Target,
-    TransferParameters,
+    TransferPolicyParameters,
     TransferPolicy,
+    GlobalParameters,
 )
 
 
@@ -58,9 +61,9 @@ def create_targets(targets: list[TargetJson]) -> list[Target]:
 
 def create_policies(policies: list[TransferPolicyConf]) -> list[TransferPolicy]:
     # prerequisities
-    nqueues = db.session.query(Queue).all()
-    ntargets = db.session.query(Target).all()
-    nservers = db.session.query(NotificationServer).all()
+    nqueues = cast(list[Queue], db.session.query(Queue).all())
+    ntargets = cast(list[Target], db.session.query(Target).all())
+    nservers = cast(list[NotificationServer], db.session.query(NotificationServer).all())
 
     npolicies: list[TransferPolicy] = []
 
@@ -75,12 +78,12 @@ def create_policies(policies: list[TransferPolicyConf]) -> list[TransferPolicy]:
         queue = policy_copy.pop("queue")
 
         tr_name = policy_copy.pop("name")
-        tr_type = policy_copy.pop("type")
+        tr_type = Type[policy_copy.pop("type").upper()]
         tr_enabled = policy_copy.pop("enabled", True)
 
-        ntr_params = TransferParameters(**policy_copy)
+        ntr_params = TransferPolicyParameters(**policy_copy)
 
-        if period_params is not None and tr_type == "periodical":
+        if period_params is not None and tr_type == Type.PERIODICAL:
             nperiod_params = PeriodicalParameters(**period_params)
             ntr_params.periodical = nperiod_params
 
@@ -116,9 +119,9 @@ def create_policies(policies: list[TransferPolicyConf]) -> list[TransferPolicy]:
                     if topics is not None:
                         for topic in topics:
                             if isinstance(topic, dict):
-                                nparameters = KafkaParameters(**topic)
+                                nparameters = KafkaTopicParameters(**topic)
                             else:
-                                nparameters = KafkaParameters(topic=topic)
+                                nparameters = KafkaTopicParameters(topic=topic)
                             nparameters.server_id = nserver.id
                             npolicy.kafka.append(nparameters)
                 else:
@@ -132,7 +135,22 @@ def create_policies(policies: list[TransferPolicyConf]) -> list[TransferPolicy]:
     return npolicies
 
 
+def create_global_params(global_params: GlobalParameters) -> GlobalParameters:
+    """
+    Create global params
+    """
+
+    nparams = GlobalParameters(**global_params)
+    db.session.add(nparams)
+    db.session.commit()
+    return nparams
+
+
 def configure(payload: ConfigurationJson):
+    global_params = payload.get("global_parameters", None)
+    if global_params is not None:
+        create_global_params(global_params)
+
     servers = payload.get("notification_servers", None)
     if servers is not None:
         create_servers(servers)

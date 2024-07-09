@@ -2,7 +2,6 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING
 
-from sqlalchemy import Integer, String
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 from sqlalchemy_serializer import SerializerMixin
 
@@ -16,8 +15,8 @@ class Target(SQLBase, SerializerMixin):
     __tablename__ = "targets"
 
     id: Mapped[int] = mapped_column(primary_key=True)
-    name: Mapped[str] = mapped_column(String(30), unique=True)
-    protocol: Mapped[str] = mapped_column(String(10))
-    port: Mapped[int] = mapped_column(Integer)
-    host: Mapped[str] = mapped_column(String(50))
+    name: Mapped[str] = mapped_column(unique=True)
+    protocol: Mapped[str]
+    port: Mapped[int]
+    host: Mapped[str]
     credentials: Mapped[Credentials] = relationship()

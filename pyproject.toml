@@ -9,6 +9,7 @@ target-version = "py310"
 
 [tool.ruff.lint]
 extend-select = ["E501"]
+exclude = ["migrations/**/*.py"]
 
 [tool.ruff.lint.isort]
 required-imports = ["from __future__ import annotations"]

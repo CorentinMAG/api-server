@@ -1,4 +1,0 @@
-[submodule "api/common"]
-	path = api/common
-	url = https://aforge-frdr.biz.nstd.fr.airbusds.corp/gitlab/dtr/common.git
-	branch = dev

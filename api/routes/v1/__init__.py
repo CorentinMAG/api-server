@@ -5,6 +5,7 @@ from . import policies
 from . import requests
 from . import notifications
 from . import trigger
+from . import parameters
 
 v1 = Blueprint("api_v1", __name__)
 
@@ -14,3 +15,4 @@ v1.register_blueprint(policies.bp)
 v1.register_blueprint(requests.bp)
 v1.register_blueprint(notifications.bp)
 v1.register_blueprint(trigger.bp)
+v1.register_blueprint(parameters.bp)
