@@ -10,6 +10,25 @@ import datetime
 from sqlalchemy import or_
 
 
+def get_next_request(session):
+    request = (session
+               .query(TransferRequest)
+               .join(TransferPolicy)
+               .join(Queue)
+               .join(State)
+               .order_by(Queue.priority.asc())
+               .order_by(TransferRequest.created_at.asc())
+               .filter(TransferRequest.last_state.in_([StateEnum.QUEUED, StateEnum.FAILED]))
+               .filter(or_(
+                TransferRequest.next_retry_min_time.is_(None),
+                TransferRequest.next_retry_min_time <= datetime.datetime.utcnow(),
+            ))
+            .with_for_update(skip_locked=True)
+            .first()
+    )
+    return request
+
+
 def filter_requests(params: FilterRequestParams):
     base = (
         db.session.query(TransferRequest)
@@ -27,15 +46,6 @@ def filter_requests(params: FilterRequestParams):
         base = base.filter(TransferRequest.last_state.in_(states))
     if params.get("sub_state") is not None:
         base = base.filter(TransferRequest.last_sub_state == params["sub_state"].upper())
-
-    if params.get("next_retry_min_time") is not None and params.get("next_retry_min_time") is True:
-        base = base.filter(
-            or_(
-                TransferRequest.next_retry_min_time.is_(None),
-                TransferRequest.next_retry_min_time <= datetime.datetime.utcnow(),
-            )
-        )
-
     if params.get("queues") is not None:
         queues = params["queues"].split(",")
         base = base.filter(Queue.name.in_(queues))

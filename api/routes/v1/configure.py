@@ -28,5 +28,5 @@ def unconfigure():
     we can specify in the body if we want to delete all transfer requests
     """
     app.logger.info("Delete configuration")
-    del_configuration(keep=["transfer_requests", "global_parameters"])
+    del_configuration(keep=["transfer_requests"])
     return "Configuration was deleted", 200
