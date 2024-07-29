@@ -16,12 +16,12 @@ def trigger():
     """
 
     nglobal_parameters = get_params()
-    if nglobal_parameters.mode == Mode.OFFLINE:
+    if nglobal_parameters is None or nglobal_parameters.mode == Mode.OFFLINE:
         return {
             "policies": [],
             "page": 0,
             "page_size": 0,
-            "total": -1,
+            "total": -1
         }
     else:
         page = request.args.get("page", type=int, default=1)
