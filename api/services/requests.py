@@ -64,6 +64,7 @@ def create_request(policy_id: int, dict_files: list[dict]) -> None:
     npolicy = set_transfer_policy_params(policy_id)
 
     queue_limit = npolicy.queue.queue_limit
+    queue_threshold = npolicy.queue.queue_threshold
     queue_timeout = npolicy.queue.queue_timeout
     retransfer_successfull_data = npolicy.parameters.only_new_data
     src_path = npolicy.src.path
@@ -76,41 +77,14 @@ def create_request(policy_id: int, dict_files: list[dict]) -> None:
     queued_requests = list(filter(lambda x: x.last_state == StateEnum.QUEUED, transfer_requests))
     failed_requests = list(filter(lambda x: x.last_state == StateEnum.FAILED, transfer_requests))
     successful_requests = list(filter(lambda x: x.last_state == StateEnum.SUCCESSFUL, transfer_requests))
-    # cancelled_requests = list(filter(lambda x: x.last_state == StateEnum.CANCELLED, transfer_requests))
+    cancelled_requests = list(filter(lambda x: x.last_state == StateEnum.CANCELLED, transfer_requests))
     in_progress_requests = list(filter(lambda x: x.last_state == StateEnum.IN_PROGRESS, transfer_requests))
 
-    # Check if transfer requests reached queue timeout
-    tr_in_queue = queued_requests + failed_requests + in_progress_requests
-    for tr in tr_in_queue:
-        tr_age = datetime.datetime.utcnow() - tr.created_at
-        tr_age = tr_age.total_seconds()
-        src_url = src_path + "/" + tr.filename
-        dest_url = dest_path + "/" + tr.filename
-
-        if tr_age > queue_timeout:
-            db.session.query(State).filter(State.request_id == tr.id).update(
-                {
-                    State.state: StateEnum.CANCELLED,
-                    State.failure_reason: "queued timeout",
-                    State.sub_state: SubStateEnum.NOTIFY,
-                }
-            )
-            db.session.commit()
-            app.logger.info(
-                "Cancel of data transfer: uid: %s, source: %s, source_url: %s,\
-                destination: %s, destination_url: %s, filename: %s, reason: queue timeout",
-                tr.uid,
-                src_path,
-                src_url,
-                dest_name,
-                dest_url,
-                tr.filename,
-            )
 
     successful_files = list(map(lambda x: x.filename, successful_requests))
     queued_files = list(map(lambda x: x.filename, queued_requests))
     failed_files = list(map(lambda x: x.filename, failed_requests))
-    # cancelled_files = list(map(lambda x: x.filename, cancelled_requests))
+    cancelled_files = list(map(lambda x: x.filename, cancelled_requests))
     in_progress_files = list(map(lambda x: x.filename, in_progress_requests))
 
     data_to_transfer = []
@@ -131,7 +105,7 @@ def create_request(policy_id: int, dict_files: list[dict]) -> None:
         data_to_transfer = dict_files
 
     # Remove data already in the queue
-    files_already_in_queue = queued_files + failed_files + in_progress_files
+    files_already_in_queue = queued_files + failed_files + in_progress_files + cancelled_files
     if len(files_already_in_queue) > 0:
         dict_files_already_in_queue = list(filter(lambda f: f["file"] in files_already_in_queue, dict_files))
         data_to_transfer = [i for i in dict_files_already_in_queue if i not in dict_files] + [
@@ -143,8 +117,38 @@ def create_request(policy_id: int, dict_files: list[dict]) -> None:
             )
         )
 
+    # Check if there are transfer requests which reached queue timeout
+    tr_in_queue = queued_requests + failed_requests + in_progress_requests
+    for tr in tr_in_queue:
+        tr_age = datetime.datetime.utcnow() - tr.created_at
+        tr_age = tr_age.total_seconds()
+        src_url = src_path + "/" + tr.filename
+        dest_url = dest_path + "/" + tr.filename
+
+        if tr_age > queue_timeout:
+            nstate = State(state=StateEnum.CANCELLED.value.upper(), sub_state=SubStateEnum.NOTIFY.value.upper(), 
+                       failure_reason="Transfer timed-out in queued")
+            nrequest = cast(TransferRequest, db.session.query(TransferRequest).get(tr.id))
+            nrequest.states.append(nstate)
+            db.session.commit()
+            app.logger.info(
+                "Cancel of data transfer: uid: %s, source: %s, source_url: %s,\
+                destination: %s, destination_url: %s, filename: %s, reason: queue timeout",
+                tr.uid,
+                src_path,
+                src_url,
+                dest_name,
+                dest_url,
+                tr.filename,
+            )
+ 
     # Add nb tr below queue limit
     available_slots = queue_limit - len(tr_in_queue)  # nb slots available in the queue
+    
+    # Send log when reach queue threshold
+    if available_slots == queue_threshold:
+        app.logger.info("Queue threshold is reached !")
+
     remaining_data_to_transfer = list(map(lambda x: x["file"], data_to_transfer))
 
     if available_slots > 0:
@@ -159,7 +163,7 @@ def create_request(policy_id: int, dict_files: list[dict]) -> None:
             if available_slots == 0:
                 app.logger.info("Queue limit reached")
                 break
-
+        
         npolicy.transfers.extend(nrequests)
         db.session.commit()
         for nrequest in nrequests:
@@ -190,7 +194,7 @@ def update_request(
     elif status == StateEnum.FAILED.value.upper() and nb_retry >= max_retry:
         app.logger.debug("Max retry is reached !")
         nstate = State(state=StateEnum.CANCELLED.value.upper(), sub_state=SubStateEnum.NOTIFY.value.upper(), 
-                       failure_reason= "Reached max retry")
+                       failure_reason= "Transfer failure despite retries.")
         nstates.append(nstate)
     else:
         nstate = State(state=status, sub_state=sub_status, failure_reason=failure_reason)
