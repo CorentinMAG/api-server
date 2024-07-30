@@ -46,6 +46,10 @@ def set_transfer_policy_params(policy_id: int) -> TransferPolicy:
         tr_policy.parameters.transfer_timeout = global_params.transfer_timeout
     elif tr_policy.queue.queue_timeout is None:
         tr_policy.queue.queue_timeout = global_params.queue_timeout
+    elif tr_policy.queue.queue_limit is None:
+        tr_policy.queue.queue_limit = global_params.queue_limit
+    elif tr_policy.queue.queue_threshold is None:
+        tr_policy.queue.queue_threshold = global_params.queue_threshold
     else:
         pass
 

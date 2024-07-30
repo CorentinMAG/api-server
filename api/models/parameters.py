@@ -55,6 +55,8 @@ class GlobalParameters(SQLBase, SerializerMixin):
     transfer_timeout: Mapped[int] = mapped_column(default=300)  # in seconds
     queue_timeout: Mapped[int] = mapped_column(default=86400)  # in seconds
     polling_interval: Mapped[int] = mapped_column(default=10)  # in seconds
+    queue_limit: Mapped[int] = mapped_column(default=100)
+    queue_threshold: Mapped[int] = mapped_column(default=80)
 
 
 class KafkaTopicParameters(SQLBase, SerializerMixin):
