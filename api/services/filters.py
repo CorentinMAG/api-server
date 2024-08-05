@@ -26,31 +26,30 @@ def set_transfer_policy_params(policy_id: int) -> TransferPolicy:
 
     if tr_policy is None:
         app.logger.error("Policy id: %d doesn't exist", policy_id)
-        raise Exception("Policy does not exists")  # create class to format exception
-
-    if not tr_policy.parameters.only_new_data:
-        tr_policy.parameters.only_new_data = global_params.only_new_data
-    elif tr_policy.dest.tmp_prefix_dest is None:
-        tr_policy.dest.tmp_prefix_dest = global_params.tmp_prefix_dest
-    elif tr_policy.dest.final_prefix_dest is None:
-        tr_policy.dest.final_prefix_dest = global_params.final_prefix_dest
-    elif tr_policy.parameters.max_retry is None:
-        tr_policy.parameters.max_retry = global_params.max_retry
-    elif tr_policy.parameters.retry_delay is None:
-        tr_policy.parameters.retry_delay = global_params.retry_delay
-    elif tr_policy.parameters.transfer_requests_history is None:
-        tr_policy.parameters.transfer_requests_history = global_params.transfer_requests_history
-    elif not tr_policy.parameters.compress:
-        tr_policy.parameters.compress = global_params.compress
-    elif tr_policy.parameters.transfer_timeout is None:
-        tr_policy.parameters.transfer_timeout = global_params.transfer_timeout
-    elif tr_policy.queue.queue_timeout is None:
-        tr_policy.queue.queue_timeout = global_params.queue_timeout
-    elif tr_policy.queue.queue_limit is None:
-        tr_policy.queue.queue_limit = global_params.queue_limit
-    elif tr_policy.queue.queue_threshold is None:
-        tr_policy.queue.queue_threshold = global_params.queue_threshold
     else:
-        pass
+        if not tr_policy.parameters.only_new_data:
+            tr_policy.parameters.only_new_data = global_params.only_new_data
+        elif tr_policy.dest.tmp_prefix_dest is None:
+            tr_policy.dest.tmp_prefix_dest = global_params.tmp_prefix_dest
+        elif tr_policy.dest.final_prefix_dest is None:
+            tr_policy.dest.final_prefix_dest = global_params.final_prefix_dest
+        elif tr_policy.parameters.max_retry is None:
+            tr_policy.parameters.max_retry = global_params.max_retry
+        elif tr_policy.parameters.retry_delay is None:
+            tr_policy.parameters.retry_delay = global_params.retry_delay
+        elif tr_policy.parameters.transfer_requests_history is None:
+            tr_policy.parameters.transfer_requests_history = global_params.transfer_requests_history
+        elif not tr_policy.parameters.compress:
+            tr_policy.parameters.compress = global_params.compress
+        elif tr_policy.parameters.transfer_timeout is None:
+            tr_policy.parameters.transfer_timeout = global_params.transfer_timeout
+        elif tr_policy.queue.queue_timeout is None:
+            tr_policy.queue.queue_timeout = global_params.queue_timeout
+        elif tr_policy.queue.queue_limit is None:
+            tr_policy.queue.queue_limit = global_params.queue_limit
+        elif tr_policy.queue.queue_threshold is None:
+            tr_policy.queue.queue_threshold = global_params.queue_threshold
+        else:
+            pass
 
     return tr_policy
