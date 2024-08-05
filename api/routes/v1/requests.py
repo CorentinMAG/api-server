@@ -53,7 +53,9 @@ def new_requests():
     policy_id = payload["policy"]
 
     create_request(policy_id, files)
-    return "Request successffully created", 201
+
+    return "Requests successffully created", 201
+
 
 
 @bp.route("/requests", methods=["PUT"])
