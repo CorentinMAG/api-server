@@ -1,14 +1,16 @@
 from dtr_common.types.filter import FilterPolicyParams
-
+from sqlalchemy import or_
 from ..db import db
 from ..models import (
     DestinationPolicy,
     Queue,
     SourcePolicy,
     Target,
-    TransferParameters,
+    TransferPolicyParameters,
     TransferPolicy,
+    PeriodicalParameters,
 )
+import datetime
 
 
 def filter_policies(params: FilterPolicyParams):
@@ -17,7 +19,7 @@ def filter_policies(params: FilterPolicyParams):
     if params.get("enabled") is not None:
         base = base.filter(TransferPolicy.enabled == params["enabled"])
     if params.get("dataType", None) is not None:
-        base = base.filter(TransferParameters.data_type == params["dataType"])
+        base = base.filter(TransferPolicyParameters.data_type == params["dataType"])
     if params.get("type") is not None:
         base = base.filter(TransferPolicy.type == params["type"].upper())
     if params.get("src") is not None:
@@ -33,6 +35,17 @@ def filter_policies(params: FilterPolicyParams):
         policies_id = params["ids"].split(",")
         policies_id = map(lambda i: int(i), policies_id)
         base = base.filter(TransferPolicy.id.in_(policies_id))
+    if params.get("next_polling_min_time") is not None and params.get("next_polling_min_time") is True:
+        base = (
+            base.join(TransferPolicyParameters)
+            .join(PeriodicalParameters)
+            .filter(
+                or_(
+                    PeriodicalParameters.next_polling_min_time.is_(None),
+                    PeriodicalParameters.next_polling_min_time <= datetime.datetime.utcnow(),
+                )
+            )
+        )
     base.order_by(TransferPolicy.created_at)
 
     return base

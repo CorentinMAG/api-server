@@ -1,5 +1,5 @@
 from flask import Blueprint, request
-from api.services.mode import get_mode
+from api.services.filters import get_params
 from dtr_common.constantes import Mode
 from typing import cast
 from dtr_common.types.filter import FilterPolicyParams
@@ -27,11 +27,10 @@ def policies():
     - dest
     """
 
-    nglobal_parameters = get_mode()
-    mode = nglobal_parameters.mode
+    nglobal_parameters = get_params()
 
-    if mode == Mode.OFFLINE:
-        return {"policies": []}
+    if nglobal_parameters is None or nglobal_parameters.mode == Mode.OFFLINE:
+        return {"policies": [], "page": 0, "page_size": 0, "total": -1}
 
     page = request.args.get("page", type=int, default=1)
     page_size = request.args.get("page_size", type=int, default=10)

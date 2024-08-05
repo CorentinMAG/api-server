@@ -5,7 +5,8 @@ ARG AFORGE_HOST \
     AFORGE_USER \
     AFORGE_PIP_REPO \
 	AFORGE_ALPINE_REPO \
-    DOCKER_TAG
+    DOCKER_TAG \
+    AFORGE_PIP_DTR
 
 ENV DTR_DB_NAME=dtr \
     DTR_DB_USER=** \
@@ -13,6 +14,7 @@ ENV DTR_DB_NAME=dtr \
     DTR_DB_HOST=localhost \
     DTR_DB_PORT=5432 \
     DTR_API_VERSION=$DOCKER_TAG \
+    DTR_VERSION=1.2.0 \
     DTR_DB_CREATE=false \
     DTR_LOG_LEVEL=INFO
 
@@ -33,6 +35,7 @@ RUN apk --no-check-certificate update && \
 
 RUN echo "[global]" > /etc/pip.conf && \
 	echo "index-url = https://${AFORGE_USER}:${AFORGE_PASSWORD}@${AFORGE_HOST}/artifactory/api/pypi/${AFORGE_PIP_REPO}/simple" >> /etc/pip.conf && \
+    echo "extra-index-url = https://${AFORGE_USER}:${AFORGE_PASSWORD}@${AFORGE_HOST}/artifactory/api/pypi/${AFORGE_PIP_DTR}/simple" >> /etc/pip.conf && \ 
 	echo "trusted-host = ${AFORGE_HOST}" >> /etc/pip.conf
 
 COPY ./ ./

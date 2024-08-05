@@ -9,14 +9,15 @@ from ..db import db
 from ..models import (
     Credentials,
     DestinationPolicy,
-    KafkaParameters,
+    KafkaTopicParameters,
     NotificationServer,
     PeriodicalParameters,
     Queue,
     SourcePolicy,
     Target,
-    TransferParameters,
+    TransferPolicyParameters,
     TransferPolicy,
+    GlobalParameters,
 )
 
 
@@ -79,8 +80,7 @@ def create_policies(policies: list[TransferPolicyConf]) -> list[TransferPolicy]:
         tr_name = policy_copy.pop("name")
         tr_type = Type[policy_copy.pop("type").upper()]
         tr_enabled = policy_copy.pop("enabled", True)
-
-        ntr_params = TransferParameters(**policy_copy)
+        ntr_params = TransferPolicyParameters(**policy_copy)
 
         if period_params is not None and tr_type == Type.PERIODICAL:
             nperiod_params = PeriodicalParameters(**period_params)
@@ -118,9 +118,9 @@ def create_policies(policies: list[TransferPolicyConf]) -> list[TransferPolicy]:
                     if topics is not None:
                         for topic in topics:
                             if isinstance(topic, dict):
-                                nparameters = KafkaParameters(**topic)
+                                nparameters = KafkaTopicParameters(**topic)
                             else:
-                                nparameters = KafkaParameters(topic=topic)
+                                nparameters = KafkaTopicParameters(topic=topic)
                             nparameters.server_id = nserver.id
                             npolicy.kafka.append(nparameters)
                 else:
@@ -134,7 +134,33 @@ def create_policies(policies: list[TransferPolicyConf]) -> list[TransferPolicy]:
     return npolicies
 
 
+def create_global_params(global_params: GlobalParameters) -> GlobalParameters:
+    """
+    Create global params
+    """
+
+    nparams = GlobalParameters(**global_params)
+    db.session.add(nparams)
+    db.session.commit()
+    return nparams
+
+
+def create_global_params(global_params: GlobalParameters) -> GlobalParameters:
+    """
+    Create global params
+    """
+
+    nparams = GlobalParameters(**global_params)
+    db.session.add(nparams)
+    db.session.commit()
+    return nparams
+
+
 def configure(payload: ConfigurationJson):
+    global_params = payload.get("global_parameters", None)
+    if global_params is not None:
+        create_global_params(global_params)
+
     servers = payload.get("notification_servers", None)
     if servers is not None:
         create_servers(servers)

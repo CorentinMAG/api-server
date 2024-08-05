@@ -1,9 +1,9 @@
 from .credentials import Credentials
 from .parameters import (
     GlobalParameters,
-    KafkaParameters,
+    KafkaTopicParameters,
     PeriodicalParameters,
-    TransferParameters,
+    TransferPolicyParameters,
 )
 from .policies import DestinationPolicy, SourcePolicy, TransferPolicy
 from .queue import Queue
@@ -21,8 +21,8 @@ __all__ = [
     "SourcePolicy",
     "DestinationPolicy",
     "GlobalParameters",
-    "TransferParameters",
-    "KafkaParameters",
+    "TransferPolicyParameters",
+    "KafkaTopicParameters",
     "PeriodicalParameters",
     "TransferRequest",
     "State",

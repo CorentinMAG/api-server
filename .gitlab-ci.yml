@@ -3,8 +3,7 @@ stages:
   - delivery
 
 variables:
-  DTR_VERSION: 1.1.5
-  GIT_SUBMODULE_STRATEGY: recursive
+  DTR_VERSION: 1.2.1rc1
 
 .configure_alpine: &configure_alpine
   - echo "https://${AFORGE_USER}:${AFORGE_PASSWORD}@${AFORGE_HOST}/artifactory/${AFORGE_ALPINE_REPO}/main" > /etc/apk/repositories
@@ -28,6 +27,7 @@ build:docker:
       --build-arg=AFORGE_USER
       --build-arg=AFORGE_PASSWORD
       --build-arg=AFORGE_PIP_REPO
+      --build-arg=AFORGE_PIP_DTR
       --build-arg=AFORGE_ALPINE_REPO
       --build-arg DOCKER_TAG=${CI_COMMIT_TAG}
       --context "${CI_PROJECT_DIR}"
