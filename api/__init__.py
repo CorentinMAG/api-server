@@ -35,13 +35,8 @@ def create_app():
         app.logger.error(e)
         return "", 500
 
-    @app.errorhandler(SQLAlchemyError)
-    def handle_sql_exception(e: SQLAlchemyError):
-        app.logger.error(e)
-        return {"error": str(e)}
-
-    @app.errorhandler(SQLAlchemyError)
-    def handle_sql_exception(e: SQLAlchemyError):
+    @app.errorhandler(Exception)
+    def handle_exception(e: Exception):
         app.logger.error(e)
         return {"error": str(e)}
 
