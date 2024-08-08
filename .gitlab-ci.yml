@@ -3,7 +3,7 @@ stages:
   - delivery
 
 variables:
-  DTR_VERSION: 1.2.1rc1
+  DTR_VERSION: 1.2.1rc2
 
 .configure_alpine: &configure_alpine
   - echo "https://${AFORGE_USER}:${AFORGE_PASSWORD}@${AFORGE_HOST}/artifactory/${AFORGE_ALPINE_REPO}/main" > /etc/apk/repositories
