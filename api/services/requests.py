@@ -67,7 +67,6 @@ def create_request(policy_id: int, dict_files: list[dict]) -> None:
         queue_limit = npolicy.queue.queue_limit
         queue_threshold = npolicy.queue.queue_threshold
         queue_timeout = npolicy.queue.queue_timeout
-        retransfer_successfull_data = npolicy.parameters.only_new_data
         src_path = npolicy.src.path
         dest_path = npolicy.dest.path
         dest_name = npolicy.dest.target.name
@@ -81,11 +80,11 @@ def create_request(policy_id: int, dict_files: list[dict]) -> None:
         cancelled_requests = list(filter(lambda x: x.last_state == StateEnum.CANCELLED, transfer_requests))
         in_progress_requests = list(filter(lambda x: x.last_state == StateEnum.IN_PROGRESS, transfer_requests))
 
-        successful_files = list(map(lambda x: x.filename, successful_requests))
-        queued_files = list(map(lambda x: x.filename, queued_requests))
-        failed_files = list(map(lambda x: x.filename, failed_requests))
-        cancelled_files = list(map(lambda x: x.filename, cancelled_requests))
-        in_progress_files = list(map(lambda x: x.filename, in_progress_requests))
+        successful_files = list(map(lambda x: {"file": x.filename, "size": x.size}, successful_requests))
+        queued_files = list(map(lambda x: {"file": x.filename, "size": x.size}, queued_requests))
+        failed_files = list(map(lambda x: {"file": x.filename, "size": x.size}, failed_requests))
+        cancelled_files = list(map(lambda x: {"file": x.filename, "size": x.size}, cancelled_requests))
+        in_progress_files = list(map(lambda x: {"file": x.filename, "size": x.size}, in_progress_requests))
 
         data_to_transfer = []
 
@@ -121,31 +120,35 @@ def create_request(policy_id: int, dict_files: list[dict]) -> None:
                     pass
 
         # Remove data already successfully transferred on option
-        successful_transfer_data = list(filter(lambda f: f["file"]  in successful_files , dict_files))
-        if retransfer_successfull_data:
-            data_to_transfer = [i for i in successful_transfer_data if i not in dict_files] + [
-                j for j in dict_files if j not in successful_transfer_data
-            ]
-            app.logger.info(
-                "Not transferring twice the same data: {}, {}".format(
-                    successful_transfer_data, len(successful_transfer_data)
-                )
-            )
-        else:
-            data_to_transfer = dict_files
-    
-        # Remove data already in the queue
         files_already_in_queue = queued_files + failed_files + in_progress_files + cancelled_files
-        if len(files_already_in_queue) > 0:
-            dict_files_already_in_queue = list(filter(lambda f: f["file"] in files_already_in_queue, dict_files))
-            data_to_transfer = [i for i in dict_files_already_in_queue if i not in dict_files] + [
-                j for j in dict_files if j not in dict_files_already_in_queue
-            ]
+        successful_in_dict_files = list(filter(lambda f: f in successful_files , dict_files))
+        queued_in_dict_files = list(filter(lambda f: f in files_already_in_queue, dict_files))
+
+        if len(successful_in_dict_files) > 0:
+                app.logger.info(
+                    "Not transferring twice the same data: {}, {}".format(
+                        successful_in_dict_files, len(successful_in_dict_files)
+                    )
+                )
+
+        if len(queued_in_dict_files) > 0:
             app.logger.info(
                 "Not managing data already in queue: {}, {}".format(
-                    dict_files_already_in_queue, len(dict_files_already_in_queue)
+                    queued_in_dict_files, len(queued_in_dict_files)
                 )
             )
+
+        if npolicy.parameters.only_new_data:
+            # we transfer data that are not SUCCESSFUL or QUEUED, CANCELLED, FAILED, IN_PROGRESS
+            # so we transfer only new data never seen by the database
+            data_to_transfer = [i for i in dict_files if i not in successful_in_dict_files + queued_in_dict_files]
+        else:
+            # we transfer all data but those in QUEUED,IN_PROGRESS,FAILED,CANCELED in database
+            data_to_transfer = [i for i in dict_files if i not in queued_in_dict_files]
+        
+        if len(data_to_transfer) > 0:
+            app.logger.info("files to transfer: {}, {}".format(data_to_transfer, len(data_to_transfer)))
+    
 
         # Add nb tr below queue limit
         available_slots = queue_limit - len(tr_in_queue)  # nb slots available in the queue

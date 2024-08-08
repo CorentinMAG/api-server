@@ -37,10 +37,4 @@ def init_app(app: Flask):
         with app.app_context():
             db.create_all()
 
-            from .models import GlobalParameters
-            params = db.session.query(GlobalParameters).first()
-            if params is None:
-                params = GlobalParameters(mode = Mode.ONLINE)
-                db.session.add(params)
-                db.session.commit()
             app.logger.debug("database tables have been created")
