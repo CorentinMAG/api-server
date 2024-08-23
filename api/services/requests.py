@@ -10,21 +10,24 @@ import datetime
 from sqlalchemy import or_, exc
 from dtr_common.logs.logger import create_rp_logger
 
+
 def get_next_request(session):
-    request = (session
-               .query(TransferRequest)
-               .join(TransferPolicy)
-               .join(Queue)
-               .join(State)
-               .order_by(Queue.priority.asc())
-               .order_by(TransferRequest.created_at.asc())
-               .filter(TransferRequest.last_state.in_([StateEnum.QUEUED, StateEnum.FAILED]))
-               .filter(or_(
+    request = (
+        session.query(TransferRequest)
+        .join(TransferPolicy)
+        .join(Queue)
+        .join(State)
+        .order_by(Queue.priority.asc())
+        .order_by(TransferRequest.created_at.asc())
+        .filter(TransferRequest.last_state.in_([StateEnum.QUEUED, StateEnum.FAILED]))
+        .filter(
+            or_(
                 TransferRequest.next_retry_min_time.is_(None),
                 TransferRequest.next_retry_min_time <= datetime.datetime.utcnow(),
-            ))
-            .with_for_update(skip_locked=True)
-            .first()
+            )
+        )
+        .with_for_update(skip_locked=True)
+        .first()
     )
     return request
 
@@ -78,7 +81,9 @@ def create_request(policy_id: int, dict_files: list[dict]) -> None:
         failed_requests = list(filter(lambda x: x.last_state == StateEnum.FAILED, transfer_requests))
         successful_requests = list(filter(lambda x: x.last_state == StateEnum.SUCCESSFUL, transfer_requests))
         cancelled_requests = list(filter(lambda x: x.last_state == StateEnum.CANCELLED, transfer_requests))
-        in_progress_requests = list(filter(lambda x: x.last_state == StateEnum.IN_PROGRESS, transfer_requests))
+        in_progress_requests = list(
+            filter(lambda x: x.last_state == StateEnum.IN_PROGRESS, transfer_requests)
+        )
 
         successful_files = list(map(lambda x: {"file": x.filename, "size": x.size}, successful_requests))
         queued_files = list(map(lambda x: {"file": x.filename, "size": x.size}, queued_requests))
@@ -101,14 +106,18 @@ def create_request(policy_id: int, dict_files: list[dict]) -> None:
             dest_url = f"{dest_path}/{tr.filename}"
 
             if tr_age > queue_timeout:
-                nstate = State(state=StateEnum.CANCELLED.value.upper(), sub_state=SubStateEnum.NOTIFY.value.upper(), 
-                        failure_reason="Transfer timed-out in queued")
+                nstate = State(
+                    state=StateEnum.CANCELLED.value.upper(),
+                    sub_state=SubStateEnum.NOTIFY.value.upper(),
+                    failure_reason="Transfer timed-out in queued",
+                )
                 nrequest = cast(TransferRequest, db.session.query(TransferRequest).get(tr.id))
                 nrequest.states.append(nstate)
                 try:
                     db.session.commit()
                     app.logger.info(
-                        "Cancel of data transfer: uid: %s, source: %s, source_url: %s, destination: %s, destination_url: %s, filename: %s, reason: queue timeout",
+                        "Cancel of data transfer: uid: %s, source: %s, source_url: %s, destination: %s,\
+                        destination_url: %s, filename: %s, reason: queue timeout",
                         tr.uid,
                         src_path,
                         src_url,
@@ -121,15 +130,15 @@ def create_request(policy_id: int, dict_files: list[dict]) -> None:
 
         # Remove data already successfully transferred on option
         files_already_in_queue = queued_files + failed_files + in_progress_files + cancelled_files
-        successful_in_dict_files = list(filter(lambda f: f in successful_files , dict_files))
+        successful_in_dict_files = list(filter(lambda f: f in successful_files, dict_files))
         queued_in_dict_files = list(filter(lambda f: f in files_already_in_queue, dict_files))
 
         if len(successful_in_dict_files) > 0:
-                app.logger.info(
-                    "Not transferring twice the same data: {}, {}".format(
-                        successful_in_dict_files, len(successful_in_dict_files)
-                    )
+            app.logger.info(
+                "Not transferring twice the same data: {}, {}".format(
+                    successful_in_dict_files, len(successful_in_dict_files)
                 )
+            )
 
         if len(queued_in_dict_files) > 0:
             app.logger.info(
@@ -141,27 +150,33 @@ def create_request(policy_id: int, dict_files: list[dict]) -> None:
         if npolicy.parameters.only_new_data:
             # we transfer data that are not SUCCESSFUL or QUEUED, CANCELLED, FAILED, IN_PROGRESS
             # so we transfer only new data never seen by the database
-            data_to_transfer = [i for i in dict_files if i not in successful_in_dict_files + queued_in_dict_files]
+            data_to_transfer = [
+                i for i in dict_files if i not in successful_in_dict_files + queued_in_dict_files
+            ]
         else:
             # we transfer all data but those in QUEUED,IN_PROGRESS,FAILED,CANCELED in database
             data_to_transfer = [i for i in dict_files if i not in queued_in_dict_files]
-        
+
         if len(data_to_transfer) > 0:
             app.logger.info("files to transfer: {}, {}".format(data_to_transfer, len(data_to_transfer)))
-    
 
         # Add nb tr below queue limit
-        available_slots = queue_limit - len(tr_in_queue)  # nb slots available in the queue
-        # Send log when reach queue threshold
+        if queue_limit is not None:
+            available_slots = queue_limit - len(tr_in_queue)  # nb slots available in the queue
+
+        # Display a log when reach queue threshold
         if available_slots == queue_threshold:
             app.logger.info("Queue threshold is reached !")
+
         remaining_data_to_transfer = list(map(lambda x: x["file"], data_to_transfer))
-    
+
         if available_slots > 0:
             nrequests: list[TransferRequest] = []
             for dict_file in data_to_transfer:
                 nstate = State(state=StateEnum.QUEUED)
-                nrequest = TransferRequest(filename=dict_file["file"], states=[nstate], size=dict_file["size"])
+                nrequest = TransferRequest(
+                    filename=dict_file["file"], states=[nstate], size=dict_file["size"]
+                )
                 nrequests.append(nrequest)
 
                 remaining_data_to_transfer.remove(dict_file["file"])
@@ -169,7 +184,7 @@ def create_request(policy_id: int, dict_files: list[dict]) -> None:
                 if available_slots == 0:
                     app.logger.info("Queue limit reached")
                     break
-            
+
             npolicy.transfers.extend(nrequests)
             try:
                 db.session.commit()
@@ -178,35 +193,50 @@ def create_request(policy_id: int, dict_files: list[dict]) -> None:
 
                     # Add report logs for End of Transfer Trigger
                     if nrequest.policy.src.path is None:
-                        src_url =  nrequest.filename
+                        src_url = nrequest.filename
                     else:
-                        src_url =  f"{nrequest.policy.src.path}/{nrequest.filename}"
-                    rp_logger = create_rp_logger("ReportLogs", "TransferTrigger", "END", "OK",
-                                                nrequest.policy.name, src_url, nrequest.filename, 
-                                                str(nrequest.uid))
+                        src_url = f"{nrequest.policy.src.path}/{nrequest.filename}"
+                    rp_logger = create_rp_logger(
+                        "ReportLogs",
+                        "TransferTrigger",
+                        "END",
+                        "OK",
+                        nrequest.policy.name,
+                        src_url,
+                        nrequest.filename,
+                        str(nrequest.uid),
+                    )
                     rp_logger.info("End of TransferTrigger")
-                    rp_logger.handlers = []  #clean logger
+                    rp_logger.handlers = []  # clean logger
             except exc.SQLAlchemyError as e:
                 for nrequest in nrequests:
                     app.logger.error("Error when creating transfer request with uid: %s ", nrequest.uid)
 
                     # Add report logs for End of Transfer Trigger
                     if nrequest.policy.src.path is None:
-                        src_url =  nrequest.filename
+                        src_url = nrequest.filename
                     else:
-                        src_url =  f"{nrequest.policy.src.path}/{nrequest.filename}"
-                    rp_logger = create_rp_logger("ReportLogs", "TransferTrigger", "END", "NOK",
-                                                nrequest.policy.name, src_url, nrequest.filename, 
-                                                str(nrequest.uid))
-                    rp_logger.info("Error in creating Transfer Request: {}".format(e)) 
+                        src_url = f"{nrequest.policy.src.path}/{nrequest.filename}"
+                    rp_logger = create_rp_logger(
+                        "ReportLogs",
+                        "TransferTrigger",
+                        "END",
+                        "NOK",
+                        nrequest.policy.name,
+                        src_url,
+                        nrequest.filename,
+                        str(nrequest.uid),
+                    )
+                    rp_logger.info("Error in creating Transfer Request: {}".format(e))
         else:
             app.logger.info("Queue full")
 
         if len(remaining_data_to_transfer) > 0:
-            app.logger.info("{} data will not be processed in this run".format(len(remaining_data_to_transfer)))
+            app.logger.info(
+                "{} data will not be processed in this run".format(len(remaining_data_to_transfer))
+            )
             app.logger.debug("Data not processed in this run : {}".format(remaining_data_to_transfer))
 
-        
 
 def update_request(
     request_id: int,
@@ -219,18 +249,23 @@ def update_request(
     nstates = []
     nrequest = cast(TransferRequest, db.session.query(TransferRequest).get(request_id))
     max_retry = nrequest.policy.parameters.max_retry
-    if status == StateEnum.FAILED.value.upper() and nb_retry < max_retry:
-        nstate = State(state=StateEnum.FAILED.value.upper(), sub_state=sub_status, 
-                       failure_reason=failure_reason)
-        nstates.append(nstate)
-    elif status == StateEnum.FAILED.value.upper() and nb_retry >= max_retry:
-        app.logger.debug("Max retry is reached !")
-        nstate = State(state=StateEnum.CANCELLED.value.upper(), sub_state=SubStateEnum.NOTIFY.value.upper(), 
-                       failure_reason= "Transfer failure despite retries.")
-        nstates.append(nstate)
-    else:
-        nstate = State(state=status, sub_state=sub_status, failure_reason=failure_reason)
-        nstates.append(nstate)
+    if max_retry is not None:
+        if status == StateEnum.FAILED.value.upper() and nb_retry < max_retry:
+            nstate = State(
+                state=StateEnum.FAILED.value.upper(), sub_state=sub_status, failure_reason=failure_reason
+            )
+            nstates.append(nstate)
+        elif status == StateEnum.FAILED.value.upper() and nb_retry >= max_retry:
+            app.logger.debug("Max retry is reached !")
+            nstate = State(
+                state=StateEnum.CANCELLED.value.upper(),
+                sub_state=SubStateEnum.NOTIFY.value.upper(),
+                failure_reason="Transfer failure despite retries.",
+            )
+            nstates.append(nstate)
+        else:
+            nstate = State(state=status, sub_state=sub_status, failure_reason=failure_reason)
+            nstates.append(nstate)
     nrequest.states.extend(nstates)
     nrequest.nb_retry = nb_retry
     nrequest.next_retry_min_time = next_retry_min_time

@@ -57,11 +57,11 @@ class TransferRequest(SQLBase, SerializerMixin):
         .scalar_subquery()
     )
 
-
     state_created_at = column_property(
         select(State.created_at)
         .where(State.request_id == id)
-        .order_by(State.created_at.asc())
+        .where(last_state.in_([StateEnum.CANCELLED.value.upper(), StateEnum.FAILED.value.upper()]))
+        .order_by(State.created_at.desc())
         .limit(1)
         .correlate_except(State)
         .scalar_subquery()
