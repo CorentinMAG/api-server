@@ -61,9 +61,9 @@ def create_targets(targets: list[TargetJson]) -> list[Target]:
 
 def create_policies(policies: list[TransferPolicyConf]) -> list[TransferPolicy]:
     # prerequisities
-    nqueues = cast(list[Queue], db.session.query(Queue).all())
-    ntargets = cast(list[Target], db.session.query(Target).all())
-    nservers = cast(list[NotificationServer], db.session.query(NotificationServer).all())
+    nqueues = cast(list[Queue], db.session.query(Queue).all())  # type: ignore
+    ntargets = cast(list[Target], db.session.query(Target).all())  # type: ignore
+    nservers = cast(list[NotificationServer], db.session.query(NotificationServer).all())  # type: ignore
 
     npolicies: list[TransferPolicy] = []
 
@@ -132,17 +132,6 @@ def create_policies(policies: list[TransferPolicyConf]) -> list[TransferPolicy]:
     db.session.commit()
 
     return npolicies
-
-
-def create_global_params(global_params: GlobalParameters) -> GlobalParameters:
-    """
-    Create global params
-    """
-
-    nparams = GlobalParameters(**global_params)
-    db.session.add(nparams)
-    db.session.commit()
-    return nparams
 
 
 def create_global_params(global_params: GlobalParameters) -> GlobalParameters:

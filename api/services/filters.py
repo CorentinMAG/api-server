@@ -1,5 +1,5 @@
 from flask import current_app as app
-from typing import cast
+from typing import cast, Optional, Any
 
 from ..db import db
 from ..models import GlobalParameters, TransferPolicy
@@ -19,13 +19,13 @@ def get_params() -> GlobalParameters | None:
     return params
 
 
-def set_transfer_policy_params(policy_id: int) -> TransferPolicy:
-    global_params = db.session.query(GlobalParameters).first()
-
+def set_transfer_policy_params(policy_id: int) -> Optional[TransferPolicy | None]:
+    global_params: Any = db.session.query(GlobalParameters).first()  # [assignment]: ignore
     tr_policy = cast(TransferPolicy | None, db.session.query(TransferPolicy).get(policy_id))
 
     if tr_policy is None:
         app.logger.error("Policy id: %d doesn't exist", policy_id)
+        return None
     else:
         if not tr_policy.parameters.only_new_data:
             tr_policy.parameters.only_new_data = global_params.only_new_data
