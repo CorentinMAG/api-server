@@ -36,3 +36,5 @@ def init_app(app: Flask):
         # create all tables
         with app.app_context():
             db.create_all()
+
+            app.logger.debug("database tables have been created")

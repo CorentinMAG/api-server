@@ -7,6 +7,7 @@ from typing import TYPE_CHECKING
 from sqlalchemy import DateTime, ForeignKey, select
 from sqlalchemy.orm import Mapped, mapped_column, relationship, column_property
 from sqlalchemy_serializer import SerializerMixin
+from dtr_common.constantes import State as StateEnum
 
 from ..db import Base as SQLBase
 from .states import State
@@ -51,6 +52,16 @@ class TransferRequest(SQLBase, SerializerMixin):
         select(State.failure_reason)
         .where(State.request_id == id)
         .order_by(State.created_at.desc())
+        .limit(1)
+        .correlate_except(State)
+        .scalar_subquery()
+    )
+
+
+    state_created_at = column_property(
+        select(State.created_at)
+        .where(State.request_id == id)
+        .order_by(State.created_at.asc())
         .limit(1)
         .correlate_except(State)
         .scalar_subquery()

@@ -11,15 +11,13 @@ bp = Blueprint("notification", __name__)
 def notification():
     app.logger.info("Get notifications")
     nglobal_parameters = get_params()
-    if nglobal_parameters.mode == Mode.OFFLINE:
+    if nglobal_parameters is None or nglobal_parameters.mode == Mode.OFFLINE:
         return {
             "requests": [],
             "page": 0,
             "page_size": 0,
             "total": -1,
         }
-    elif nglobal_parameters.mode == Mode.OFFLINE:
-        return {"requests": [], "page": 0, "page_size": 0, "total": -1}
     else:
         page = request.args.get("page", type=int, default=1)
         page_size = request.args.get("page_size", type=int, default=10)

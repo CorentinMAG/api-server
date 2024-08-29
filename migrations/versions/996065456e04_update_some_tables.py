@@ -88,7 +88,7 @@ def upgrade() -> None:
     sa.Column('policy_id', sa.INTEGER(), autoincrement=False, nullable=True),
     sa.Column('created_at', postgresql.TIMESTAMP(), autoincrement=False, nullable=False),
     sa.Column('nb_retry', sa.INTEGER(), autoincrement=False, nullable=True),
-    sa.Column('next_retry_min_time', postgresql.TIMESTAMP(), autoincrement=False, nullable=False),
+    sa.Column('next_retry_min_time', postgresql.TIMESTAMP(), autoincrement=False, nullable=True),
     sa.ForeignKeyConstraint(['policy_id'], ['transfer_policies.id'], name='transfer_requests_policy_id_fkey', ondelete='SET NULL'),
     sa.PrimaryKeyConstraint('id', name='transfer_requests_pkey'),
     sa.UniqueConstraint('uid', name='transfer_requests_uid_key')

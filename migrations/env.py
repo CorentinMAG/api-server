@@ -6,7 +6,6 @@ from sqlalchemy import pool
 from alembic import context
 
 from api.db import Base
-
 target_metadata = Base.metadata
 
 # this is the Alembic Config object, which provides
@@ -27,7 +26,6 @@ if config.config_file_name is not None:
 # can be acquired:
 # my_important_option = config.get_main_option("my_important_option")
 # ... etc.
-
 
 def run_migrations_offline() -> None:
     """Run migrations in 'offline' mode.
