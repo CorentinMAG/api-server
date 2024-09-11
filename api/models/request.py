@@ -59,8 +59,10 @@ class TransferRequest(SQLBase, SerializerMixin):
 
     state_created_at = column_property(
         select(State.created_at)
-        .where(State.request_id == id)
-        .where(last_state.in_([StateEnum.CANCELLED.value.upper(), StateEnum.FAILED.value.upper()]))
+        .where(
+            State.request_id == id
+            and last_state.in_([StateEnum.CANCELLED.value.upper(), StateEnum.FAILED.value.upper()])
+        )
         .order_by(State.created_at.desc())
         .limit(1)
         .correlate_except(State)
