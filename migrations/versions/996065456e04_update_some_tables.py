@@ -142,6 +142,10 @@ def upgrade() -> None:
         sa.Column("created_at", postgresql.TIMESTAMP(), autoincrement=False, nullable=False),
         sa.Column("nb_retry", sa.INTEGER(), autoincrement=False, nullable=True),
         sa.Column("next_retry_min_time", postgresql.TIMESTAMP(), autoincrement=False, nullable=True),
+        sa.Column("beginning_time", postgresql.TIMESTAMP(), autoincrement=False, nullable=True),
+        sa.Column("end_time", postgresql.TIMESTAMP(), autoincrement=False, nullable=True),
+        sa.Column("rate", sa.INTEGER(), autoincrement=False, nullable=True),
+        sa.Column("relative_path", sa.VARCHAR(), autoincrement=False, nullable=True),
         sa.ForeignKeyConstraint(
             ["policy_id"],
             ["transfer_policies.id"],

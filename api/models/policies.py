@@ -24,7 +24,7 @@ class SourcePolicy(SQLBase, SerializerMixin):
     purge: Mapped[bool] = mapped_column(default=False)
     path: Mapped[str | None]
     bucket: Mapped[str | None]
-    pattern: Mapped[str]
+    pattern: Mapped[str | None]
 
     src_id: Mapped[int] = mapped_column(ForeignKey("targets.id", ondelete="CASCADE"))
     target: Mapped[Target] = relationship()

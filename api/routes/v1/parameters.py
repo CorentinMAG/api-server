@@ -10,7 +10,7 @@ def update_parameters():
     """
     Update periodical parameters
     """
-    payload: UpdateParamsJson = request.json
+    payload: UpdateParamsJson = request.json  # --check-untyped-defs
     payload = request.json
     param_id = payload["parameter_id"]
     next_polling_min_time = payload["next_polling_min_time"]
