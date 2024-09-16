@@ -49,8 +49,7 @@ def policies():
 
 @bp.route("/policies", methods=["POST"])
 def post_policies():
-    # create policies programatically
-    payload: CreatePoliciesJson = request.json
+    payload: CreatePoliciesJson = request.json  # --check-untyped-defs
     policies = payload["policies"]
     create_policies(policies)
 

@@ -21,7 +21,7 @@ class TransferRequest(SQLBase, SerializerMixin):
 
     id: Mapped[int] = mapped_column(primary_key=True)
     filename: Mapped[str]
-    size: Mapped[int | None]
+    size: Mapped[int | None] = mapped_column(default=None)
     uid: Mapped[uuid.UUID] = mapped_column(default=uuid.uuid4, unique=True)
     states: Mapped[list[State]] = relationship()
     policy_id: Mapped[int | None] = mapped_column(ForeignKey("transfer_policies.id", ondelete="SET NULL"))
@@ -29,6 +29,10 @@ class TransferRequest(SQLBase, SerializerMixin):
     created_at: Mapped[str] = mapped_column(DateTime, default=datetime.utcnow)
     nb_retry: Mapped[int] = mapped_column(default=0)
     next_retry_min_time: Mapped[str | None] = mapped_column(DateTime, default=None)
+    beginning_time: Mapped[str | None] = mapped_column(DateTime, default=None)
+    end_time: Mapped[str | None] = mapped_column(DateTime, default=None)
+    rate: Mapped[int | None] = mapped_column(default=None)
+    source_relative_path: Mapped[str | None] = mapped_column(default=None)
 
     last_state = column_property(
         select(State.state)
@@ -59,8 +63,10 @@ class TransferRequest(SQLBase, SerializerMixin):
 
     state_created_at = column_property(
         select(State.created_at)
-        .where(State.request_id == id)
-        .where(last_state.in_([StateEnum.CANCELLED.value.upper(), StateEnum.FAILED.value.upper()]))
+        .where(
+            State.request_id == id
+            and last_state.in_([StateEnum.CANCELLED.value.upper(), StateEnum.FAILED.value.upper()])
+        )
         .order_by(State.created_at.desc())
         .limit(1)
         .correlate_except(State)

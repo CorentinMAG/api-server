@@ -19,14 +19,30 @@ def get_params() -> GlobalParameters | None:
     return params
 
 
-def set_transfer_policy_params(policy_id: int) -> Optional[TransferPolicy | None]:
-    global_params: Any = db.session.query(GlobalParameters).first()  # [assignment]: ignore
-    tr_policy = cast(TransferPolicy | None, db.session.query(TransferPolicy).get(policy_id))
+def set_transfer_policy_params(
+    policy_id: Optional[int | None] = None, transfer_policy_name: Optional[str | None] = None
+) -> Optional[TransferPolicy | None]:
+    global_params: Any = db.session.query(GlobalParameters).first()
 
-    if tr_policy is None:
-        app.logger.error("Policy id: %d doesn't exist", policy_id)
-        return None
+    if policy_id is not None:
+        tr_policy = cast(TransferPolicy | None, db.session.query(TransferPolicy).get(policy_id))
+        if tr_policy is None:
+            app.logger.error("Tranfer policy do not exists for policy_id {}".format(policy_id))
+            return None
+    elif transfer_policy_name is not None:
+        tr_policy = cast(
+            TransferPolicy,
+            db.session.query(TransferPolicy).filter(TransferPolicy.name == transfer_policy_name).first(),
+        )
+        if tr_policy is None:
+            app.logger.error(
+                "Tranfer policy do not exists for  transfer_policy_name {}".format(transfer_policy_name)
+            )
+            return None
     else:
+        pass
+
+    if tr_policy is not None:
         if not tr_policy.parameters.only_new_data:
             tr_policy.parameters.only_new_data = global_params.only_new_data
         elif tr_policy.dest.tmp_prefix_dest is None:
