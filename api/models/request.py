@@ -21,7 +21,7 @@ class TransferRequest(SQLBase, SerializerMixin):
 
     id: Mapped[int] = mapped_column(primary_key=True)
     filename: Mapped[str]
-    size: Mapped[int | None] = mapped_column(default=None)
+    size: Mapped[int | None] = mapped_column(default=None)  # in MB
     uid: Mapped[uuid.UUID] = mapped_column(default=uuid.uuid4, unique=True)
     states: Mapped[list[State]] = relationship()
     policy_id: Mapped[int | None] = mapped_column(ForeignKey("transfer_policies.id", ondelete="SET NULL"))

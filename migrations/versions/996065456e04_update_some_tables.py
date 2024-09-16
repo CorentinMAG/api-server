@@ -70,7 +70,7 @@ def upgrade() -> None:
         sa.Column("path", sa.VARCHAR(), autoincrement=False, nullable=True),
         sa.Column("bucket", sa.VARCHAR(), autoincrement=False, nullable=True),
         sa.Column("src_id", sa.INTEGER(), autoincrement=False, nullable=False),
-        sa.Column("pattern", sa.VARCHAR(), autoincrement=False, nullable=True),
+        sa.Column("pattern", sa.VARCHAR(), autoincrement=False, nullable=False),
         sa.ForeignKeyConstraint(
             ["src_id"], ["targets.id"], name="source_policies_src_id_fkey", ondelete="CASCADE"
         ),

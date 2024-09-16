@@ -9,10 +9,18 @@ from api.services.filters import set_transfer_policy_params
 import datetime
 from sqlalchemy import or_, exc
 from dtr_common.logs.logger import create_rp_logger
+from dtr_common.utils import convert_datetime_regex
 from dtr_common.types.requests import CreateRequestCmdJson
+import os
+import re
 
 
-def get_next_request(session):
+def get_next_request(session, params: FilterRequestParams):
+    worker_size_in_gb = 0
+    if params.get("worker_size") is not None:
+        worker_size_in_gb = int(re.sub("G", "", params["worker_size"]))
+        worker_size_in_mb = worker_size_in_gb * 1024
+
     request = (
         session.query(TransferRequest)
         .join(TransferPolicy)
@@ -27,9 +35,11 @@ def get_next_request(session):
                 TransferRequest.next_retry_min_time <= datetime.datetime.utcnow(),
             )
         )
+        .filter(or_(TransferRequest.size.is_(None), TransferRequest.size < worker_size_in_mb))
         .with_for_update(skip_locked=True)
         .first()
     )
+
     return request
 
 
@@ -92,9 +102,11 @@ def create_request(
         queue_limit = npolicy.queue.queue_limit
         queue_threshold = npolicy.queue.queue_threshold
         queue_timeout = npolicy.queue.queue_timeout
-        src_path = npolicy.src.path
+        src_path = convert_datetime_regex(npolicy.src.path)
         src_name = npolicy.src.target.name
-        dest_path = npolicy.dest.path
+        host = npolicy.src.target.host
+        pattern = npolicy.src.pattern
+        dest_path = convert_datetime_regex(npolicy.dest.path)
         dest_name = npolicy.dest.target.name
 
         transfer_requests = filter_requests(params).all()
@@ -152,7 +164,7 @@ def create_request(
                     pass
 
         if dict_files is None and payload is not None:
-            file = payload["path"].split("/")[-1]
+            file = convert_datetime_regex(os.path.split(payload["path"])[1])
             dict_files = [{"file": file, "size": None}]
             files_already_in_queue = queued_files + failed_files + in_progress_files
         else:
@@ -203,13 +215,13 @@ def create_request(
                 nstate = State(state=StateEnum.QUEUED)
                 if payload is not None:
                     uid = payload.get("uid", None)
-                    path = payload["path"].split("/")
+                    path = os.path.split(payload["path"])
                     relative_path = None
                     if len(path) > 1:
-                        relative_path = path[0]
+                        relative_path = convert_datetime_regex(path[0])
                     timestamp = payload["timestamp"]
                     nrequest = TransferRequest(
-                        filename=dict_file["file"],
+                        filename=convert_datetime_regex(dict_file["file"]),
                         states=[nstate],
                         uid=uid,
                         created_at=timestamp,
@@ -219,10 +231,14 @@ def create_request(
                     nrequest = TransferRequest(
                         filename=dict_file["file"], states=[nstate], size=dict_file["size"]
                     )
-                if npolicy.src.path is None:
+                if src_path is None:
                     src_url = nrequest.filename
+                elif re.search(pattern, src_path):
+                    src_url = src_path
+                elif src_path.startswith(host):
+                    src_url = src_path
                 else:
-                    src_url = f"{npolicy.src.path}/{nrequest.filename}"
+                    src_url = f"{src_path}/{nrequest.filename}"
                 dest_url = f"{dest_path}/{nrequest.filename}"
 
                 # Add report logs
