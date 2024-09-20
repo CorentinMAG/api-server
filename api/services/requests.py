@@ -15,6 +15,11 @@ import os
 import re
 
 
+log_lvl = os.environ.get("DTR_LOG_LEVEL", "INFO")
+version = os.environ["DTR_API_VERSION"]
+ssystem_version = os.environ["DTR_VERSION"]
+
+
 def get_next_request(session, params: FilterRequestParams):
     worker_size_in_gb = 0
     if params.get("worker_size") is not None:
@@ -151,7 +156,7 @@ def create_request(
                 try:
                     db.session.commit()
                     app.logger.info(
-                        "Cancel of data transfer: uid: %s, source: %s, source_url: %s, destination: %s"
+                        "Cancel of data transfer: uid: %s, source: %s, source_url: %s, destination: %s",
                         "destination_url: %s, filename: %s, reason: queue timeout",
                         tr.uid,
                         src_path,
@@ -244,6 +249,11 @@ def create_request(
                 # Add report logs
                 rp_logger = create_rp_logger(
                     "ReportLogs",
+                    log_lvl,
+                    "DTR",
+                    ssystem_version,
+                    "Api",
+                    version,
                     "TransferRequest",
                     "BEGIN",
                     None,
@@ -277,6 +287,11 @@ def create_request(
                     # Add report logs
                     rp_logger = create_rp_logger(
                         "ReportLogs",
+                        log_lvl,
+                        "DTR",
+                        ssystem_version,
+                        "Api",
+                        version,
                         "TransferRequest",
                         "END",
                         "OK",
@@ -294,6 +309,11 @@ def create_request(
 
                     rp_logger = create_rp_logger(
                         "ReportLogs",
+                        log_lvl,
+                        "DTR",
+                        ssystem_version,
+                        "Api",
+                        version,
                         "TransferTrigger",
                         "END",
                         "OK",
@@ -313,6 +333,11 @@ def create_request(
                     # Add report logs TransferTrigger/TransferRequest in case of error
                     rp_logger = create_rp_logger(
                         "ReportLogs",
+                        log_lvl,
+                        "DTR",
+                        ssystem_version,
+                        "Api",
+                        version,
                         "TransferRequest",
                         "END",
                         "NOK",
@@ -330,6 +355,11 @@ def create_request(
 
                     rp_logger = create_rp_logger(
                         "ReportLogs",
+                        log_lvl,
+                        "DTR",
+                        ssystem_version,
+                        "Api",
+                        version,
                         "TransferTrigger",
                         "END",
                         "NOK",
