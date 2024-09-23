@@ -33,7 +33,9 @@ def get_next_request(session, params: FilterRequestParams):
         .join(State)
         .order_by(Queue.priority.asc())
         .order_by(TransferRequest.created_at.asc())
-        .filter(TransferRequest.last_state.in_([StateEnum.QUEUED, StateEnum.FAILED]))
+        .filter(
+            TransferRequest.last_state.in_([StateEnum.QUEUED, StateEnum.FAILED])
+        )
         .filter(
             or_(
                 TransferRequest.next_retry_min_time.is_(None),
@@ -116,10 +118,18 @@ def create_request(
 
         transfer_requests = filter_requests(params).all()
 
-        queued_requests = list(filter(lambda x: x.last_state == StateEnum.QUEUED, transfer_requests))
-        failed_requests = list(filter(lambda x: x.last_state == StateEnum.FAILED, transfer_requests))
-        successful_requests = list(filter(lambda x: x.last_state == StateEnum.SUCCESSFUL, transfer_requests))
-        cancelled_requests = list(filter(lambda x: x.last_state == StateEnum.CANCELLED, transfer_requests))
+        queued_requests = list(
+            filter(lambda x: x.last_state == StateEnum.QUEUED, transfer_requests)
+        )
+        failed_requests = list(
+            filter(lambda x: x.last_state == StateEnum.FAILED, transfer_requests)
+        )
+        successful_requests = list(
+            filter(lambda x: x.last_state == StateEnum.SUCCESSFUL, transfer_requests)
+        )
+        cancelled_requests = list(
+            filter(lambda x: x.last_state == StateEnum.CANCELLED, transfer_requests)
+        )
         in_progress_requests = list(
             filter(lambda x: x.last_state == StateEnum.IN_PROGRESS, transfer_requests)
         )
