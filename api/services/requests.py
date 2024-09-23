@@ -156,8 +156,7 @@ def create_request(
                 try:
                     db.session.commit()
                     app.logger.info(
-                        "Cancel of data transfer: uid: %s, source: %s, source_url: %s, destination: %s",
-                        "destination_url: %s, filename: %s, reason: queue timeout",
+                        "Cancel of data transfer: uid: %s, source: %s, source_url: %s, destination: %s, destination_url: %s, filename: %s, reason: queue timeout",
                         tr.uid,
                         src_path,
                         src_url,
