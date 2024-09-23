@@ -15,7 +15,7 @@ def create_app():
     version = os.environ["DTR_API_VERSION"]
     ssystem_version = os.environ["DTR_VERSION"]
 
-    app.logger = create_logger("api", log_lvl, "DTR", ssystem_version, version)
+    app.logger = create_logger("api", log_lvl, "DTR", version, ssystem_version)
 
     @app.route("/", methods=["GET"])
     def index():
