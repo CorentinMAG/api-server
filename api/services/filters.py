@@ -27,7 +27,7 @@ def set_transfer_policy_params(
     if policy_id is not None:
         tr_policy = cast(TransferPolicy | None, db.session.query(TransferPolicy).get(policy_id))
         if tr_policy is None:
-            app.logger.error("Tranfer policy do not exists for policy_id {}".format(policy_id))
+            app.logger.error("Transfer policy do not exists for policy_id {}".format(policy_id))
             return None
     elif transfer_policy_name is not None:
         tr_policy = cast(
