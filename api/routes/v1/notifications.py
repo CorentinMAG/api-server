@@ -9,7 +9,7 @@ bp = Blueprint("notification", __name__)
 
 @bp.route("/notifications", methods=["GET"])
 def notification():
-    app.logger.info("Get notifications")
+    app.logger.debug("Get notifications")
     nglobal_parameters = get_params()
     if nglobal_parameters is None or nglobal_parameters.mode == Mode.OFFLINE:
         return {
