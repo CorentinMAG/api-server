@@ -5,7 +5,7 @@ from flask import current_app as app
 
 from ..db import db
 from ..models import Queue, State, TransferPolicy, TransferRequest, TransferPolicyParameters
-from api.services.filters import set_transfer_policy_params
+from api.services.filters import check_policy_params
 import datetime
 from sqlalchemy import or_, exc
 from dtr_common.logs.logger import create_rp_logger
@@ -22,8 +22,8 @@ ssystem_version = os.environ["DTR_VERSION"]
 
 def get_next_request(session, params: FilterRequestParams):
     worker_size_in_gb = 0
-    if params.get("worker_size") is not None:
-        worker_size_in_gb = int(re.sub("G", "", params["worker_size"]))
+    if params.get("worker_storage") is not None:
+        worker_size_in_gb = int(re.sub("G", "", params["worker_storage"]))
         worker_size_in_mb = worker_size_in_gb * 1024
 
     request = (
@@ -33,9 +33,7 @@ def get_next_request(session, params: FilterRequestParams):
         .join(State)
         .order_by(Queue.priority.asc())
         .order_by(TransferRequest.created_at.asc())
-        .filter(
-            TransferRequest.last_state.in_([StateEnum.QUEUED, StateEnum.FAILED])
-        )
+        .filter(TransferRequest.last_state.in_([StateEnum.QUEUED, StateEnum.FAILED]))
         .filter(
             or_(
                 TransferRequest.next_retry_min_time.is_(None),
@@ -96,10 +94,10 @@ def create_request(
     """
     if payload is not None and policy_id is None and dict_files is None:
         transfer_policy = payload["transfer_policy"]
-        npolicy = set_transfer_policy_params(transfer_policy_name=transfer_policy)
+        npolicy = check_policy_params(transfer_policy_name=transfer_policy)
         params = {"transfer_policy_name": transfer_policy}
     elif policy_id is not None and dict_files is not None and payload is None:
-        npolicy = set_transfer_policy_params(policy_id=policy_id)
+        npolicy = check_policy_params(policy_id=policy_id)
         params = {"policy_id": policy_id}
     else:
         pass
@@ -118,18 +116,10 @@ def create_request(
 
         transfer_requests = filter_requests(params).all()
 
-        queued_requests = list(
-            filter(lambda x: x.last_state == StateEnum.QUEUED, transfer_requests)
-        )
-        failed_requests = list(
-            filter(lambda x: x.last_state == StateEnum.FAILED, transfer_requests)
-        )
-        successful_requests = list(
-            filter(lambda x: x.last_state == StateEnum.SUCCESSFUL, transfer_requests)
-        )
-        cancelled_requests = list(
-            filter(lambda x: x.last_state == StateEnum.CANCELLED, transfer_requests)
-        )
+        queued_requests = list(filter(lambda x: x.last_state == StateEnum.QUEUED, transfer_requests))
+        failed_requests = list(filter(lambda x: x.last_state == StateEnum.FAILED, transfer_requests))
+        successful_requests = list(filter(lambda x: x.last_state == StateEnum.SUCCESSFUL, transfer_requests))
+        cancelled_requests = list(filter(lambda x: x.last_state == StateEnum.CANCELLED, transfer_requests))
         in_progress_requests = list(
             filter(lambda x: x.last_state == StateEnum.IN_PROGRESS, transfer_requests)
         )
