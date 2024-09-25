@@ -10,3 +10,4 @@ sqlalchemy_utils==0.41.2
 alembic==1.13.1
 pydantic==2.7.3
 dtr-common==2.0.0rc2
+
