@@ -4,6 +4,7 @@ from dtr_common.types.configuration import ConfigurationJson, TransferPolicyConf
 from dtr_common.types.models import QueueJson, TargetJson, NotificationServerJson
 from typing import cast
 from dtr_common.constantes import Type
+from typing import Dict
 
 from ..db import db
 from ..models import (
@@ -35,7 +36,7 @@ def create_servers(servers: list[NotificationServerJson]) -> list[NotificationSe
     return nservers
 
 
-def create_queues(queues: list[QueueJson], global_params: dict()) -> list[Queue]:
+def create_queues(queues: list[QueueJson], global_params: Dict[str, int]) -> list[Queue]:
     nqueues: list[Queue] = []
     for queue in queues:
         if queue.get("queue_timeout", None) is None:
@@ -67,7 +68,9 @@ def create_targets(targets: list[TargetJson]) -> list[Target]:
     return ntargets
 
 
-def create_policies(policies: list[TransferPolicyConf], global_params: dict) -> list[TransferPolicy]:
+def create_policies(
+    policies: list[TransferPolicyConf], global_params: Dict[str, int]
+) -> list[TransferPolicy]:
     # prerequisities
     nqueues = cast(list[Queue], db.session.query(Queue).all())  # type: ignore
     ntargets = cast(list[Target], db.session.query(Target).all())  # type: ignore
