@@ -23,7 +23,7 @@ ssystem_version = os.environ["DTR_VERSION"]
 def get_next_request(session, params: FilterRequestParams):
     worker_size_in_gb = 0
     if params.get("worker_storage") is not None:
-        worker_size_in_gb = int(re.sub("G", "", params["worker_storage"]))
+        worker_size_in_gb = int(re.search(r"\d+", params["worker_storage"]).group())
         worker_size_in_mb = worker_size_in_gb * 1024
 
     request = (
