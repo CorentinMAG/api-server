@@ -4,6 +4,7 @@ from dtr_common.types.configuration import ConfigurationJson, TransferPolicyConf
 from dtr_common.types.models import QueueJson, TargetJson, NotificationServerJson
 from typing import cast
 from dtr_common.constantes import Type
+from typing import Dict
 
 from ..db import db
 from ..models import (
@@ -35,9 +36,17 @@ def create_servers(servers: list[NotificationServerJson]) -> list[NotificationSe
     return nservers
 
 
-def create_queues(queues: list[QueueJson]) -> list[Queue]:
+def create_queues(queues: list[QueueJson], global_params: Dict[str, int]) -> list[Queue]:
     nqueues: list[Queue] = []
     for queue in queues:
+        if queue.get("queue_timeout", None) is None:
+            queue["queue_timeout"] = global_params.get("queue_timeout")
+        elif queue.get("queue_limit", None) is None:
+            queue["queue_limit"] = global_params.get("queue_limit")
+        elif queue.get("queue_threshold", None) is None:
+            queue["queue_threshold"] = global_params.get("queue_threshold")
+        else:
+            pass
         nqueue = Queue(**queue)
         nqueues.append(nqueue)
     db.session.add_all(nqueues)
@@ -59,11 +68,13 @@ def create_targets(targets: list[TargetJson]) -> list[Target]:
     return ntargets
 
 
-def create_policies(policies: list[TransferPolicyConf]) -> list[TransferPolicy]:
+def create_policies(
+    policies: list[TransferPolicyConf], global_params: Dict[str, int]
+) -> list[TransferPolicy]:
     # prerequisities
-    nqueues = cast(list[Queue], db.session.query(Queue).all())
-    ntargets = cast(list[Target], db.session.query(Target).all())
-    nservers = cast(list[NotificationServer], db.session.query(NotificationServer).all())
+    nqueues = cast(list[Queue], db.session.query(Queue).all())  # type: ignore
+    ntargets = cast(list[Target], db.session.query(Target).all())  # type: ignore
+    nservers = cast(list[NotificationServer], db.session.query(NotificationServer).all())  # type: ignore
 
     npolicies: list[TransferPolicy] = []
 
@@ -80,11 +91,36 @@ def create_policies(policies: list[TransferPolicyConf]) -> list[TransferPolicy]:
         tr_name = policy_copy.pop("name")
         tr_type = Type[policy_copy.pop("type").upper()]
         tr_enabled = policy_copy.pop("enabled", True)
+
+        if period_params is None:
+            period_params = {}
+            period_params["polling_interval"] = global_params.get("polling_interval")
+
+        if policy_copy.get("retry_delay", None) is None:
+            policy_copy["retry_delay"] = global_params.get("retry_delay")
+        if policy_copy.get("max_retry", None) is None:
+            policy_copy["max_retry"] = global_params.get("max_retry")
+        if policy_copy.get("transfer_requests_history", None) is None:
+            policy_copy["transfer_requests_history"] = global_params.get("transfer_requests_history")
+        if policy_copy.get("compress", None) is None:
+            policy_copy["compress"] = global_params.get("compress")
+        if policy_copy.get("only_new_data", None) is None:
+            policy_copy["only_new_data"] = global_params.get("only_new_data")
+        if policy_copy.get("transfer_timeout", None) is None:
+            policy_copy["transfer_timeout"] = global_params.get("transfer_timeout")
+
         ntr_params = TransferPolicyParameters(**policy_copy)
 
         if period_params is not None and tr_type == Type.PERIODICAL:
             nperiod_params = PeriodicalParameters(**period_params)
             ntr_params.periodical = nperiod_params
+
+        if dest_policy.get("tmp_prefix_dest", None) is None:
+            dest_policy["tmp_prefix_dest"] = global_params.get("tmp_prefix_dest")
+        elif dest_policy.get("final_prefix_dest", None) is None:
+            dest_policy["final_prefix_dest"] = global_params.get("final_prefix_dest")
+        else:
+            pass
 
         ntr_queue = next(filter(lambda q: q.name == queue, nqueues))
 
@@ -167,7 +203,7 @@ def configure(payload: ConfigurationJson):
 
     queues = payload.get("queues", None)
     if queues is not None:
-        create_queues(queues)
+        create_queues(queues, global_params)
 
     targets = payload.get("targets", None)
     if targets is not None:
@@ -175,7 +211,7 @@ def configure(payload: ConfigurationJson):
 
     policies = payload.get("transfer_policies", None)
     if policies is not None:
-        create_policies(policies)
+        create_policies(policies, global_params)
 
 
 def unconfigure(keep: list[str] | None = None) -> None:

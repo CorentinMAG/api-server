@@ -66,3 +66,30 @@ $ docker run -dp 80:80 api-server
 ## start in docker-compose
 
 check out the `dtr/dtr` repository
+
+## update models
+
+1. update your models in `api/models`
+2. update database connection in `alembic.ini` (`sqlalchemy.url`)
+3. generate the revision `alembic revision --autogenerate -m "xxx"`
+4. apply the migrations `alembic upgrade head`
+5. create the new sql file `alembic upgrade head --sql > ../dtr/db/dtr-xxx.sql`
+
+
+## run alembic to generate migrations
+
+1. create the migration
+```bash
+$ alembic revision -m "my first revision"
+```
+
+2. run the latest migration (create table in database)
+```bash
+$ alembic upgrade head
+```
+
+3. generate the sql script
+```bash
+$ alembic upgrade <revision> --sql > my_file.sql
+```
+

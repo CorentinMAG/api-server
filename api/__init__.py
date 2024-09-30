@@ -13,8 +13,9 @@ def create_app():
 
     log_lvl = os.environ.get("DTR_LOG_LEVEL", "INFO")
     version = os.environ["DTR_API_VERSION"]
+    ssystem_version = os.environ["DTR_VERSION"]
 
-    app.logger = create_logger("api", log_lvl, "DTR", version)
+    app.logger = create_logger("api", log_lvl, "DTR", version, ssystem_version)
 
     @app.route("/", methods=["GET"])
     def index():
@@ -37,11 +38,6 @@ def create_app():
 
     @app.errorhandler(Exception)
     def handle_exception(e: Exception):
-        app.logger.error(e)
-        return {"error": str(e)}
-
-    @app.errorhandler(SQLAlchemyError)
-    def handle_sql_exception(e: SQLAlchemyError):
         app.logger.error(e)
         return {"error": str(e)}
 

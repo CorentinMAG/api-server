@@ -1,5 +1,5 @@
 from flask import current_app as app
-from typing import cast
+from typing import cast, Optional
 
 from ..db import db
 from ..models import GlobalParameters, TransferPolicy
