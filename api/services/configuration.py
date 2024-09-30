@@ -181,17 +181,6 @@ def create_global_params(global_params: GlobalParameters) -> GlobalParameters:
     return nparams
 
 
-def create_global_params(global_params: GlobalParameters) -> GlobalParameters:
-    """
-    Create global params
-    """
-
-    nparams = GlobalParameters(**global_params)
-    db.session.add(nparams)
-    db.session.commit()
-    return nparams
-
-
 def configure(payload: ConfigurationJson):
     global_params = payload.get("global_parameters", None)
     if global_params is not None:

@@ -30,7 +30,7 @@ def create_app():
         response = e.get_response()
         app.logger.error(e.description)
         return response
-    
+
     @app.errorhandler(SQLAlchemyError)
     def handle_sql_exception(e: SQLAlchemyError):
         app.logger.error(e)

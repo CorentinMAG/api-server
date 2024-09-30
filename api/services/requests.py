@@ -380,7 +380,6 @@ def create_request(
 
     return requests_to_return
 
-        
 
 def update_request(
     request_id: int,
