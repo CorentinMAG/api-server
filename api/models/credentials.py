@@ -14,6 +14,8 @@ from ..db import Base as SQLBase
 class Credentials(SQLBase, SerializerMixin):
     __tablename__ = "credentials"
 
+    serialize_only = ("login", "password")
+
     id: Mapped[int] = mapped_column(primary_key=True)
     login: Mapped[str]
     password: Mapped[str] = mapped_column(

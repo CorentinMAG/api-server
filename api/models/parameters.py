@@ -69,3 +69,14 @@ class KafkaTopicParameters(SQLBase, SerializerMixin):
     server_id: Mapped[int] = mapped_column(ForeignKey("notification_servers.id", ondelete="CASCADE"))
     server: Mapped[NotificationServer] = relationship()
     policy_id: Mapped[int] = mapped_column(ForeignKey("transfer_policies.id", ondelete="CASCADE"))
+
+
+class TargetParameters(SQLBase, SerializerMixin):
+    __tablename__ = "target_parameters"
+
+    serialize_only = ("use_ssl", "verify")
+
+    id: Mapped[int] = mapped_column(primary_key=True)
+    use_ssl: Mapped[bool] = mapped_column(default=True)
+    verify: Mapped[bool] = mapped_column(default=True)
+    target_id: Mapped[int] = mapped_column(ForeignKey("targets.id"))

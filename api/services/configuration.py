@@ -19,6 +19,7 @@ from ..models import (
     TransferPolicyParameters,
     TransferPolicy,
     GlobalParameters,
+    TargetParameters,
 )
 
 
@@ -59,8 +60,13 @@ def create_targets(targets: list[TargetJson]) -> list[Target]:
     for target in targets:
         target_copy = deepcopy(target)
         credentials = target_copy.get("credentials", None)
+        parameters = target_copy.get("parameters", None)
         if credentials is not None:
             target_copy["credentials"] = Credentials(**credentials)
+        if parameters is not None:
+            target_copy["parameters"] = TargetParameters(**parameters)
+        else:
+            target_copy["parameters"] = TargetParameters()
         ntarget = Target(**target_copy)
         ntargets.append(ntarget)
     db.session.add_all(ntargets)

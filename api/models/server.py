@@ -14,6 +14,8 @@ if TYPE_CHECKING:
 class NotificationServer(SQLBase, SerializerMixin):
     __tablename__ = "notification_servers"
 
+    serialize_only = ("name", "type", "host", "port", "credentials", "timeout")
+
     id: Mapped[int] = mapped_column(primary_key=True)
     name: Mapped[str] = mapped_column(unique=True)
     type: Mapped[str]
