@@ -13,6 +13,12 @@ variables:
   - echo "https://${AFORGE_USER}:${AFORGE_PASSWORD}@${AFORGE_HOST}/artifactory/${AFORGE_ALPINE_REPO}/main" > /etc/apk/repositories
   - echo "https://${AFORGE_USER}:${AFORGE_PASSWORD}@${AFORGE_HOST}/artifactory/${AFORGE_ALPINE_REPO}/community" >> /etc/apk/repositories
 
+.configure_pip: &configure_pip
+  - echo "[global]" > /etc/pip.conf
+  - echo "index-url = https://${AFORGE_USER}:${AFORGE_PASSWORD}@${AFORGE_HOST}/artifactory/api/pypi/${AFORGE_PIP_REPO}/simple" >> /etc/pip.conf
+  - echo "extra-index-url = https://${AFORGE_USER}:${AFORGE_PASSWORD}@${AFORGE_HOST}/artifactory/api/pypi/${AFORGE_PIP_DTR}/simple" >> /etc/pip.conf
+  - echo "trusted-host = ${AFORGE_HOST}" >> /etc/pip.conf
+
 test:migrations:
   stage: test
   image: $AFORGE_HOST/$AFORGE_DOCKER_REGISTRY/python:3.10.13-alpine3.18
@@ -23,6 +29,7 @@ test:migrations:
   - dtr
   before_script:
   - *configure_alpine
+  - *configure_pip
   - apk --no-check-certificate update
   - apk --no-check-certificate add curl
   - cat $AFORGE_CA_BUNDLE > /etc/ssl/certs/ca-certificates.crt
