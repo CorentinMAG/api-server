@@ -1,10 +1,12 @@
 from logging.config import fileConfig
 
-from sqlalchemy import engine_from_config
-from sqlalchemy import pool
+from sqlalchemy.orm import Session
+from sqlalchemy import create_engine
 from api.models import *
 from api.db import Base
 from alembic import context
+import os
+from sqlalchemy_utils import database_exists, create_database
 
 target_metadata = Base.metadata
 
@@ -35,7 +37,7 @@ def run_migrations_offline() -> None:
     script output.
 
     """
-    url = config.get_main_option("sqlalchemy.url")
+    url = os.environ["DATABASE_URL"]
     context.configure(
         url=url,
         target_metadata=target_metadata,
@@ -54,14 +56,11 @@ def run_migrations_online() -> None:
     and associate a connection with the context.
 
     """
-    connectable = engine_from_config(
-        config.get_section(config.config_ini_section, {}),
-        prefix="sqlalchemy.",
-        poolclass=pool.NullPool,
-    )
-
-    with connectable.connect() as connection:
-        context.configure(connection=connection, target_metadata=target_metadata)
+    engine = create_engine(os.environ["DATABASE_URL"])
+    if not database_exists(os.environ["DATABASE_URL"]):
+        create_database(os.environ["DATABASE_URL"])
+    with Session(engine) as session:
+        context.configure(connection=session.connection(), target_metadata=target_metadata)
 
         with context.begin_transaction():
             context.run_migrations()
