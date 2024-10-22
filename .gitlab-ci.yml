@@ -35,6 +35,7 @@ test:migrations:
   - cat $AFORGE_CA_BUNDLE > /etc/ssl/certs/ca-certificates.crt
   - pip install -r requirements.txt
   - export DATABASE_URL=$DATABASE_URL
+  - export DTR_ENCRYPTION_KEY=azeaze
   script:
   - alembic revision --autogenerate -m "generate migration in gitlab pipeline"
   - cat alembic/*.py
