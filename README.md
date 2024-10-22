@@ -80,7 +80,7 @@ check out the `dtr/dtr` repository
 
 1. create the migration
 ```bash
-$ alembic revision -m "my first revision"
+$ alembic revision --autogenerate -m "my first revision"
 ```
 
 2. run the latest migration (create table in database)
