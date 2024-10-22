@@ -33,7 +33,7 @@ test:migrations:
   - apk --no-check-certificate update
   - apk --no-check-certificate add curl
   - cat $AFORGE_CA_BUNDLE > /etc/ssl/certs/ca-certificates.crt
-  - pip install requirements.txt
+  - pip install -r requirements.txt
   - export DATABASE_URL=$DATABASE_URL
   script:
   - alembic revision --autogenerate -m "generate migration in gitlab pipeline"
