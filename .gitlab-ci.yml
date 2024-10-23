@@ -5,7 +5,6 @@ stages:
 
 variables:
   POSTGRES_DB: dtr
-  POSTGRES_USER: postgres
   POSTGRES_PASSWORD: password
   DATABASE_URL: postgresql+psycopg://postgres:password@postgres:5432/dtr
 
