@@ -19,8 +19,4 @@ class Queue(SQLBase, SerializerMixin):
     priority: Mapped[int]
     queue_timeout: Mapped[int | None] = mapped_column(default=300)
     queue_limit: Mapped[int | None] = mapped_column(default=100)
-<<<<<<< HEAD
-    queue_threshold: Mapped[int| None] = mapped_column(default=80)
-=======
     queue_threshold: Mapped[int | None] = mapped_column(default=80)
->>>>>>> main
