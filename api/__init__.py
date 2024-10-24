@@ -38,8 +38,8 @@ def create_app():
 
     @app.errorhandler(Exception)
     def handle_exception(e: Exception):
-        app.logger.error("Exception occured on: {}".format(e))
-        return f"Internal Server error:{e}", 500
+        app.logger.error(e)
+        return {"error": str(e)}
 
     @app.before_request
     def log_request():

@@ -134,7 +134,6 @@ def create_request(
 
         # Check if there are transfer requests which reached queue timeout
         tr_in_queue = queued_requests + failed_requests + in_progress_requests
-
         for tr in tr_in_queue:
             tr_age = datetime.datetime.utcnow() - tr.state_created_at
             tr_age = tr_age.total_seconds()

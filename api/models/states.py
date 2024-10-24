@@ -13,6 +13,8 @@ from ..db import Base as SQLBase
 class State(SQLBase, SerializerMixin):
     __tablename__ = "states"
 
+    serialize_only = ("state", "created_at", "request_id", "failure_reason", "sub_state")
+
     id: Mapped[int] = mapped_column(primary_key=True)
     state: Mapped[StateEnum]
     created_at: Mapped[str] = mapped_column(DateTime, default=datetime.utcnow)

@@ -17,6 +17,7 @@ export DTR_DB_PORT=5438
 export DTR_DB_CREATE=true
 export DTR_LOG_LEVEL=DEBUG
 export DTR_ENCRYPTION_KEY=azeaze
+export DTR_VERSION=2.0.1
 
 
 

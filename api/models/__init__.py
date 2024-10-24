@@ -4,6 +4,7 @@ from .parameters import (
     KafkaTopicParameters,
     PeriodicalParameters,
     TransferPolicyParameters,
+    TargetParameters,
 )
 from .policies import DestinationPolicy, SourcePolicy, TransferPolicy
 from .queue import Queue
