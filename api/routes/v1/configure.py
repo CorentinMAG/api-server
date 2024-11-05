@@ -1,6 +1,7 @@
 from flask import request, Blueprint, current_app as app
 from api.services.configuration import configure as set_configuration, unconfigure as del_configuration
 from sqlalchemy.exc import SQLAlchemyError
+from dtr_common.schema import ConfigurationSchema
 
 bp = Blueprint("configuration", __name__)
 
@@ -14,8 +15,11 @@ def configure():
 
     del_configuration(keep=["transfer_requests", "global_parameters"])
 
+    configuration = ConfigurationSchema(**payload)
+
     try:
-        set_configuration(payload)
+        set_configuration(configuration)
+        app.logger.info("new configuration has been succesfully applied")
         return {"message": "configuration has been applied"}, 201
     except Exception as e:
         raise SQLAlchemyError(e)
@@ -27,6 +31,6 @@ def unconfigure():
     delete all records from all tables in the database
     we can specify in the body if we want to delete all transfer requests
     """
-    app.logger.info("Delete configuration")
     del_configuration(keep=["transfer_requests"])
-    return "Configuration was deleted", 200
+    app.logger.info("configuration has been successfully deleted")
+    return {"message": "configuration has been deleted"}, 200

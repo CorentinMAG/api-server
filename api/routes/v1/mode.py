@@ -11,7 +11,7 @@ def set_offline_mode():
     set DTR to offline mode
     """
     switch_mode(Mode.OFFLINE)
-    return "", 200
+    return "", 204
 
 
 @bp.route("/online", methods=["POST"])
@@ -21,7 +21,7 @@ def set_online_mode():
     """
 
     switch_mode(Mode.ONLINE)
-    return "", 200
+    return "", 204
 
 
 @bp.route("/global_params", methods=["GET"])
@@ -31,11 +31,6 @@ def get_global_parameters():
     """
     params = get_params()
     if params is None:
-        return {
-            "requests": [],
-            "page": 0,
-            "page_size": 0,
-            "total": -1,
-        }
+        return "", 204
     else:
         return params.to_dict(), 200

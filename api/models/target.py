@@ -4,6 +4,7 @@ from typing import TYPE_CHECKING
 
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 from sqlalchemy_serializer import SerializerMixin
+from dtr_common.constantes import Protocol
 
 from ..db import Base as SQLBase
 
@@ -19,7 +20,7 @@ class Target(SQLBase, SerializerMixin):
 
     id: Mapped[int] = mapped_column(primary_key=True)
     name: Mapped[str] = mapped_column(unique=True)
-    protocol: Mapped[str]
+    protocol: Mapped[Protocol]
     port: Mapped[int]
     host: Mapped[str]
     credentials: Mapped[Credentials] = relationship()

@@ -1,13 +1,13 @@
 from __future__ import annotations
 
 import uuid
-from datetime import datetime
+import datetime
 from typing import TYPE_CHECKING
 
-from sqlalchemy import DateTime, ForeignKey, select
-from sqlalchemy.orm import Mapped, mapped_column, relationship, column_property
+from sqlalchemy import DateTime, ForeignKey, func
+from sqlalchemy.orm import Mapped, mapped_column, relationship
 from sqlalchemy_serializer import SerializerMixin
-from dtr_common.constantes import State as StateEnum
+from dtr_common.constantes import State
 
 from ..db import Base as SQLBase
 from .states import State
@@ -19,56 +19,60 @@ if TYPE_CHECKING:
 class TransferRequest(SQLBase, SerializerMixin):
     __tablename__ = "transfer_requests"
 
+    serialize_only = (
+        "id",
+        "filename",
+        "size",
+        "uid",
+        "states",
+        "policy",
+        "created_at",
+        "nb_retry",
+        "next_retry_min_time",
+        "start",
+        "end",
+        "download_rate",
+        "download_time",
+        "upload_rate",
+        "upload_time",
+    )
+
     id: Mapped[int] = mapped_column(primary_key=True)
     filename: Mapped[str]
-    size: Mapped[int | None] = mapped_column(default=None)  # in MB
+    size: Mapped[float | None] = mapped_column(default=None)  # in MB
     uid: Mapped[uuid.UUID] = mapped_column(default=uuid.uuid4, unique=True)
-    states: Mapped[list[State]] = relationship()
+    states: Mapped[list[State]] = relationship(order_by="State.id.desc()")
     policy_id: Mapped[int | None] = mapped_column(ForeignKey("transfer_policies.id", ondelete="SET NULL"))
     policy: Mapped[TransferPolicy] = relationship(back_populates="transfers")
-    created_at: Mapped[str] = mapped_column(DateTime, default=datetime.utcnow)
+    created_at: Mapped[str] = mapped_column(DateTime, default=func.now())
     nb_retry: Mapped[int] = mapped_column(default=0)
     next_retry_min_time: Mapped[str | None] = mapped_column(DateTime, default=None)
-    beginning_time: Mapped[str | None] = mapped_column(DateTime, default=None)
-    end_time: Mapped[str | None] = mapped_column(DateTime, default=None)
-    rate: Mapped[int | None] = mapped_column(default=None)
-    source_relative_path: Mapped[str | None] = mapped_column(default=None)
+    start: Mapped[str | None] = mapped_column(DateTime, default=None)
+    end: Mapped[str | None] = mapped_column(DateTime, default=None)
+    download_rate: Mapped[float | None]
+    download_time: Mapped[float | None]
+    upload_rate: Mapped[float | None]
+    upload_time: Mapped[float | None]
 
-    last_state = column_property(
-        select(State.state)
-        .where(State.request_id == id)
-        .order_by(State.created_at.desc())
-        .limit(1)
-        .correlate_except(State)
-        .scalar_subquery()
-    )
+    def update(self, mapping: dict):
+        for key, value in mapping.items():
+            if key in self.__mapper__.column_attrs.keys():
+                setattr(self, key, value)
 
-    last_sub_state = column_property(
-        select(State.sub_state)
-        .where(State.request_id == id)
-        .order_by(State.created_at.desc())
-        .limit(1)
-        .correlate_except(State)
-        .scalar_subquery()
-    )
-
-    failure_reason = column_property(
-        select(State.failure_reason)
-        .where(State.request_id == id)
-        .order_by(State.created_at.desc())
-        .limit(1)
-        .correlate_except(State)
-        .scalar_subquery()
-    )
-
-    state_created_at = column_property(
-        select(State.created_at)
-        .where(
-            State.request_id == id
-            and last_state.in_([StateEnum.CANCELLED.value.upper(), StateEnum.FAILED.value.upper()])
+    def clone(self) -> TransferRequest:
+        return self.__class__(
+            **{
+                c.name: getattr(self, c.name)
+                for c in self.__table__.columns
+                if c.name
+                not in (
+                    "id",
+                    "uid",
+                    "created_at",
+                    "download_rate",
+                    "download_time",
+                    "upload_rate",
+                    "upload_time",
+                )
+            }
         )
-        .order_by(State.created_at.desc())
-        .limit(1)
-        .correlate_except(State)
-        .scalar_subquery()
-    )

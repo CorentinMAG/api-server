@@ -1,13 +1,8 @@
-from copy import deepcopy
-
-from dtr_common.types.configuration import ConfigurationJson, TransferPolicyConf
-from dtr_common.types.models import QueueJson, TargetJson, NotificationServerJson
 from typing import cast
 from dtr_common.constantes import Type
-from typing import Dict
 
-from ..db import db
-from ..models import (
+from api.db import db
+from api.models import (
     Credentials,
     DestinationPolicy,
     KafkaTopicParameters,
@@ -20,193 +15,185 @@ from ..models import (
     TransferPolicy,
     GlobalParameters,
     TargetParameters,
+    ServerParameters,
+)
+
+from dtr_common.schema import (
+    ConfigurationSchema,
+    GlobalParametersSchema,
+    QueueSchema,
+    ServerSchema,
+    TargetSchema,
+    TransferPolicySchema,
 )
 
 
-def create_servers(servers: list[NotificationServerJson]) -> list[NotificationServer]:
+def create_servers(servers: list[ServerSchema]) -> list[NotificationServer]:
     nservers: list[NotificationServer] = []
     for server in servers:
-        server_copy = deepcopy(server)
-        credentials = server_copy.get("credentials", None)
+        model = server.model_dump()
+        credentials = server.credentials
         if credentials is not None:
-            server_copy["credentials"] = Credentials(**credentials)
-        nserver = NotificationServer(**server_copy)
+            cred = {"login": credentials.login, "password": credentials.password.get_secret_value()}
+            ncred = Credentials(**cred)
+            model["credentials"] = ncred
+        nserver = NotificationServer(**model)
         nservers.append(nserver)
-    db.session.add_all(nservers)
-    db.session.commit()
     return nservers
 
 
-def create_queues(queues: list[QueueJson], global_params: Dict[str, int]) -> list[Queue]:
+def create_queues(queues: list[QueueSchema], gparams: GlobalParameters) -> list[Queue]:
     nqueues: list[Queue] = []
     for queue in queues:
-        if queue.get("queue_timeout", None) is None:
-            queue["queue_timeout"] = global_params.get("queue_timeout")
-        elif queue.get("queue_limit", None) is None:
-            queue["queue_limit"] = global_params.get("queue_limit")
-        elif queue.get("queue_threshold", None) is None:
-            queue["queue_threshold"] = global_params.get("queue_threshold")
-        else:
-            pass
-        nqueue = Queue(**queue)
+        queue.queue_timeout = (
+            queue.queue_timeout if queue.queue_timeout is not None else gparams.queue_timeout
+        )
+        queue.queue_limit = queue.queue_limit if queue.queue_limit is not None else gparams.queue_limit
+        queue.queue_threshold = (
+            queue.queue_threshold if queue.queue_threshold is not None else gparams.queue_threshold
+        )
+        nqueue = Queue(**queue.model_dump())
         nqueues.append(nqueue)
-    db.session.add_all(nqueues)
-    db.session.commit()
     return nqueues
 
 
-def create_targets(targets: list[TargetJson]) -> list[Target]:
+def create_targets(targets: list[TargetSchema]) -> list[Target]:
     ntargets: list[Target] = []
     for target in targets:
-        target_copy = deepcopy(target)
-        credentials = target_copy.get("credentials", None)
-        parameters = target_copy.get("parameters", None)
+        model = target.model_dump()
+        credentials = target.credentials
+        parameters = target.parameters
         if credentials is not None:
-            target_copy["credentials"] = Credentials(**credentials)
-        if parameters is not None:
-            target_copy["parameters"] = TargetParameters(**parameters)
-        else:
-            target_copy["parameters"] = TargetParameters()
-        ntarget = Target(**target_copy)
+            cred = {"login": credentials.login, "password": credentials.password.get_secret_value()}
+            ncred = Credentials(**cred)
+            model["credentials"] = ncred
+        model["parameters"] = TargetParameters(**parameters.model_dump())
+        ntarget = Target(**model)
         ntargets.append(ntarget)
-    db.session.add_all(ntargets)
-    db.session.commit()
     return ntargets
 
 
 def create_policies(
-    policies: list[TransferPolicyConf], global_params: Dict[str, int]
+    policies: list[TransferPolicySchema],
+    ngparams: GlobalParameters,
+    nservers: list[NotificationServer],
+    nqueues: list[Queue],
+    ntargets: list[Target],
 ) -> list[TransferPolicy]:
-    # prerequisities
-    nqueues = cast(list[Queue], db.session.query(Queue).all())  # type: ignore
-    ntargets = cast(list[Target], db.session.query(Target).all())  # type: ignore
-    nservers = cast(list[NotificationServer], db.session.query(NotificationServer).all())  # type: ignore
-
     npolicies: list[TransferPolicy] = []
 
     for policy in policies:
-        policy_copy = deepcopy(policy)
+        name = policy.name
+        enabled = policy.enabled
+        tr_type = policy.type
 
-        period_params = policy_copy.pop("periodical", None)
-        notifications = policy_copy.pop("notifications", None)
+        # to create SourcePolicy and DestinationPolicy objects
+        # we need the target object and not only the name
+        src = policy.src.model_dump()
+        src["target"] = next(filter(lambda t: t.name == policy.src.target, ntargets))
 
-        src_policy = policy_copy.pop("src")
-        dest_policy = policy_copy.pop("dest")
-        queue = policy_copy.pop("queue")
+        dest = policy.dest.model_dump()
+        dest["target"] = next(filter(lambda t: t.name == policy.dest.target, ntargets))
 
-        tr_name = policy_copy.pop("name")
-        tr_type = Type[policy_copy.pop("type").upper()]
-        tr_enabled = policy_copy.pop("enabled", True)
+        # if some params are set to None, we take the default one in GlobalParameters
+        dparams = {k: v for k, v in dest.items() if k in ngparams.to_dict()}
+        for k, v in dparams.items():
+            if v is None:
+                dparams[k] = getattr(ngparams, k)
+        dest.update(dparams)
 
-        if period_params is None:
-            period_params = {}
-            period_params["polling_interval"] = global_params.get("polling_interval")
+        queue = policy.queue
+        nqueue = next(filter(lambda q: q.name == queue, nqueues))
 
-        if policy_copy.get("retry_delay", None) is None:
-            policy_copy["retry_delay"] = global_params.get("retry_delay")
-        if policy_copy.get("max_retry", None) is None:
-            policy_copy["max_retry"] = global_params.get("max_retry")
-        if policy_copy.get("transfer_requests_history", None) is None:
-            policy_copy["transfer_requests_history"] = global_params.get("transfer_requests_history")
-        if policy_copy.get("compress", None) is None:
-            policy_copy["compress"] = global_params.get("compress")
-        if policy_copy.get("only_new_data", None) is None:
-            policy_copy["only_new_data"] = global_params.get("only_new_data")
-        if policy_copy.get("transfer_timeout", None) is None:
-            policy_copy["transfer_timeout"] = global_params.get("transfer_timeout")
+        notifications = policy.notifications
 
-        ntr_params = TransferPolicyParameters(**policy_copy)
-
-        if period_params is not None and tr_type == Type.PERIODICAL:
-            nperiod_params = PeriodicalParameters(**period_params)
-            ntr_params.periodical = nperiod_params
-
-        if dest_policy.get("tmp_prefix_dest", None) is None:
-            dest_policy["tmp_prefix_dest"] = global_params.get("tmp_prefix_dest")
-        elif dest_policy.get("final_prefix_dest", None) is None:
-            dest_policy["final_prefix_dest"] = global_params.get("final_prefix_dest")
+        # if some params are set to None, we take the default one in GlobalParameter
+        if policy.parameters:
+            params = {k: v for k, v in policy.parameters.model_dump().items() if k in ngparams.to_dict()}
+            for k, v in params.items():
+                if v is None:
+                    params[k] = getattr(ngparams, k)
         else:
-            pass
+            params = ngparams.to_dict()
+        nparams = TransferPolicyParameters(**params)
 
-        ntr_queue = next(filter(lambda q: q.name == queue, nqueues))
+        if tr_type == Type.PERIODICAL:
+            if policy.parameters is None or policy.parameters.periodical is None:
+                pparams = {"polling_interval": ngparams.polling_interval}
+            else:
+                pparams = policy.parameters.periodical.model_dump()
+            npparams = PeriodicalParameters(**pparams)
+            nparams.periodical = npparams
 
-        src_target = src_policy.pop("target")
-        dest_target = dest_policy.pop("target")
+        nsrc = SourcePolicy(**src)
+        ndest = DestinationPolicy(**dest)
 
-        src_policy["target"] = next(filter(lambda t: t.name == src_target, ntargets))
-        dest_policy["target"] = next(filter(lambda t: t.name == dest_target, ntargets))
-
-        nsrc_policy = SourcePolicy(**src_policy)
-        ndest_policy = DestinationPolicy(**dest_policy)
-
-        npolicy = TransferPolicy(
-            name=tr_name,
-            type=tr_type,
-            enabled=tr_enabled,
-            queue=ntr_queue,
-            parameters=ntr_params,
-            src=nsrc_policy,
-            dest=ndest_policy,
-        )
-
+        nnotifications: list[ServerParameters] = []
         if notifications is not None:
             for notification in notifications:
-                notification_copy = deepcopy(notification)
-                server_name = notification_copy.pop("server")
+                server_name = notification.server
                 nserver = next(filter(lambda n: n.name == server_name, nservers))
 
+                notification_params = notification.model_dump()
+                notification_params.pop("server")
+
                 if nserver.type == "kafka":
-                    topics = notification_copy.get("topics", None)
-                    if topics is not None:
-                        for topic in topics:
-                            if isinstance(topic, dict):
-                                nparameters = KafkaTopicParameters(**topic)
-                            else:
-                                nparameters = KafkaTopicParameters(topic=topic)
-                            nparameters.server_id = nserver.id
-                            npolicy.kafka.append(nparameters)
+                    topics = cast(list, notification_params["topics"])
+                    for topic in topics:
+                        if isinstance(topic, dict):
+                            nparameters = KafkaTopicParameters(server=nserver, **topic)
+                        else:
+                            nparameters = KafkaTopicParameters(server=nserver, topic=topic)
+                        nnotifications.append(nparameters)
                 else:
                     raise NotImplementedError(f"only 'kafka' server is emplemented (not {nserver.type})")
 
-        npolicies.append(npolicy)
+        npolicy = TransferPolicy(
+            name=name,
+            type=tr_type,
+            enabled=enabled,
+            queue=nqueue,
+            parameters=nparams,
+            src=nsrc,
+            dest=ndest,
+            notifications=nnotifications,
+        )
 
-    db.session.add_all(npolicies)
-    db.session.commit()
+        npolicies.append(npolicy)
 
     return npolicies
 
 
-def create_global_params(global_params: GlobalParameters) -> GlobalParameters:
+def create_global_params(gparams: GlobalParametersSchema) -> GlobalParameters:
     """
     Create global params
     """
 
-    nparams = GlobalParameters(**global_params)
-    db.session.add(nparams)
-    db.session.commit()
+    model = gparams.model_dump()
+    nparams = GlobalParameters(**model)
     return nparams
 
 
-def configure(payload: ConfigurationJson):
-    global_params = payload.get("global_parameters", None)
-    if global_params is not None:
-        create_global_params(global_params)
+def configure(payload: ConfigurationSchema):
+    gparams = payload.global_parameters
+    ngparams = create_global_params(gparams)
 
-    servers = payload.get("notification_servers", None)
-    if servers is not None:
-        create_servers(servers)
+    servers = payload.notification_servers
+    nservers = create_servers(servers)
 
-    queues = payload.get("queues", None)
-    if queues is not None:
-        create_queues(queues, global_params)
+    queues = payload.queues
+    nqueues = create_queues(queues, ngparams)
 
-    targets = payload.get("targets", None)
-    if targets is not None:
-        create_targets(targets)
+    targets = payload.targets
+    ntargets = create_targets(targets)
 
-    policies = payload.get("transfer_policies", None)
-    if policies is not None:
-        create_policies(policies, global_params)
+    policies = payload.transfer_policies
+    npolicies = create_policies(policies, ngparams, nservers, nqueues, ntargets)
+
+    data = [ngparams] + nservers + nqueues + ntargets + npolicies
+
+    db.session.add_all(data)
+    db.session.commit()
 
 
 def unconfigure(keep: list[str] | None = None) -> None:

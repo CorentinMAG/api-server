@@ -11,7 +11,7 @@ source ~/Envs/dtr/api/bin/activate
 export DTR_DB_NAME=dtr
 export DTR_API_VERSION=2.0.0-rc.1
 export DTR_DB_USER=postgres
-export DTR_DB_PASSWORD=test
+export DTR_DB_PASSWORD=vlgklm91810
 export DTR_DB_HOST=127.0.0.1
 export DTR_DB_PORT=5438
 export DTR_DB_CREATE=true

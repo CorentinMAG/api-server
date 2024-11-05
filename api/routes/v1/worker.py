@@ -4,25 +4,24 @@ from dtr_common.constantes import Mode, State as StateEnum
 from api.models import State
 from api.db import db
 from api.services.requests import get_next_request
+import datetime
 
 bp = Blueprint("worker", __name__)
 
 
 @bp.route("configuration/worker", methods=["GET"])
 def worker():
-    nglobal_parameters = get_params()
-    if nglobal_parameters is None or nglobal_parameters.mode == Mode.OFFLINE:
-        return {
-            "request": {},
-        }
+    ngparams = get_params()
+    if ngparams is None or ngparams.mode == Mode.OFFLINE:
+        return {"request": None}
     else:
-        session = db.session
-        worker_storage = request.args.get("worker_storage")
-        params = {"worker_storage": worker_storage}
-        next_request = get_next_request(session, params)
+        worker_storage = request.args.get("size", type=float)
+        params = {"size": worker_storage, "state": StateEnum.QUEUED}
+        next_request = get_next_request(params)
         if next_request is not None:
-            nstate = State(state=StateEnum.IN_PROGRESS.value.upper())
+            nstate = State(state=StateEnum.IN_PROGRESS)
             next_request.states.append(nstate)
+            next_request.start = datetime.datetime.now(datetime.timezone.utc)
             db.session.commit()
-            return {"request": next_request.to_dict(rules=("-policy.transfers",))}, 200
-        return {"request": []}, 200
+            return {"request": next_request.to_dict()}, 200
+        return {"request": None}, 200

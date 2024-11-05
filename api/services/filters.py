@@ -8,10 +8,11 @@ from ..models import GlobalParameters, TransferPolicy
 def switch_mode(mode: str) -> None:
     params = db.session.query(GlobalParameters).first()
     if params is None:
-        app.logger.error("no global parameters, the DTR doesn't know how to switch mode")
+        app.logger.error("no global parameters, the dtr doesn't know how to switch mode")
     else:
         params.mode = mode
         db.session.commit()
+        app.logger.info("dtr has switched to %s mode", mode)
 
 
 def get_params() -> GlobalParameters | None:
@@ -41,4 +42,3 @@ def check_policy_params(
         pass
 
     return tr_policy
-

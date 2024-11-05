@@ -1,35 +1,20 @@
-from flask import request, Blueprint, current_app as app
+from flask import Blueprint
 from api.services.filters import get_params
-from dtr_common.constantes import Mode
-from api.services.requests import filter_requests
-from sqlalchemy_pagination import paginate
+from dtr_common.constantes import Mode, SubState
+from api.services.requests import get_next_request
 
 bp = Blueprint("notification", __name__)
 
 
 @bp.route("/notifications", methods=["GET"])
 def notification():
-    app.logger.debug("Get notifications")
-    nglobal_parameters = get_params()
-    if nglobal_parameters is None or nglobal_parameters.mode == Mode.OFFLINE:
-        return {
-            "requests": [],
-            "page": 0,
-            "page_size": 0,
-            "total": -1,
-        }
+    ngparams = get_params()
+    if ngparams is None or ngparams.mode == Mode.OFFLINE:
+        return {"request": None}
     else:
-        page = request.args.get("page", type=int, default=1)
-        page_size = request.args.get("page_size", type=int, default=10)
+        params = {"sub_state": SubState.NOTIFY}
 
-        params = {"sub_state": "notify"}
-
-        query = filter_requests(params)
-        result = paginate(query, page=page, page_size=page_size)
-
-        return {
-            "requests": [r.to_dict(rules=("-policy.transfers",)) for r in result.items],
-            "page": page,
-            "page_size": page_size,
-            "total": result.total,
-        }, 200
+        nrequest = get_next_request(params)
+        if nrequest is not None:
+            return {"request": nrequest.to_dict()}, 200
+        return {"request": None}, 200

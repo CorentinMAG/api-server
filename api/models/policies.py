@@ -1,9 +1,8 @@
 from __future__ import annotations
 
-from datetime import datetime
 from typing import TYPE_CHECKING
 
-from sqlalchemy import DateTime, ForeignKey
+from sqlalchemy import DateTime, ForeignKey, func
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 from sqlalchemy_serializer import SerializerMixin
 
@@ -11,7 +10,7 @@ from ..db import Base as SQLBase
 from dtr_common.constantes import Type
 
 if TYPE_CHECKING:
-    from .parameters import KafkaTopicParameters, TransferPolicyParameters
+    from .parameters import TransferPolicyParameters, ServerParameters
     from .queue import Queue
     from .request import TransferRequest
     from .target import Target
@@ -46,12 +45,25 @@ class DestinationPolicy(SQLBase, SerializerMixin):
 class TransferPolicy(SQLBase, SerializerMixin):
     __tablename__ = "transfer_policies"
 
+    serialize_only = (
+        "id",
+        "name",
+        "enabled",
+        "type",
+        "notifications",
+        "src",
+        "dest",
+        "parameters",
+        "queue",
+        "created_at",
+    )
+
     id: Mapped[int] = mapped_column(primary_key=True)
     name: Mapped[str] = mapped_column(unique=True)
     enabled: Mapped[bool] = mapped_column(default=True)
-    type: Mapped[Type]  # deprecated
+    type: Mapped[Type]
 
-    kafka: Mapped[list[KafkaTopicParameters]] = relationship()
+    notifications: Mapped[list[ServerParameters]] = relationship()
 
     src: Mapped[SourcePolicy] = relationship()
     src_id: Mapped[int] = mapped_column(ForeignKey("source_policies.id", ondelete="CASCADE"))
@@ -63,8 +75,23 @@ class TransferPolicy(SQLBase, SerializerMixin):
     queue_id: Mapped[int] = mapped_column(ForeignKey("queues.id"))
     queue: Mapped[Queue] = relationship()
     transfers: Mapped[list[TransferRequest]] = relationship(back_populates="policy")
-    created_at: Mapped[str] = mapped_column(DateTime, default=datetime.utcnow)
+    created_at: Mapped[str] = mapped_column(DateTime, default=func.now())
 
     @property
     def has_notifications(self) -> bool:
         return bool(self.kafka)
+
+    def update(self, mapping: dict):
+        update_rec(self, mapping)
+
+
+def update_rec(obj: SQLBase, mapping: dict):
+    """
+    recursive update
+    """
+    for key, value in mapping.items():
+        if key in obj.__mapper__.relationships:
+            relation = getattr(obj, key)
+            update_rec(relation, value)
+        elif key in obj.__mapper__.column_attrs:
+            setattr(obj, key, value)

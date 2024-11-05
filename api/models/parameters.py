@@ -16,6 +16,8 @@ if TYPE_CHECKING:
 class PeriodicalParameters(SQLBase, SerializerMixin):
     __tablename__ = "periodical_parameters"
 
+    serialize_only = ("polling_interval", "next_polling_min_time")
+
     id: Mapped[int] = mapped_column(primary_key=True)
     polling_interval: Mapped[int]
     parameter_id: Mapped[int] = mapped_column(ForeignKey("transfer_policy_parameters.id", ondelete="CASCADE"))
@@ -25,13 +27,23 @@ class PeriodicalParameters(SQLBase, SerializerMixin):
 class TransferPolicyParameters(SQLBase, SerializerMixin):
     __tablename__ = "transfer_policy_parameters"
 
+    serialize_only = (
+        "max_retry",
+        "retry_delay",
+        "transfer_requests_history",
+        "compress",
+        "compress_type",
+        "only_new_data",
+        "transfer_timeout",
+        "periodical",
+    )
+
     id: Mapped[int] = mapped_column(primary_key=True)
     max_retry: Mapped[int | None]
     retry_delay: Mapped[int | None]  # in seconds
     transfer_requests_history: Mapped[int | None]
     compress: Mapped[bool | None]
     compress_type: Mapped[str | None]
-    data_type: Mapped[str]
     only_new_data: Mapped[bool | None]
     transfer_timeout: Mapped[int | None]  # in seconds
 
@@ -59,18 +71,6 @@ class GlobalParameters(SQLBase, SerializerMixin):
     queue_threshold: Mapped[int] = mapped_column(default=80)
 
 
-class KafkaTopicParameters(SQLBase, SerializerMixin):
-    __tablename__ = "kafka_topic_parameters"
-
-    id: Mapped[int] = mapped_column(primary_key=True)
-    topic: Mapped[str]
-    replica: Mapped[int] = mapped_column(default=1)
-    partitions: Mapped[int] = mapped_column(default=1)
-    server_id: Mapped[int] = mapped_column(ForeignKey("notification_servers.id", ondelete="CASCADE"))
-    server: Mapped[NotificationServer] = relationship()
-    policy_id: Mapped[int] = mapped_column(ForeignKey("transfer_policies.id", ondelete="CASCADE"))
-
-
 class TargetParameters(SQLBase, SerializerMixin):
     __tablename__ = "target_parameters"
 
@@ -80,3 +80,28 @@ class TargetParameters(SQLBase, SerializerMixin):
     use_ssl: Mapped[bool] = mapped_column(default=True)
     verify: Mapped[bool] = mapped_column(default=True)
     target_id: Mapped[int] = mapped_column(ForeignKey("targets.id"))
+
+
+class ServerParameters(SQLBase):
+    __tablename__ = "server_parameters"
+
+    id: Mapped[int] = mapped_column(primary_key=True)
+    type: Mapped[str]  # discriminator column to differentiate parameter types
+    policy_id: Mapped[int] = mapped_column(ForeignKey("transfer_policies.id", ondelete="CASCADE"))
+
+    __mapper_args__ = {"polymorphic_identity": "transfer_parameters", "polymorphic_on": "type"}
+
+
+class KafkaTopicParameters(ServerParameters, SerializerMixin):
+    __tablename__ = "kafka_topic_parameters"
+
+    serialize_only = ("topic", "replica", "partitions", "server")
+
+    id: Mapped[int] = mapped_column(ForeignKey("server_parameters.id"), primary_key=True)
+    topic: Mapped[str]
+    replica: Mapped[int] = mapped_column(default=1)
+    partitions: Mapped[int] = mapped_column(default=1)
+    server_id: Mapped[int] = mapped_column(ForeignKey("notification_servers.id", ondelete="CASCADE"))
+    server: Mapped[NotificationServer] = relationship()
+
+    __mapper_args__ = {"polymorphic_identity": "kafka_topic_parameters"}

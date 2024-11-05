@@ -1,7 +1,6 @@
-from dtr_common.types.filter import FilterPolicyParams
 from sqlalchemy import or_
-from ..db import db
-from ..models import (
+from api.db import db
+from api.models import (
     DestinationPolicy,
     Queue,
     SourcePolicy,
@@ -11,6 +10,19 @@ from ..models import (
     PeriodicalParameters,
 )
 import datetime
+from typing import cast, TypedDict
+from dtr_common.constantes import Type
+
+
+class FilterPolicyParams(TypedDict, total=False):
+    enabled: bool
+    type: Type | str
+    src: str
+    dest: str
+    queues: str
+    id: int
+    ids: str
+    next_polling_min_time: bool
 
 
 def filter_policies(params: FilterPolicyParams):
@@ -18,10 +30,9 @@ def filter_policies(params: FilterPolicyParams):
 
     if params.get("enabled") is not None:
         base = base.filter(TransferPolicy.enabled == params["enabled"])
-    if params.get("dataType", None) is not None:
-        base = base.filter(TransferPolicyParameters.data_type == params["dataType"])
     if params.get("type") is not None:
-        base = base.filter(TransferPolicy.type == params["type"].upper())
+        type = params["type"] if isinstance(params["type"], Type) else Type[params["type"].upper()]
+        base = base.filter(TransferPolicy.type == type)
     if params.get("src") is not None:
         base = base.join(SourcePolicy).join(Target).filter(Target.name == params["src"])
     if params.get("dest") is not None:
@@ -42,10 +53,18 @@ def filter_policies(params: FilterPolicyParams):
             .filter(
                 or_(
                     PeriodicalParameters.next_polling_min_time.is_(None),
-                    PeriodicalParameters.next_polling_min_time <= datetime.datetime.utcnow(),
+                    PeriodicalParameters.next_polling_min_time
+                    <= datetime.datetime.now(datetime.timezone.utc),
                 )
             )
         )
     base.order_by(TransferPolicy.created_at)
 
     return base
+
+
+def update_policy(policy_id: int, payload: dict):
+    npolicy = cast(TransferPolicy | None, db.session.query(TransferPolicy).get(policy_id))
+    if npolicy:
+        npolicy.update(payload)
+        db.session.commit()
