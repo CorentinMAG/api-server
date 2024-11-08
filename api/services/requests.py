@@ -1,5 +1,5 @@
 from typing import cast
-from dtr_common.constantes import State as StateEnum, SubState as SubStateEnum
+from dtr_common.constantes import State as StateEnum, SubState as SubStateEnum, Type
 from flask import current_app as app
 
 from api.db import db
@@ -126,7 +126,7 @@ def create_periodical_requests(payload: TriggerTransferRequestSchema) -> None:
     triggered_files = payload.files
 
     # we sort triggered_files by modified_at attribute
-    triggered_files = sorted(triggered_files, key=lambda k: k["modified_at"], reverse=True)
+    triggered_files = sorted(triggered_files, key=lambda k: k.modified_at, reverse=True)
 
     npolicy = db.session.scalar(select(TransferPolicy).where(TransferPolicy.id == policy_id))
 
@@ -227,7 +227,11 @@ def create_periodical_requests(payload: TriggerTransferRequestSchema) -> None:
 def create_commanded_request(payload: CommandedTransferRequestSchema) -> None:
     policy_name = payload.transfer_policy
 
-    npolicy = db.session.scalar(select(TransferPolicy).where(TransferPolicy.name == policy_name))
+    npolicy = db.session.scalar(
+        select(TransferPolicy).where(
+            TransferPolicy.name == policy_name, TransferPolicy.type == Type.COMMANDED
+        )
+    )
 
     if npolicy:
         if payload.uid:

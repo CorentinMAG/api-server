@@ -13,7 +13,7 @@ def configure():
     """
     payload = request.json
 
-    del_configuration(keep=["transfer_requests", "global_parameters"])
+    del_configuration(keep=["transfer_requests", "global_parameters", "states"])
 
     configuration = ConfigurationSchema(**payload)
 
