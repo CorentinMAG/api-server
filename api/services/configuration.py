@@ -114,7 +114,7 @@ def create_policies(
                 if v is None:
                     params[k] = getattr(ngparams, k)
         else:
-            params = ngparams.to_dict()
+            params = {k: v for k, v in ngparams.to_dict() if k in TransferPolicy.__mapper__.columns}
         nparams = TransferPolicyParameters(**params)
 
         if tr_type == Type.PERIODICAL:

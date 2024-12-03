@@ -54,6 +54,22 @@ class TransferPolicyParameters(SQLBase, SerializerMixin):
 class GlobalParameters(SQLBase, SerializerMixin):
     __tablename__ = "global_parameters"
 
+    serialize_only = (
+        "mode",
+        "tmp_prefix",
+        "final_prefix",
+        "retry_delay",
+        "max_retry",
+        "transfer_requests_history",
+        "compress",
+        "only_new_data",
+        "transfer_timeout",
+        "queue_timeout",
+        "polling_interval",
+        "queue_limit",
+        "queue_threshold"
+    )
+
     id: Mapped[int] = mapped_column(primary_key=True)
     mode: Mapped[Mode] = mapped_column(default=Mode.ONLINE)
     updated_at: Mapped[str] = mapped_column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
