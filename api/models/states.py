@@ -16,8 +16,8 @@ class State(SQLBase, SerializerMixin):
     serialize_only = ("state", "created_at", "failure_reason", "sub_state", "id")
 
     id: Mapped[int] = mapped_column(primary_key=True)
-    state: Mapped[StateEnum] = mapped_column(index=True)
+    state: Mapped[StateEnum] = mapped_column(index = True)
     created_at: Mapped[datetime.datetime] = mapped_column(DateTime, default=func.now())
-    request_id: Mapped[int] = mapped_column(ForeignKey("transfer_requests.id", ondelete="CASCADE"))
+    request_id: Mapped[int] = mapped_column(ForeignKey("transfer_requests.id", ondelete="CASCADE"), index = True)
     failure_reason: Mapped[str | None]
     sub_state: Mapped[SubStateEnum | None] = mapped_column(default=None, index=True)

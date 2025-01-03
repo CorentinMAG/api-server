@@ -27,8 +27,7 @@ def get_next_request(params: NextTransferRequestParams) -> TransferRequest | Non
         select(TransferRequest)
         .join(TransferPolicy)
         .join(Queue)
-        .order_by(Queue.priority.asc())
-        .order_by(TransferRequest.created_at.asc())
+        .order_by(Queue.priority.asc(), TransferRequest.created_at.asc())
     )
 
     if state or sub_state:
