@@ -92,15 +92,19 @@ def create_policies(
         src = policy.src.model_dump()
         src["target"] = next(filter(lambda t: t.name == policy.src.target, ntargets))
 
-        dest = policy.dest.model_dump()
-        dest["target"] = next(filter(lambda t: t.name == policy.dest.target, ntargets))
+        dests = []
 
-        # if some params are set to None, we take the default one in GlobalParameters
-        dparams = {k: v for k, v in dest.items() if k in ngparams.to_dict()}
-        for k, v in dparams.items():
-            if v is None:
-                dparams[k] = getattr(ngparams, k)
-        dest.update(dparams)
+        for dest in policy.dest:
+            dest_json = dest.model_dump()
+            dest_json["target"] = next(filter(lambda t: t.name == dest.target, ntargets))
+
+            # if some params are set to None, we take the default one in GlobalParameters
+            dparams = {k: v for k, v in dest.items() if k in ngparams.to_dict()}
+            for k, v in dparams.items():
+                if v is None:
+                    dparams[k] = getattr(ngparams, k)
+            dest_json.update(dparams)
+            dests.append(dest_json)
 
         queue = policy.queue
         nqueue = next(filter(lambda q: q.name == queue, nqueues))
@@ -126,7 +130,7 @@ def create_policies(
             nparams.periodical = npparams
 
         nsrc = SourcePolicy(**src)
-        ndest = DestinationPolicy(**dest)
+        ndests = list(map(lambda dest: DestinationPolicy(**dest)))
 
         nnotifications: list[ServerParameters] = []
         if notifications is not None:
@@ -155,7 +159,7 @@ def create_policies(
             queue=nqueue,
             parameters=nparams,
             src=nsrc,
-            dest=ndest,
+            dest=ndests,
             notifications=nnotifications,
         )
 
