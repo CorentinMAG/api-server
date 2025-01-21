@@ -5,6 +5,7 @@ from .parameters import (
     PeriodicalParameters,
     TransferPolicyParameters,
     ServerParameters,
+    TargetParameters,
 )
 from .policies import DestinationPolicy, SourcePolicy, TransferPolicy
 from .queue import Queue
@@ -28,4 +29,5 @@ __all__ = [
     "TransferRequest",
     "State",
     "ServerParameters",
+    "TargetParameters",
 ]

@@ -168,7 +168,7 @@ def create_periodical_requests(payload: TriggerTransferRequestSchema) -> None:
             # and the state is SUCCESSFUL or CANCELLED
             # we recreate a new transfer request
             elif not only_new_data:
-                nrequest = cast(TransferRequest, next(filter(lambda r: r.filename == filename, requests)))
+                nrequest = next(filter(lambda r: r.filename == filename, requests))
                 latest_state = nrequest.states[0]
                 if latest_state.state == StateEnum.CANCELLED or latest_state.state == StateEnum.SUCCESSFUL:
                     nrequest = nrequest.clone()
@@ -242,7 +242,8 @@ def create_commanded_request(payload: CommandedTransferRequestSchema) -> None:
                 .where(TransferRequest.uid == payload.uid)
             )
             if nrequest and nrequest.states[0].state == StateEnum.QUEUED:
-                return nrequest.uid
+                return
+
         filename = payload.path.split("/")[-1]
         nrequest = TransferRequest(filename=filename)
         nstate = State(state=StateEnum.QUEUED)
@@ -259,7 +260,7 @@ def update_request(
     state = StateEnum[params["state"].upper()] if params.get("state") else None
     sub_state = SubStateEnum[params["sub_state"].upper()] if params.get("sub_state") else None
 
-    if nrequest:
+    if nrequest and params:
         npolicy = nrequest.policy
         # if we are updating the request status,
         # we need to check if it is a FAILED or not
@@ -282,7 +283,7 @@ def update_request(
                     nstates.append(nstate)
             else:
                 # state is either CANCELLED or SUCCESSFUL
-                nrequest.end = datetime.datetime.now(datetime.timezone.utc)
+                nrequest.end = datetime.datetime.now(datetime.timezone.utc).isoformat()
                 nstate = State(state=state, sub_state=sub_state)
                 nstates.append(nstate)
             nrequest.states.extend(nstates)
@@ -290,3 +291,4 @@ def update_request(
         nrequest.update(params)
         db.session.commit()
         return nrequest
+    return None
