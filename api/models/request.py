@@ -1,19 +1,17 @@
 from __future__ import annotations
 
 import uuid
-import datetime
 from typing import TYPE_CHECKING
 
 from sqlalchemy import DateTime, ForeignKey, func
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 from sqlalchemy_serializer import SerializerMixin
-from dtr_common.constantes import State
 
 from ..db import Base as SQLBase
 from .states import State
 
 if TYPE_CHECKING:
-    from .policies import TransferPolicy
+    from .policies import TransferPolicy, DestinationPolicy
 
 
 class TransferRequest(SQLBase, SerializerMixin):
@@ -35,6 +33,7 @@ class TransferRequest(SQLBase, SerializerMixin):
         "download_time",
         "upload_rate",
         "upload_time",
+        "dest",
     )
 
     id: Mapped[int] = mapped_column(primary_key=True)
@@ -53,6 +52,8 @@ class TransferRequest(SQLBase, SerializerMixin):
     download_time: Mapped[float | None]
     upload_rate: Mapped[float | None]
     upload_time: Mapped[float | None]
+    dest_id: Mapped[int | None] = mapped_column(ForeignKey("destination_policies.id", ondelete="SET NULL"))
+    dest: Mapped[DestinationPolicy] = relationship(foreign_keys=[dest_id])
 
     def update(self, mapping: dict):
         for key, value in mapping.items():

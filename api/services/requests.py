@@ -111,7 +111,7 @@ def filter_requests(params):
     if params.get("policy_ids") is not None:
         policy_ids = list(map(lambda x: int(x), params["policy_ids"].split(",")))
         base = base.filter(TransferRequest.policy_id.in_(policy_ids))
-    return base
+    return base.with_for_update()
 
 
 def create_periodical_requests(payload: TriggerTransferRequestSchema) -> None:
@@ -136,10 +136,11 @@ def create_periodical_requests(payload: TriggerTransferRequestSchema) -> None:
         only_new_data = npolicy.parameters.only_new_data
         requests = npolicy.transfers
         queue = npolicy.queue
+        dests = npolicy.dests
 
         db_files = list(map(lambda r: r.filename, requests))
         db_queued_files = list(filter(lambda r: r.states[0].state == StateEnum.QUEUED, requests))
-        l = queue.queue_limit - len(db_queued_files)
+        l = queue.queue_limit - len(db_queued_files) * len(dests)
 
         if l <= 0:
             # queue is already full
@@ -160,10 +161,11 @@ def create_periodical_requests(payload: TriggerTransferRequestSchema) -> None:
             filename = file.filename
             size = file.size
             if filename not in db_files:
-                nrequest = TransferRequest(filename=filename, size=size)
-                nstate = State(state=StateEnum.QUEUED)
-                nrequest.states.append(nstate)
-                nrequests.append(nrequest)
+                for dest in dests:
+                    nrequest = TransferRequest(filename=filename, size=size, dest=dest)
+                    nstate = State(state=StateEnum.QUEUED)
+                    nrequest.states.append(nstate)
+                    nrequests.append(nrequest)
             # if only_new_data is false
             # and the trigerred file is already in database
             # and the state is SUCCESSFUL or CANCELLED
@@ -182,45 +184,47 @@ def create_periodical_requests(payload: TriggerTransferRequestSchema) -> None:
         ## for each new request we create a report log
         reports_uid = []
         for nrequest in nrequests:
-            uid = uuid.uuid4()
-            reports_uid.append(uid)
-            task = {
-                "type": "REPORT",
-                "task": {
-                    "uid": str(uid),
-                    "name": "dtr_api_transfer_request",
-                    "event": "BEGIN",
-                    "input": {
-                        "tpln_string": npolicy.name,
-                        "source_url_string": npolicy.src.path,
-                        "filename_string": nrequest.filename,
-                        "target_url_string": npolicy.dest.path,
-                        "target_logical_name_string": npolicy.dest.target.name,
+            for dest in npolicy.dests:
+                uid = uuid.uuid4()
+                reports_uid.append(uid)
+                task = {
+                    "type": "REPORT",
+                    "task": {
+                        "uid": str(uid),
+                        "name": "dtr_api_transfer_request",
+                        "event": "BEGIN",
+                        "input": {
+                            "tpln_string": npolicy.name,
+                            "source_url_string": npolicy.src.path,
+                            "filename_string": nrequest.filename,
+                            "target_url_string": dest.path,
+                            "target_logical_name_string": dest.target.name,
+                        },
                     },
-                },
-            }
+                }
             app.logger.info("request for transfer", extra=task)
         db.session.commit()
 
         for nrequest, uid in zip(nrequests, reports_uid):
-            task = {
-                "type": "REPORT",
-                "task": {
-                    "uid": str(uid),
-                    "name": "dtr_api_transfer_request",
-                    "event": "END",
-                    "status": "OK",
-                    "input": {
-                        "tpln_string": npolicy.name,
-                        "source_url_string": npolicy.src.path,
-                        "filename_string": nrequest.filename,
-                        "target_url_string": npolicy.dest.path,
-                        "target_logical_name_string": npolicy.dest.target.name,
+            for dest in npolicy.dests:
+                task = {
+                    "type": "REPORT",
+                    "task": {
+                        "uid": str(uid),
+                        "name": "dtr_api_transfer_request",
+                        "event": "END",
+                        "status": "OK",
+                        "input": {
+                            "tpln_string": npolicy.name,
+                            "source_url_string": npolicy.src.path,
+                            "filename_string": nrequest.filename,
+                            "target_url_string": dest.path,
+                            "target_logical_name_string": dest.target.name,
+                        },
+                        "error_code": 0,
+                        "output": {"rest_id_string": str(nrequest.uid)},
                     },
-                    "error_code": 0,
-                    "output": {"rest_id_string": str(nrequest.uid)},
-                },
-            }
+                }
             app.logger.info("end of request transfer", extra=task)
 
 

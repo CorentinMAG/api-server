@@ -7,13 +7,14 @@ from api.services.requests import (
     update_request,
     create_commanded_request,
 )
-from dtr_common.constantes import Mode
-from dtr_common.utils import parse_params
 from api.models import TransferRequest
+from dtr_common.utils import parse_params
+from dtr_common.constantes import Mode
 from dtr_common.schema import TriggerTransferRequestSchema, CommandedTransferRequestSchema
 
-bp = Blueprint("requests", __name__)
 from api.db import db
+
+bp = Blueprint("requests", __name__)
 
 
 @bp.route("/requests", methods=["GET"])
@@ -21,7 +22,7 @@ def requests():
     """
     list all transfer requests
     output can be filtered by using query params
-    - state: queued / sucessful / failed / in_progress
+    - state: queued / successful / failed / in_progress
     - queues: name1,name2,...
     """
 

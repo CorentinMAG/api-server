@@ -18,7 +18,7 @@ class FilterPolicyParams(TypedDict, total=False):
     enabled: bool
     type: Type | str
     src: str
-    dest: str
+    dests: str
     queues: str
     id: int
     ids: str
@@ -35,8 +35,8 @@ def filter_policies(params: FilterPolicyParams):
         base = base.filter(TransferPolicy.type == type)
     if params.get("src") is not None:
         base = base.join(SourcePolicy).join(Target).filter(Target.name == params["src"])
-    if params.get("dest") is not None:
-        base = base.join(DestinationPolicy).join(Target).filter(Target.name == params["dest"])
+    if params.get("dests") is not None:
+        base = base.join(DestinationPolicy).join(Target).filter(Target.name == params["dests"])
     if params.get("queues") is not None:
         queues = params["queues"].split(",")
         base = base.join(TransferPolicy.queue).filter(Queue.name.in_(queues))

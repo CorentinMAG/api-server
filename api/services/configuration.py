@@ -93,13 +93,12 @@ def create_policies(
         src["target"] = next(filter(lambda t: t.name == policy.src.target, ntargets))
 
         dests = []
-
-        for dest in policy.dest:
+        for dest in policy.dests:
             dest_json = dest.model_dump()
             dest_json["target"] = next(filter(lambda t: t.name == dest.target, ntargets))
 
             # if some params are set to None, we take the default one in GlobalParameters
-            dparams = {k: v for k, v in dest.items() if k in ngparams.to_dict()}
+            dparams = {k: v for k, v in dest_json.items() if k in ngparams.to_dict()}
             for k, v in dparams.items():
                 if v is None:
                     dparams[k] = getattr(ngparams, k)
@@ -130,7 +129,7 @@ def create_policies(
             nparams.periodical = npparams
 
         nsrc = SourcePolicy(**src)
-        ndests = list(map(lambda dest: DestinationPolicy(**dest)))
+        ndests = list(map(lambda dest: DestinationPolicy(**dest), dests))
 
         nnotifications: list[ServerParameters] = []
         if notifications is not None:
@@ -159,7 +158,7 @@ def create_policies(
             queue=nqueue,
             parameters=nparams,
             src=nsrc,
-            dest=ndests,
+            dests=ndests,
             notifications=nnotifications,
         )
 
@@ -172,7 +171,6 @@ def create_global_params(gparams: GlobalParametersSchema) -> GlobalParameters:
     """
     Create global params
     """
-
     model = gparams.model_dump()
     nparams = GlobalParameters(**model)
     return nparams
