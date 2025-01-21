@@ -2,7 +2,6 @@ from logging.config import fileConfig
 
 from sqlalchemy.orm import Session
 from sqlalchemy import create_engine
-from api.models import *
 from api.db import Base
 from alembic import context
 import os

@@ -67,7 +67,7 @@ class GlobalParameters(SQLBase, SerializerMixin):
         "queue_timeout",
         "polling_interval",
         "queue_limit",
-        "queue_threshold"
+        "queue_threshold",
     )
 
     id: Mapped[int] = mapped_column(primary_key=True)

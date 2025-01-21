@@ -1,22 +1,19 @@
-from typing import cast
-from dtr_common.constantes import State as StateEnum, SubState as SubStateEnum, Type
+import datetime
+from typing import cast, TypedDict
 from flask import current_app as app
 
 from api.db import db
 from api.models import Queue, State, TransferPolicy, TransferRequest
-import datetime
 from sqlalchemy import or_, select, func
 import uuid
-from typing import cast, TypedDict
 from dtr_common.schema import TriggerTransferRequestSchema, CommandedTransferRequestSchema
-from dtr_common.constantes import State as StateEnum, SubState
-import datetime
+from dtr_common.constantes import State as StateEnum, SubState as SubStateEnum, Type
 
 
 class NextTransferRequestParams(TypedDict, total=False):
     state: StateEnum
     size: int
-    sub_state: SubState
+    sub_state: SubStateEnum
 
 
 def get_next_request(params: NextTransferRequestParams) -> TransferRequest | None:
@@ -140,13 +137,13 @@ def create_periodical_requests(payload: TriggerTransferRequestSchema) -> None:
 
         db_files = list(map(lambda r: r.filename, requests))
         db_queued_files = list(filter(lambda r: r.states[0].state == StateEnum.QUEUED, requests))
-        l = queue.queue_limit - len(db_queued_files) * len(dests)
+        limit = queue.queue_limit - len(db_queued_files) * len(dests)
 
-        if l <= 0:
+        if limit <= 0:
             # queue is already full
             return
         else:
-            triggered_files = triggered_files[:l]
+            triggered_files = triggered_files[:limit]
 
         if len(triggered_files) + len(db_queued_files) >= queue.queue_threshold:
             app.logger.warning(
@@ -260,7 +257,7 @@ def update_request(
 ) -> TransferRequest | None:
     nrequest = cast(TransferRequest | None, db.session.query(TransferRequest).get(request_id))
     state = StateEnum[params["state"].upper()] if params.get("state") else None
-    sub_state = SubState[params["sub_state"].upper()] if params.get("sub_state") else None
+    sub_state = SubStateEnum[params["sub_state"].upper()] if params.get("sub_state") else None
 
     if nrequest:
         npolicy = nrequest.policy
