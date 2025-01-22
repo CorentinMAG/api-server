@@ -137,13 +137,13 @@ def create_periodical_requests(payload: TriggerTransferRequestSchema) -> None:
 
         db_files = list(map(lambda r: r.filename, requests))
         db_queued_files = list(filter(lambda r: r.states[0].state == StateEnum.QUEUED, requests))
-        limit = queue.queue_limit - len(db_queued_files) * len(dests)
 
-        if limit <= 0:
-            # queue is already full
+        available_space = queue.queue_limit - len(db_queued_files)
+        needed_space = len(triggered_files) * len(dests)
+
+        # if queue is already full
+        if available_space <= needed_space:
             return
-        else:
-            triggered_files = triggered_files[:limit]
 
         if len(triggered_files) + len(db_queued_files) >= queue.queue_threshold:
             app.logger.warning(
@@ -235,6 +235,8 @@ def create_commanded_request(payload: CommandedTransferRequestSchema) -> None:
     )
 
     if npolicy:
+        dests = npolicy.dests
+
         if payload.uid:
             nrequest = db.session.scalar(
                 select(TransferRequest)
@@ -245,10 +247,11 @@ def create_commanded_request(payload: CommandedTransferRequestSchema) -> None:
                 return
 
         filename = payload.path.split("/")[-1]
-        nrequest = TransferRequest(filename=filename)
-        nstate = State(state=StateEnum.QUEUED)
-        nrequest.states.append(nstate)
-        npolicy.transfers.append(nrequest)
+        for dest in dests:
+            nrequest = TransferRequest(filename=filename, dest=dest)
+            nstate = State(state=StateEnum.QUEUED)
+            nrequest.states.append(nstate)
+            npolicy.transfers.append(nrequest)
         db.session.commit()
 
 

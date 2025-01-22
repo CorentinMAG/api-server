@@ -68,7 +68,7 @@ def new_commanded_request():
     result = create_commanded_request(schema)
     if result:
         return {"message": result}, 200
-    return "", 200
+    return {"error": "This policy doesn't exist"}, 404
 
 
 @bp.route("/requests/<int:id>", methods=["PUT"])
