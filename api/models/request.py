@@ -34,6 +34,7 @@ class TransferRequest(SQLBase, SerializerMixin):
         "upload_rate",
         "upload_time",
         "dest",
+        "src_relative_path",
     )
 
     id: Mapped[int] = mapped_column(primary_key=True)
@@ -54,6 +55,7 @@ class TransferRequest(SQLBase, SerializerMixin):
     upload_time: Mapped[float | None]
     dest_id: Mapped[int | None] = mapped_column(ForeignKey("destination_policies.id", ondelete="SET NULL"))
     dest: Mapped[DestinationPolicy] = relationship(foreign_keys=[dest_id])
+    src_relative_path: Mapped[str | None]
 
     def update(self, mapping: dict):
         for key, value in mapping.items():

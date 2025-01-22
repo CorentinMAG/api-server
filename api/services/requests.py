@@ -248,7 +248,9 @@ def create_commanded_request(payload: CommandedTransferRequestSchema) -> None:
 
         filename = payload.path.split("/")[-1]
         for dest in dests:
-            nrequest = TransferRequest(filename=filename, dest=dest)
+            nrequest = TransferRequest(filename=filename,
+                                       dest=dest,
+                                       src_relative_path=payload.path)
             nstate = State(state=StateEnum.QUEUED)
             nrequest.states.append(nstate)
             npolicy.transfers.append(nrequest)
