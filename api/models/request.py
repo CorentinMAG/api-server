@@ -44,7 +44,7 @@ class TransferRequest(SQLBase, SerializerMixin):
     states: Mapped[list[State]] = relationship(order_by="State.id.desc()")
     policy_id: Mapped[int | None] = mapped_column(ForeignKey("transfer_policies.id", ondelete="SET NULL"))
     policy: Mapped[TransferPolicy] = relationship(back_populates="transfers")
-    created_at: Mapped[str] = mapped_column(DateTime, default=func.now())
+    created_at: Mapped[str] = mapped_column(DateTime, default=func.now(), index=True)
     nb_retry: Mapped[int] = mapped_column(default=0)
     next_retry_min_time: Mapped[str | None] = mapped_column(DateTime, default=None)
     start: Mapped[str | None] = mapped_column(DateTime, default=None)

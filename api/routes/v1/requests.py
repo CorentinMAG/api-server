@@ -68,14 +68,15 @@ def new_commanded_request():
     result = create_commanded_request(schema)
     if result:
         return {"message": result}, 200
-    return {"error": "This policy doesn't exist"}, 404
+    return {"error": "Request is ill-formed"}, 400
 
 
 @bp.route("/requests/<int:id>", methods=["PUT"])
 def update_requests(id: int):
     payload = request.json
 
-    nrequest = update_request(id, payload)
-    if nrequest:
-        return nrequest.to_dict(), 200
+    response = update_request(id, payload)
+
+    if response:
+        return response, 200
     return "", 200

@@ -1,4 +1,6 @@
+import os
 import datetime
+from urllib.parse import urlparse
 from typing import cast, TypedDict
 from flask import current_app as app
 
@@ -108,17 +110,12 @@ def filter_requests(params):
     if params.get("policy_ids") is not None:
         policy_ids = list(map(lambda x: int(x), params["policy_ids"].split(",")))
         base = base.filter(TransferRequest.policy_id.in_(policy_ids))
-    return base.with_for_update()
+    if params.get("filename") is not None:
+        base = base.filter(TransferRequest.filename == params["filename"])
+    return base
 
 
 def create_periodical_requests(payload: TriggerTransferRequestSchema) -> None:
-    # TODO: with Aniel,
-    # when the trigger sent data to the api,
-    # we used to check if a transfer was in the QUEUED state
-    # longer than expected
-    # if this was the case, then the transfer state was passed to CANCELED
-    # Moreover, there was a WARNING log if the queue is almost full
-    # with also have to handle the case where the queue is full (not accepting new requests)
     policy_id = payload.policy
     triggered_files = payload.files
 
@@ -134,22 +131,25 @@ def create_periodical_requests(payload: TriggerTransferRequestSchema) -> None:
         requests = npolicy.transfers
         queue = npolicy.queue
         dests = npolicy.dests
+        nb_dests = len(dests)
 
         db_files = list(map(lambda r: r.filename, requests))
         db_queued_files = list(filter(lambda r: r.states[0].state == StateEnum.QUEUED, requests))
 
-        available_space = queue.queue_limit - len(db_queued_files)
-        needed_space = len(triggered_files) * len(dests)
+        available_slots = queue.queue_limit - len(db_queued_files)
 
         # if queue is already full
-        if available_space <= needed_space:
+        if available_slots <= nb_dests:
             return
+        else:
+            max_files = available_slots // nb_dests
+            triggered_files = triggered_files[:max_files]
 
         if len(triggered_files) + len(db_queued_files) >= queue.queue_threshold:
             app.logger.warning(
                 "queue %s is almost full (%d/%d)",
                 queue.name,
-                len(triggered_files) + len(db_queued_files),
+                len(db_queued_files),
                 queue.queue_limit,
             )
 
@@ -246,22 +246,33 @@ def create_commanded_request(payload: CommandedTransferRequestSchema) -> None:
             if nrequest and nrequest.states[0].state == StateEnum.QUEUED:
                 return
 
-        filename = payload.path.split("/")[-1]
+        if payload.path.startswith(("http://", "https://")):
+            parsed_url = urlparse(payload.path)
+            filename = os.path.basename(parsed_url.path)
+            path = os.path.dirname(parsed_url.path)
+        else:
+            filename = payload.path.split("/")[-1]
+            path = payload.path.replace(filename, '')
+
         for dest in dests:
             nrequest = TransferRequest(filename=filename,
                                        dest=dest,
-                                       src_relative_path=payload.path)
+                                       src_relative_path=path)
             nstate = State(state=StateEnum.QUEUED)
             nrequest.states.append(nstate)
             npolicy.transfers.append(nrequest)
         db.session.commit()
+        return True
 
 
 def update_request(
     request_id: int,
     params: dict,
-) -> TransferRequest | None:
-    nrequest = cast(TransferRequest | None, db.session.query(TransferRequest).get(request_id))
+) -> dict | None:
+    nrequest = cast(
+        TransferRequest | None,
+        db.session.query(TransferRequest).with_for_update().get(request_id)
+    )
     state = StateEnum[params["state"].upper()] if params.get("state") else None
     sub_state = SubStateEnum[params["sub_state"].upper()] if params.get("sub_state") else None
 
@@ -294,6 +305,28 @@ def update_request(
             nrequest.states.extend(nstates)
 
         nrequest.update(params)
+        response = nrequest.to_dict()
+        response["Purge"] = can_purge(nrequest)
         db.session.commit()
-        return nrequest
+        return response
     return None
+
+
+def can_purge(nrequest: TransferRequest | None) -> bool:
+    associated_tr = db.session.query(TransferRequest).filter(
+        TransferRequest.filename == nrequest.filename,
+        TransferRequest.id != nrequest.id,
+        TransferPolicy.id == nrequest.policy_id
+    ).all()
+
+    app.logger.debug(f"Found {len(associated_tr)} associated transfert requests")
+
+    for tr in associated_tr:
+        if not any(state.state == StateEnum.SUCCESSFUL for state in tr.states):
+            app.logger.debug(f"Transfert request {tr.id} not successful")
+            return False
+
+    app.logger.debug("Authorize worker to purge source")
+    return True
+
+    

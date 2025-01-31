@@ -40,7 +40,7 @@ RUN echo "[global]" > /etc/pip.conf && \
 	echo "trusted-host = ${AFORGE_HOST}" >> /etc/pip.conf
 
 
-COPY common2 /opt/common
+COPY common /opt/common
 COPY api-server/scripts/dev-entrypoint.sh /opt/app/entrypoint.sh
 COPY api-server/requirements.txt .
 

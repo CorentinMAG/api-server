@@ -16,7 +16,7 @@ class Queue(SQLBase, SerializerMixin):
     id: Mapped[int] = mapped_column(primary_key=True)
     name: Mapped[str] = mapped_column(unique=True)
     uid: Mapped[uuid.UUID] = mapped_column(default=uuid.uuid4, unique=True)
-    priority: Mapped[int]
+    priority: Mapped[int] = mapped_column(index=True)
     queue_timeout: Mapped[int] = mapped_column(default=300)
     queue_limit: Mapped[int] = mapped_column(default=100)
     queue_threshold: Mapped[int] = mapped_column(default=80)

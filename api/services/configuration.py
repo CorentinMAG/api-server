@@ -1,5 +1,5 @@
 from typing import cast
-from dtr_common.constantes import Type
+import copy
 
 from api.db import db
 from api.models import (
@@ -18,6 +18,7 @@ from api.models import (
     ServerParameters,
 )
 
+from dtr_common.constantes import Type
 from dtr_common.schema import (
     ConfigurationSchema,
     GlobalParametersSchema,
@@ -108,8 +109,6 @@ def create_policies(
         queue = policy.queue
         nqueue = next(filter(lambda q: q.name == queue, nqueues))
 
-        notifications = policy.notifications
-
         # if some params are set to None, we take the default one in GlobalParameter
         if policy.parameters:
             params = {k: v for k, v in policy.parameters.model_dump().items() if k in ngparams.to_dict()}
@@ -129,27 +128,28 @@ def create_policies(
             nparams.periodical = npparams
 
         nsrc = SourcePolicy(**src)
+
+        for dest in dests:
+
+            if dest.get("notifications") is not None:
+                nnotifications: list[ServerParameters] = []
+                for notification in dest["notifications"]:
+                    notif = copy.deepcopy(notification)
+                    server_name = notif.pop("server")
+                    nserver = next(filter(lambda n: n.name == server_name, nservers))
+
+                    if nserver.type == "kafka":
+                        topics = cast(list, notif["topics"])
+                        for topic in topics:
+                            if isinstance(topic, dict):
+                                nparameters = KafkaTopicParameters(server=nserver, **topic)
+                            else:
+                                nparameters = KafkaTopicParameters(server=nserver, topic=topic)
+                            nnotifications.append(nparameters)
+                    else:
+                        raise NotImplementedError(f"only 'kafka' server is emplemented (not {nserver.type})")
+                dest["notifications"] = nnotifications
         ndests = list(map(lambda dest: DestinationPolicy(**dest), dests))
-
-        nnotifications: list[ServerParameters] = []
-        if notifications is not None:
-            for notification in notifications:
-                server_name = notification.server
-                nserver = next(filter(lambda n: n.name == server_name, nservers))
-
-                notification_params = notification.model_dump()
-                notification_params.pop("server")
-
-                if nserver.type == "kafka":
-                    topics = cast(list, notification_params["topics"])
-                    for topic in topics:
-                        if isinstance(topic, dict):
-                            nparameters = KafkaTopicParameters(server=nserver, **topic)
-                        else:
-                            nparameters = KafkaTopicParameters(server=nserver, topic=topic)
-                        nnotifications.append(nparameters)
-                else:
-                    raise NotImplementedError(f"only 'kafka' server is emplemented (not {nserver.type})")
 
         npolicy = TransferPolicy(
             name=name,
@@ -158,8 +158,7 @@ def create_policies(
             queue=nqueue,
             parameters=nparams,
             src=nsrc,
-            dests=ndests,
-            notifications=nnotifications,
+            dests=ndests
         )
 
         npolicies.append(npolicy)

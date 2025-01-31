@@ -103,7 +103,7 @@ class ServerParameters(SQLBase):
 
     id: Mapped[int] = mapped_column(primary_key=True)
     type: Mapped[str]  # discriminator column to differentiate parameter types
-    policy_id: Mapped[int] = mapped_column(ForeignKey("transfer_policies.id", ondelete="CASCADE"))
+    dest_id: Mapped[int] = mapped_column(ForeignKey("destination_policies.id", ondelete="CASCADE"))
 
     __mapper_args__ = {"polymorphic_identity": "transfer_parameters", "polymorphic_on": "type"}
 
@@ -113,7 +113,7 @@ class KafkaTopicParameters(ServerParameters, SerializerMixin):
 
     serialize_only = ("topic", "replica", "partitions", "server")
 
-    id: Mapped[int] = mapped_column(ForeignKey("server_parameters.id"), primary_key=True)
+    id: Mapped[int] = mapped_column(ForeignKey("server_parameters.id", ondelete="CASCADE"), primary_key=True)
     topic: Mapped[str]
     replica: Mapped[int] = mapped_column(default=1)
     partitions: Mapped[int] = mapped_column(default=1)
