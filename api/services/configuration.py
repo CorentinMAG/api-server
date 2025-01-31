@@ -1,5 +1,5 @@
 from typing import cast
-from dtr_common.constantes import Type
+import copy
 
 from api.db import db
 from api.models import (
@@ -18,6 +18,7 @@ from api.models import (
     ServerParameters,
 )
 
+from dtr_common.constantes import Type
 from dtr_common.schema import (
     ConfigurationSchema,
     GlobalParametersSchema,
@@ -92,20 +93,21 @@ def create_policies(
         src = policy.src.model_dump()
         src["target"] = next(filter(lambda t: t.name == policy.src.target, ntargets))
 
-        dest = policy.dest.model_dump()
-        dest["target"] = next(filter(lambda t: t.name == policy.dest.target, ntargets))
+        dests = []
+        for dest in policy.dests:
+            dest_json = dest.model_dump()
+            dest_json["target"] = next(filter(lambda t: t.name == dest.target, ntargets))
 
-        # if some params are set to None, we take the default one in GlobalParameters
-        dparams = {k: v for k, v in dest.items() if k in ngparams.to_dict()}
-        for k, v in dparams.items():
-            if v is None:
-                dparams[k] = getattr(ngparams, k)
-        dest.update(dparams)
+            # if some params are set to None, we take the default one in GlobalParameters
+            dparams = {k: v for k, v in dest_json.items() if k in ngparams.to_dict()}
+            for k, v in dparams.items():
+                if v is None:
+                    dparams[k] = getattr(ngparams, k)
+            dest_json.update(dparams)
+            dests.append(dest_json)
 
         queue = policy.queue
         nqueue = next(filter(lambda q: q.name == queue, nqueues))
-
-        notifications = policy.notifications
 
         # if some params are set to None, we take the default one in GlobalParameter
         if policy.parameters:
@@ -126,27 +128,28 @@ def create_policies(
             nparams.periodical = npparams
 
         nsrc = SourcePolicy(**src)
-        ndest = DestinationPolicy(**dest)
 
-        nnotifications: list[ServerParameters] = []
-        if notifications is not None:
-            for notification in notifications:
-                server_name = notification.server
-                nserver = next(filter(lambda n: n.name == server_name, nservers))
+        for dest in dests:
 
-                notification_params = notification.model_dump()
-                notification_params.pop("server")
+            if dest.get("notifications") is not None:
+                nnotifications: list[ServerParameters] = []
+                for notification in dest["notifications"]:
+                    notif = copy.deepcopy(notification)
+                    server_name = notif.pop("server")
+                    nserver = next(filter(lambda n: n.name == server_name, nservers))
 
-                if nserver.type == "kafka":
-                    topics = cast(list, notification_params["topics"])
-                    for topic in topics:
-                        if isinstance(topic, dict):
-                            nparameters = KafkaTopicParameters(server=nserver, **topic)
-                        else:
-                            nparameters = KafkaTopicParameters(server=nserver, topic=topic)
-                        nnotifications.append(nparameters)
-                else:
-                    raise NotImplementedError(f"only 'kafka' server is emplemented (not {nserver.type})")
+                    if nserver.type == "kafka":
+                        topics = cast(list, notif["topics"])
+                        for topic in topics:
+                            if isinstance(topic, dict):
+                                nparameters = KafkaTopicParameters(server=nserver, **topic)
+                            else:
+                                nparameters = KafkaTopicParameters(server=nserver, topic=topic)
+                            nnotifications.append(nparameters)
+                    else:
+                        raise NotImplementedError(f"only 'kafka' server is emplemented (not {nserver.type})")
+                dest["notifications"] = nnotifications
+        ndests = list(map(lambda dest: DestinationPolicy(**dest), dests))
 
         npolicy = TransferPolicy(
             name=name,
@@ -155,8 +158,7 @@ def create_policies(
             queue=nqueue,
             parameters=nparams,
             src=nsrc,
-            dest=ndest,
-            notifications=nnotifications,
+            dests=ndests
         )
 
         npolicies.append(npolicy)
@@ -168,7 +170,6 @@ def create_global_params(gparams: GlobalParametersSchema) -> GlobalParameters:
     """
     Create global params
     """
-
     model = gparams.model_dump()
     nparams = GlobalParameters(**model)
     return nparams

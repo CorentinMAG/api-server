@@ -2,3 +2,5 @@ __pycache__
 main.py
 .ruff_cache
 .mypy_cache
+app.log
+*.tar.gz

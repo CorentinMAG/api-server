@@ -7,13 +7,14 @@ from api.services.requests import (
     update_request,
     create_commanded_request,
 )
-from dtr_common.constantes import Mode
-from dtr_common.utils import parse_params
 from api.models import TransferRequest
+from dtr_common.utils import parse_params
+from dtr_common.constantes import Mode
 from dtr_common.schema import TriggerTransferRequestSchema, CommandedTransferRequestSchema
 
-bp = Blueprint("requests", __name__)
 from api.db import db
+
+bp = Blueprint("requests", __name__)
 
 
 @bp.route("/requests", methods=["GET"])
@@ -21,7 +22,7 @@ def requests():
     """
     list all transfer requests
     output can be filtered by using query params
-    - state: queued / sucessful / failed / in_progress
+    - state: queued / successful / failed / in_progress
     - queues: name1,name2,...
     """
 
@@ -67,14 +68,15 @@ def new_commanded_request():
     result = create_commanded_request(schema)
     if result:
         return {"message": result}, 200
-    return "", 200
+    return {"error": "Request is ill-formed"}, 400
 
 
 @bp.route("/requests/<int:id>", methods=["PUT"])
 def update_requests(id: int):
     payload = request.json
 
-    nrequest = update_request(id, payload)
-    if nrequest:
-        return nrequest.to_dict(), 200
+    response = update_request(id, payload)
+
+    if response:
+        return response, 200
     return "", 200

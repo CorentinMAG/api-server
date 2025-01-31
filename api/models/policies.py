@@ -37,9 +37,12 @@ class DestinationPolicy(SQLBase, SerializerMixin):
     bucket: Mapped[str | None]
 
     dest_id: Mapped[int] = mapped_column(ForeignKey("targets.id", ondelete="CASCADE"))
+    policy_id: Mapped[int] = mapped_column(ForeignKey("transfer_policies.id", ondelete="CASCADE"))
+    request_id: Mapped[int | None] = mapped_column(ForeignKey("transfer_requests.id"))
     target: Mapped[Target] = relationship()
     tmp_prefix: Mapped[str | None]
     final_prefix: Mapped[str | None]
+    notifications: Mapped[list[ServerParameters]] = relationship()
 
 
 class TransferPolicy(SQLBase, SerializerMixin):
@@ -50,9 +53,8 @@ class TransferPolicy(SQLBase, SerializerMixin):
         "name",
         "enabled",
         "type",
-        "notifications",
         "src",
-        "dest",
+        "dests",
         "parameters",
         "queue",
         "created_at",
@@ -63,23 +65,16 @@ class TransferPolicy(SQLBase, SerializerMixin):
     enabled: Mapped[bool] = mapped_column(default=True)
     type: Mapped[Type]
 
-    notifications: Mapped[list[ServerParameters]] = relationship()
-
     src: Mapped[SourcePolicy] = relationship()
     src_id: Mapped[int] = mapped_column(ForeignKey("source_policies.id", ondelete="CASCADE"))
 
-    dest: Mapped[DestinationPolicy] = relationship()
-    dest_id: Mapped[int] = mapped_column(ForeignKey("destination_policies.id", ondelete="CASCADE"))
+    dests: Mapped[list[DestinationPolicy]] = relationship()
 
     parameters: Mapped[TransferPolicyParameters] = relationship()
     queue_id: Mapped[int] = mapped_column(ForeignKey("queues.id"))
     queue: Mapped[Queue] = relationship()
     transfers: Mapped[list[TransferRequest]] = relationship(back_populates="policy")
     created_at: Mapped[str] = mapped_column(DateTime, default=func.now())
-
-    @property
-    def has_notifications(self) -> bool:
-        return bool(self.kafka)
 
     def update(self, mapping: dict):
         update_rec(self, mapping)

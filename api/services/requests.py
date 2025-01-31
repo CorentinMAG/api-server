@@ -1,22 +1,21 @@
-from typing import cast
-from dtr_common.constantes import State as StateEnum, SubState as SubStateEnum, Type
+import os
+import datetime
+from urllib.parse import urlparse
+from typing import cast, TypedDict
 from flask import current_app as app
 
 from api.db import db
 from api.models import Queue, State, TransferPolicy, TransferRequest
-import datetime
 from sqlalchemy import or_, select, func
 import uuid
-from typing import cast, TypedDict
 from dtr_common.schema import TriggerTransferRequestSchema, CommandedTransferRequestSchema
-from dtr_common.constantes import State as StateEnum, SubState
-import datetime
+from dtr_common.constantes import State as StateEnum, SubState as SubStateEnum, Type
 
 
 class NextTransferRequestParams(TypedDict, total=False):
     state: StateEnum
     size: int
-    sub_state: SubState
+    sub_state: SubStateEnum
 
 
 def get_next_request(params: NextTransferRequestParams) -> TransferRequest | None:
@@ -111,17 +110,12 @@ def filter_requests(params):
     if params.get("policy_ids") is not None:
         policy_ids = list(map(lambda x: int(x), params["policy_ids"].split(",")))
         base = base.filter(TransferRequest.policy_id.in_(policy_ids))
+    if params.get("filename") is not None:
+        base = base.filter(TransferRequest.filename == params["filename"])
     return base
 
 
 def create_periodical_requests(payload: TriggerTransferRequestSchema) -> None:
-    # TODO: with Aniel,
-    # when the trigger sent data to the api,
-    # we used to check if a transfer was in the QUEUED state
-    # longer than expected
-    # if this was the case, then the transfer state was passed to CANCELED
-    # Moreover, there was a WARNING log if the queue is almost full
-    # with also have to handle the case where the queue is full (not accepting new requests)
     policy_id = payload.policy
     triggered_files = payload.files
 
@@ -136,22 +130,26 @@ def create_periodical_requests(payload: TriggerTransferRequestSchema) -> None:
         only_new_data = npolicy.parameters.only_new_data
         requests = npolicy.transfers
         queue = npolicy.queue
+        dests = npolicy.dests
+        nb_dests = len(dests)
 
         db_files = list(map(lambda r: r.filename, requests))
         db_queued_files = list(filter(lambda r: r.states[0].state == StateEnum.QUEUED, requests))
-        l = queue.queue_limit - len(db_queued_files)
 
-        if l <= 0:
-            # queue is already full
+        available_slots = queue.queue_limit - len(db_queued_files)
+
+        # if queue is already full
+        if available_slots <= nb_dests:
             return
         else:
-            triggered_files = triggered_files[:l]
+            max_files = available_slots // nb_dests
+            triggered_files = triggered_files[:max_files]
 
         if len(triggered_files) + len(db_queued_files) >= queue.queue_threshold:
             app.logger.warning(
                 "queue %s is almost full (%d/%d)",
                 queue.name,
-                len(triggered_files) + len(db_queued_files),
+                len(db_queued_files),
                 queue.queue_limit,
             )
 
@@ -160,16 +158,17 @@ def create_periodical_requests(payload: TriggerTransferRequestSchema) -> None:
             filename = file.filename
             size = file.size
             if filename not in db_files:
-                nrequest = TransferRequest(filename=filename, size=size)
-                nstate = State(state=StateEnum.QUEUED)
-                nrequest.states.append(nstate)
-                nrequests.append(nrequest)
+                for dest in dests:
+                    nrequest = TransferRequest(filename=filename, size=size, dest=dest)
+                    nstate = State(state=StateEnum.QUEUED)
+                    nrequest.states.append(nstate)
+                    nrequests.append(nrequest)
             # if only_new_data is false
             # and the trigerred file is already in database
             # and the state is SUCCESSFUL or CANCELLED
             # we recreate a new transfer request
             elif not only_new_data:
-                nrequest = cast(TransferRequest, next(filter(lambda r: r.filename == filename, requests)))
+                nrequest = next(filter(lambda r: r.filename == filename, requests))
                 latest_state = nrequest.states[0]
                 if latest_state.state == StateEnum.CANCELLED or latest_state.state == StateEnum.SUCCESSFUL:
                     nrequest = nrequest.clone()
@@ -182,45 +181,47 @@ def create_periodical_requests(payload: TriggerTransferRequestSchema) -> None:
         ## for each new request we create a report log
         reports_uid = []
         for nrequest in nrequests:
-            uid = uuid.uuid4()
-            reports_uid.append(uid)
-            task = {
-                "type": "REPORT",
-                "task": {
-                    "uid": str(uid),
-                    "name": "dtr_api_transfer_request",
-                    "event": "BEGIN",
-                    "input": {
-                        "tpln_string": npolicy.name,
-                        "source_url_string": npolicy.src.path,
-                        "filename_string": nrequest.filename,
-                        "target_url_string": npolicy.dest.path,
-                        "target_logical_name_string": npolicy.dest.target.name,
+            for dest in npolicy.dests:
+                uid = uuid.uuid4()
+                reports_uid.append(uid)
+                task = {
+                    "type": "REPORT",
+                    "task": {
+                        "uid": str(uid),
+                        "name": "dtr_api_transfer_request",
+                        "event": "BEGIN",
+                        "input": {
+                            "tpln_string": npolicy.name,
+                            "source_url_string": npolicy.src.path,
+                            "filename_string": nrequest.filename,
+                            "target_url_string": dest.path,
+                            "target_logical_name_string": dest.target.name,
+                        },
                     },
-                },
-            }
+                }
             app.logger.info("request for transfer", extra=task)
         db.session.commit()
 
         for nrequest, uid in zip(nrequests, reports_uid):
-            task = {
-                "type": "REPORT",
-                "task": {
-                    "uid": str(uid),
-                    "name": "dtr_api_transfer_request",
-                    "event": "END",
-                    "status": "OK",
-                    "input": {
-                        "tpln_string": npolicy.name,
-                        "source_url_string": npolicy.src.path,
-                        "filename_string": nrequest.filename,
-                        "target_url_string": npolicy.dest.path,
-                        "target_logical_name_string": npolicy.dest.target.name,
+            for dest in npolicy.dests:
+                task = {
+                    "type": "REPORT",
+                    "task": {
+                        "uid": str(uid),
+                        "name": "dtr_api_transfer_request",
+                        "event": "END",
+                        "status": "OK",
+                        "input": {
+                            "tpln_string": npolicy.name,
+                            "source_url_string": npolicy.src.path,
+                            "filename_string": nrequest.filename,
+                            "target_url_string": dest.path,
+                            "target_logical_name_string": dest.target.name,
+                        },
+                        "error_code": 0,
+                        "output": {"rest_id_string": str(nrequest.uid)},
                     },
-                    "error_code": 0,
-                    "output": {"rest_id_string": str(nrequest.uid)},
-                },
-            }
+                }
             app.logger.info("end of request transfer", extra=task)
 
 
@@ -234,6 +235,8 @@ def create_commanded_request(payload: CommandedTransferRequestSchema) -> None:
     )
 
     if npolicy:
+        dests = npolicy.dests
+
         if payload.uid:
             nrequest = db.session.scalar(
                 select(TransferRequest)
@@ -241,24 +244,39 @@ def create_commanded_request(payload: CommandedTransferRequestSchema) -> None:
                 .where(TransferRequest.uid == payload.uid)
             )
             if nrequest and nrequest.states[0].state == StateEnum.QUEUED:
-                return nrequest.uid
-        filename = payload.path.split("/")[-1]
-        nrequest = TransferRequest(filename=filename)
-        nstate = State(state=StateEnum.QUEUED)
-        nrequest.states.append(nstate)
-        npolicy.transfers.append(nrequest)
+                return
+
+        if payload.path.startswith(("http://", "https://")):
+            parsed_url = urlparse(payload.path)
+            filename = os.path.basename(parsed_url.path)
+            path = os.path.dirname(parsed_url.path)
+        else:
+            filename = payload.path.split("/")[-1]
+            path = payload.path.replace(filename, '')
+
+        for dest in dests:
+            nrequest = TransferRequest(filename=filename,
+                                       dest=dest,
+                                       src_relative_path=path)
+            nstate = State(state=StateEnum.QUEUED)
+            nrequest.states.append(nstate)
+            npolicy.transfers.append(nrequest)
         db.session.commit()
+        return True
 
 
 def update_request(
     request_id: int,
     params: dict,
-) -> TransferRequest | None:
-    nrequest = cast(TransferRequest | None, db.session.query(TransferRequest).get(request_id))
+) -> dict | None:
+    nrequest = cast(
+        TransferRequest | None,
+        db.session.query(TransferRequest).with_for_update().get(request_id)
+    )
     state = StateEnum[params["state"].upper()] if params.get("state") else None
-    sub_state = SubState[params["sub_state"].upper()] if params.get("sub_state") else None
+    sub_state = SubStateEnum[params["sub_state"].upper()] if params.get("sub_state") else None
 
-    if nrequest:
+    if nrequest and params:
         npolicy = nrequest.policy
         # if we are updating the request status,
         # we need to check if it is a FAILED or not
@@ -281,11 +299,34 @@ def update_request(
                     nstates.append(nstate)
             else:
                 # state is either CANCELLED or SUCCESSFUL
-                nrequest.end = datetime.datetime.now(datetime.timezone.utc)
+                nrequest.end = datetime.datetime.now(datetime.timezone.utc).isoformat()
                 nstate = State(state=state, sub_state=sub_state)
                 nstates.append(nstate)
             nrequest.states.extend(nstates)
 
         nrequest.update(params)
+        response = nrequest.to_dict()
+        response["Purge"] = can_purge(nrequest)
         db.session.commit()
-        return nrequest
+        return response
+    return None
+
+
+def can_purge(nrequest: TransferRequest | None) -> bool:
+    associated_tr = db.session.query(TransferRequest).filter(
+        TransferRequest.filename == nrequest.filename,
+        TransferRequest.id != nrequest.id,
+        TransferPolicy.id == nrequest.policy_id
+    ).all()
+
+    app.logger.debug(f"Found {len(associated_tr)} associated transfert requests")
+
+    for tr in associated_tr:
+        if not any(state.state == StateEnum.SUCCESSFUL for state in tr.states):
+            app.logger.debug(f"Transfert request {tr.id} not successful")
+            return False
+
+    app.logger.debug("Authorize worker to purge source")
+    return True
+
+    

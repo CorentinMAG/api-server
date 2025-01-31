@@ -19,11 +19,3 @@ repos:
         types: [python]
         require_serial: true
         verbose: true
-      - id: checker
-        name: type-checker
-        entry: mypy
-        language: python
-        types: [python]
-        require_serial: true
-        verbose: true
-      

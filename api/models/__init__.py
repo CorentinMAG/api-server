@@ -4,8 +4,8 @@ from .parameters import (
     KafkaTopicParameters,
     PeriodicalParameters,
     TransferPolicyParameters,
-    TargetParameters,
     ServerParameters,
+    TargetParameters,
 )
 from .policies import DestinationPolicy, SourcePolicy, TransferPolicy
 from .queue import Queue
@@ -29,4 +29,5 @@ __all__ = [
     "TransferRequest",
     "State",
     "ServerParameters",
+    "TargetParameters",
 ]

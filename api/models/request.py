@@ -1,19 +1,17 @@
 from __future__ import annotations
 
 import uuid
-import datetime
 from typing import TYPE_CHECKING
 
 from sqlalchemy import DateTime, ForeignKey, func
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 from sqlalchemy_serializer import SerializerMixin
-from dtr_common.constantes import State
 
 from ..db import Base as SQLBase
 from .states import State
 
 if TYPE_CHECKING:
-    from .policies import TransferPolicy
+    from .policies import TransferPolicy, DestinationPolicy
 
 
 class TransferRequest(SQLBase, SerializerMixin):
@@ -35,6 +33,8 @@ class TransferRequest(SQLBase, SerializerMixin):
         "download_time",
         "upload_rate",
         "upload_time",
+        "dest",
+        "src_relative_path",
     )
 
     id: Mapped[int] = mapped_column(primary_key=True)
@@ -44,7 +44,7 @@ class TransferRequest(SQLBase, SerializerMixin):
     states: Mapped[list[State]] = relationship(order_by="State.id.desc()")
     policy_id: Mapped[int | None] = mapped_column(ForeignKey("transfer_policies.id", ondelete="SET NULL"))
     policy: Mapped[TransferPolicy] = relationship(back_populates="transfers")
-    created_at: Mapped[str] = mapped_column(DateTime, default=func.now())
+    created_at: Mapped[str] = mapped_column(DateTime, default=func.now(), index=True)
     nb_retry: Mapped[int] = mapped_column(default=0)
     next_retry_min_time: Mapped[str | None] = mapped_column(DateTime, default=None)
     start: Mapped[str | None] = mapped_column(DateTime, default=None)
@@ -53,6 +53,9 @@ class TransferRequest(SQLBase, SerializerMixin):
     download_time: Mapped[float | None]
     upload_rate: Mapped[float | None]
     upload_time: Mapped[float | None]
+    dest_id: Mapped[int | None] = mapped_column(ForeignKey("destination_policies.id", ondelete="SET NULL"))
+    dest: Mapped[DestinationPolicy] = relationship(foreign_keys=[dest_id])
+    src_relative_path: Mapped[str | None]
 
     def update(self, mapping: dict):
         for key, value in mapping.items():
