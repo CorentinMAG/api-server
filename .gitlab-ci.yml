@@ -93,6 +93,7 @@ delivery:docker:
 
 delivery:sql:
   stage: delivery
+  image: $AFORGE_HOST/$AFORGE_DOCKER_REGISTRY/alpine:3.18
   tags:
   - dtr
   before_script:
