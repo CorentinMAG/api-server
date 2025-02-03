@@ -56,7 +56,6 @@ build:docker:
     - dtr
   before_script:
     - echo "{\"auths\":{\"${AFORGE_HOST}\":{\"auth\":\"$(printf "%s:%s" "${AFORGE_USER}" "${AFORGE_PASSWORD}" | base64 | tr -d '\n')\"}}}" > /kaniko/.docker/config.json
-    - echo "10.95.223.36 ${AFORGE_HOST}" >> /etc/hosts
   script:
     - >
       /kaniko/executor
