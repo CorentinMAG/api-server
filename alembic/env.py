@@ -6,6 +6,7 @@ from api.db import Base
 from alembic import context
 import os
 from sqlalchemy_utils import database_exists, create_database
+import api.models
 
 target_metadata = Base.metadata
 

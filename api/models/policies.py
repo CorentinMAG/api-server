@@ -38,7 +38,7 @@ class DestinationPolicy(SQLBase, SerializerMixin):
 
     dest_id: Mapped[int] = mapped_column(ForeignKey("targets.id", ondelete="CASCADE"))
     policy_id: Mapped[int] = mapped_column(ForeignKey("transfer_policies.id", ondelete="CASCADE"))
-    request_id: Mapped[int | None] = mapped_column(ForeignKey("transfer_requests.id"))
+    # request_id: Mapped[int | None] = mapped_column(ForeignKey("transfer_requests.id"))
     target: Mapped[Target] = relationship()
     tmp_prefix: Mapped[str | None]
     final_prefix: Mapped[str | None]
