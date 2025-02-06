@@ -22,7 +22,8 @@ def configure():
         app.logger.info("new configuration has been succesfully applied")
         return {"message": "configuration has been applied"}, 201
     except Exception as e:
-        raise SQLAlchemyError(e, stack_info=app.logger.level == "DEBUG", exc_info=app.logger.level == "DEBUG")
+        app.logger.error(e, stack_info=app.logger.level == "DEBUG", exc_info=app.logger.level == "DEBUG")
+        raise SQLAlchemyError(e)
 
 
 @bp.route("/configure", methods=["DELETE"])
