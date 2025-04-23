@@ -3,15 +3,16 @@ from typing import cast, Optional
 
 from ..db import db
 from ..models import GlobalParameters, TransferPolicy
+from .utils import transactional
 
 
+@transactional
 def switch_mode(mode: str) -> None:
     params = db.session.query(GlobalParameters).first()
     if params is None:
         app.logger.error("no global parameters, the dtr doesn't know how to switch mode")
     else:
         params.mode = mode
-        db.session.commit()
         app.logger.info("dtr has switched to %s mode", mode)
 
 

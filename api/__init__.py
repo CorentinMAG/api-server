@@ -30,29 +30,87 @@ def create_app():
     @app.errorhandler(HTTPException)
     def handle_http_exception(e: HTTPException):
         response = e.get_response()
-        app.logger.error(e.description, stack_info=is_debug, exc_info=is_debug)
+        app.logger.error(
+            "HTTP Exception occurred",
+            extra={
+                'error_type': 'http_exception',
+                'description': e.description,
+                'code': e.code,
+                'endpoint': request.endpoint,
+                'method': request.method,
+                'path': request.path,
+                'component': 'api',
+                'trace': True if is_debug else False
+            }
+        )
         return response
 
     @app.errorhandler(NotFound)
     def handle_not_found_error(e: NotFound):
         url = request.url
-        app.logger.error("request url: %s does not exist", url, stack_info=is_debug, exc_info=is_debug)
-        return {"error": "requested url does not exist", "details": {"url": url}}
+        app.logger.error(
+            "Resource not found",
+            extra={
+                'error_type': 'not_found',
+                'url': url,
+                'endpoint': request.endpoint,
+                'method': request.method,
+                'path': request.path,
+                'component': 'api',
+                'trace': True if is_debug else False
+            }
+        )
+        return {"error": "requested url does not exist", "details": {"url": url}}, 404
 
     @app.errorhandler(SQLAlchemyError)
     def handle_sql_exception(e: SQLAlchemyError):
-        app.logger.error(e, stack_info=is_debug, exc_info=is_debug)
-        return "", 500
+        app.logger.error(
+            "Database error occurred",
+            extra={
+                'error_type': 'database_error',
+                'error_details': str(e),
+                'endpoint': request.endpoint,
+                'method': request.method,
+                'path': request.path,
+                'component': 'api',
+                'trace': True if is_debug else False
+            }
+        )
+        return {"error": "database error occurred"}, 500
 
     @app.errorhandler(ValidationError)
     def handle_validation_error(e: ValidationError):
-        app.logger.error("Validation error: %s", e.errors(), stack_info=is_debug, exc_info=is_debug)
-        return {"errors": e.errors()}, 500
+        errors = e.errors()
+        app.logger.error(
+            "Validation error occurred",
+            extra={
+                'error_type': 'validation_error',
+                'validation_errors': errors,
+                'endpoint': request.endpoint,
+                'method': request.method,
+                'path': request.path,
+                'component': 'api',
+                'trace': True if is_debug else False
+            }
+        )
+        return {"errors": errors}, 400
 
     @app.errorhandler(Exception)
     def handle_exception(e: Exception):
-        app.logger.error(e, stack_info=is_debug, exc_info=is_debug)
-        return {"error": str(e)}
+        app.logger.error(
+            "Unhandled exception occurred",
+            extra={
+                'error_type': 'unhandled_exception',
+                'error_class': e.__class__.__name__,
+                'error_details': str(e),
+                'endpoint': request.endpoint,
+                'method': request.method,
+                'path': request.path,
+                'component': 'api',
+                'trace': True if is_debug else False
+            }
+        )
+        return {"error": "internal server error"}, 500
 
     # @app.before_request
     # def log_request():
@@ -61,7 +119,7 @@ def create_app():
 
     from api.routes import v1
 
-    app.register_blueprint(v1, url_prefix="/api/v1")
+    app.register_blueprint(v1, url_prefix="/dtr/v1")
 
     from . import db
 

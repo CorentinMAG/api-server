@@ -7,9 +7,11 @@ from flask import current_app as app
 from api.db import db
 from api.models import Queue, State, TransferPolicy, TransferRequest
 from sqlalchemy import or_, select, func
+from sqlalchemy.exc import SQLAlchemyError
 import uuid
 from dtr_common.schema import TriggerTransferRequestSchema, CommandedTransferRequestSchema
 from dtr_common.constantes import State as StateEnum, SubState as SubStateEnum, Type
+from .utils import transactional
 
 
 class NextTransferRequestParams(TypedDict, total=False):
@@ -102,6 +104,12 @@ def filter_requests(params):
         transfer_ids = params["ids"].split(",")
         transfer_ids = map(lambda i: int(i), transfer_ids)
         base = base.filter(TransferRequest.id.in_(transfer_ids))
+    if params.get("uid") is not None:
+        base = base.filter(TransferRequest.uid == params["uid"])
+    if params.get("uids") is not None:
+        transfer_uids = params["uids"].split(",")
+        transfer_uids = map(lambda i: int(i), transfer_uids)
+        base = base.filter(TransferRequest.uid.in_(transfer_uids))
     if params.get("policy_id") is not None:
         base = base.filter(TransferRequest.policy_id == params["policy_id"])
     if params.get("policy_name") is not None:
@@ -114,6 +122,7 @@ def filter_requests(params):
     return base
 
 
+@transactional
 def create_periodical_requests(payload: TriggerTransferRequestSchema) -> None:
     policy_id = payload.policy
     triggered_files = payload.files
@@ -199,7 +208,6 @@ def create_periodical_requests(payload: TriggerTransferRequestSchema) -> None:
                     },
                 }
             app.logger.info("request for transfer", extra=task)
-        db.session.commit()
 
         for nrequest, uid in zip(nrequests, reports_uid):
             for dest in npolicy.dests:
@@ -224,7 +232,15 @@ def create_periodical_requests(payload: TriggerTransferRequestSchema) -> None:
             app.logger.info("end of request transfer", extra=task)
 
 
-def create_commanded_request(payload: CommandedTransferRequestSchema) -> None:
+@transactional
+def create_commanded_request(payload: CommandedTransferRequestSchema) -> tuple[list[str] | None, str | None, int]:
+    """
+    Create a commanded transfer request.
+    Returns a tuple containing:
+    - list of request IDs if successful
+    - error message if failed
+    - HTTP status code
+    """
     policy_name = payload.transfer_policy
 
     npolicy = db.session.scalar(
@@ -233,37 +249,77 @@ def create_commanded_request(payload: CommandedTransferRequestSchema) -> None:
         )
     )
 
-    if npolicy:
-        dests = npolicy.dests
+    if not npolicy:
+        return None, f"Transfer policy '{policy_name}' not found or is not a commanded policy", 404
 
-        if payload.uid:
-            nrequest = db.session.scalar(
-                select(TransferRequest)
-                .where(TransferPolicy.name == policy_name)
-                .where(TransferRequest.uid == payload.uid)
-            )
-            if nrequest and nrequest.states[0].state == StateEnum.QUEUED:
-                return
+    dests = npolicy.dests
+    if not dests:
+        return None, f"No destinations configured for policy '{policy_name}'", 400
 
-        if payload.path.startswith(("http://", "https://")):
-            parsed_url = urlparse(payload.path)
-            filename = os.path.basename(parsed_url.path)
-            path = os.path.dirname(parsed_url.path)
-        else:
-            filename = payload.path.split("/")[-1]
-            path = payload.path.replace(filename, '')
+    nrequests = db.session.scalars(
+        select(TransferRequest)
+        .join(TransferPolicy)
+        .where(TransferPolicy.name == policy_name)
+        .where(TransferRequest.filename==payload.path.split("/")[-1])
+    ).all()
 
+    if nrequests and any(
+        req.states[0].state not in [StateEnum.SUCCESSFUL, StateEnum.CANCELLED] for req in nrequests
+        ):
+        return None, "A transfer request for this file is already in progress", 409
+
+    if payload.path.startswith(("http://", "https://")):
+        parsed_url = urlparse(payload.path)
+        filename = os.path.basename(parsed_url.path)
+        path = os.path.dirname(parsed_url.path)
+    else:
+        filename = payload.path.split("/")[-1]
+        path = payload.path.replace(filename, '')
+
+    try:
         for dest in dests:
-            nrequest = TransferRequest(filename=filename,
-                                       dest=dest,
-                                       src_relative_path=path)
+            nrequest = TransferRequest(
+                filename=filename,
+                dest=dest,
+                src_relative_path=path,
+                follows_from_tasks=payload.uid if payload.uid else None
+            )
             nstate = State(state=StateEnum.QUEUED)
             nrequest.states.append(nstate)
             npolicy.transfers.append(nrequest)
+        
         db.session.commit()
-        return True
+        
+        request_uids = []
+        for nrequest in npolicy.transfers[-len(dests):]:
+            if nrequest.uid is None:
+                app.logger.error("UID is None for a newly created transfer request")
+                return None, "Internal error: Failed to create transfer request", 500
+            else:
+                request_uids.append(str(nrequest.uid))
+        
+        return request_uids, None, 200
+    except SQLAlchemyError as e:
+        app.logger.error(
+            "Database error while creating commanded requests",
+            extra={
+                'error_type': 'database_error',
+                'error_details': str(e)
+            }
+        )
+        return None, f"Database error: {str(e)}", 500
+    except Exception as e:
+        app.logger.error(
+            "Unexpected error while creating commanded requests",
+            extra={
+                'error_type': 'unexpected_error',
+                'error_details': str(e)
+            }
+        )
+        return None, f"Unexpected error: {str(e)}", 500
 
 
+@transactional
 def update_request(
     request_id: int,
     params: dict,
@@ -293,7 +349,7 @@ def update_request(
                     nstate = State(
                         state=StateEnum.CANCELLED.value.upper(),
                         sub_state=SubStateEnum.NOTIFY.value.upper(),
-                        failure_reason="Max retries reached",
+                        failure_reason=f"Max retries reached - Last error: {failure_reason}",
                     )
                     nstates.append(nstate)
             else:
@@ -306,7 +362,6 @@ def update_request(
         nrequest.update(params)
         response = nrequest.to_dict()
         response["Purge"] = can_purge(nrequest)
-        db.session.commit()
         return response
     return None
 
@@ -327,5 +382,3 @@ def can_purge(nrequest: TransferRequest | None) -> bool:
 
     app.logger.debug("Authorize worker to purge source")
     return True
-
-    

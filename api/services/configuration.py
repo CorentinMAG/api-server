@@ -27,6 +27,7 @@ from dtr_common.schema import (
     TargetSchema,
     TransferPolicySchema,
 )
+from .utils import transactional
 
 
 def create_servers(servers: list[ServerSchema]) -> list[NotificationServer]:
@@ -149,6 +150,8 @@ def create_policies(
                     else:
                         raise NotImplementedError(f"only 'kafka' server is emplemented (not {nserver.type})")
                 dest["notifications"] = nnotifications
+            else:
+                dest["notifications"] = []
         ndests = list(map(lambda dest: DestinationPolicy(**dest), dests))
 
         npolicy = TransferPolicy(
@@ -175,6 +178,7 @@ def create_global_params(gparams: GlobalParametersSchema) -> GlobalParameters:
     return nparams
 
 
+@transactional
 def configure(payload: ConfigurationSchema):
     gparams = payload.global_parameters
     ngparams = create_global_params(gparams)
@@ -192,15 +196,13 @@ def configure(payload: ConfigurationSchema):
     npolicies = create_policies(policies, ngparams, nservers, nqueues, ntargets)
 
     data = [ngparams] + nservers + nqueues + ntargets + npolicies
-
     db.session.add_all(data)
-    db.session.commit()
 
 
+@transactional
 def unconfigure(keep: list[str] | None = None) -> None:
     tables = db.metadata.sorted_tables
     for table in reversed(tables):
         if keep is not None and table.name in keep:
             continue
         db.session.execute(table.delete())
-    db.session.commit()
