@@ -68,28 +68,36 @@ def get_transfer_status():
                 "protocol": req.dest.target.protocol.value if req.dest.target else None
             }
         
-        # Create detailed request object
+        # Create detailed request object with grouped information
         detailed_request = {
             "follows_from_tasks": req.follows_from_tasks,
             "transfer_id": str(req.uid),
-            "status": latest_state.state.value if latest_state else "UNKNOWN",
-            "sub_status": latest_state.sub_state.value if latest_state and latest_state.sub_state else None,
-            "source": source,
-            "destination": destination,
-            "data_type": "file",  # All transfers are files
-            "data_identifier": req.filename,
-            "transfer_begin_time": req.start.isoformat() if req.start else None,
-            "transfer_end_time": req.end.isoformat() if req.end else None,
-            "transfer_rate_mb_s": round(transfer_rate, 2) if transfer_rate else None,
-            "data_size_mb": req.size,
-            "failure_count": failure_count,
-            "failure_reason": failure_reason,
-            "created_at": req.created_at.isoformat() if req.created_at else None,
-            "download_rate_mb_s": req.download_rate,
-            "download_time_s": req.download_time,
-            "upload_rate_mb_s": req.upload_rate,
-            "upload_time_s": req.upload_time,
-            "policy_name": req.policy.name if req.policy else None
+            "transfer_status": {
+                "status": latest_state.state.value if latest_state else "UNKNOWN",
+                "sub_status": latest_state.sub_state.value if latest_state and latest_state.sub_state else None,
+                "failure_count": failure_count,
+                "failure_reason": failure_reason
+            },
+            "transfer_info": {
+                "data_identifier": req.filename,
+                "data_size_mb": req.size,
+                "data_type": "file",  # All transfers are files
+                "policy_name": req.policy.name if req.policy else None,
+                "created_at": req.created_at.isoformat() if req.created_at else None,
+                "transfer_begin_time": req.start.isoformat() if req.start else None,
+                "transfer_end_time": req.end.isoformat() if req.end else None,
+                "transfer_rate_mb_s": round(transfer_rate, 2) if transfer_rate else None
+            },
+            "download": {
+                "source": source,
+                "download_rate_mb_s": req.download_rate,
+                "download_time_s": req.download_time
+            },
+            "upload": {
+                "destination": destination,
+                "upload_rate_mb_s": req.upload_rate,
+                "upload_time_s": req.upload_time
+            }
         }
         
         return detailed_request, 200

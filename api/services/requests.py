@@ -6,7 +6,7 @@ from flask import current_app as app
 
 from api.db import db
 from api.models import Queue, State, TransferPolicy, TransferRequest
-from sqlalchemy import or_, select, func
+from sqlalchemy import or_, select
 from sqlalchemy.exc import SQLAlchemyError
 import uuid
 from dtr_common.schema import TriggerTransferRequestSchema, CommandedTransferRequestSchema
@@ -122,10 +122,11 @@ def create_periodical_requests(payload: TriggerTransferRequestSchema) -> None:
                 nrequest = next(filter(lambda r: r.filename == filename, requests))
                 latest_state = nrequest.states[0]
                 if latest_state.state == StateEnum.CANCELLED or latest_state.state == StateEnum.SUCCESSFUL:
-                    nrequest = nrequest.clone()
-                    nstate = State(state=StateEnum.QUEUED)
-                    nrequest.states.append(nstate)
-                    nrequests.append(nrequest)
+                    for dest in dests:
+                        nrequest = TransferRequest(filename=filename, size=size, dest=dest)
+                        nstate = State(state=StateEnum.QUEUED)
+                        nrequest.states.append(nstate)
+                        nrequests.append(nrequest)
         npolicy.transfers.extend(nrequests)
         db.session.add(npolicy)
 
@@ -199,28 +200,38 @@ def create_commanded_request(payload: CommandedTransferRequestSchema) -> tuple[l
     if not dests:
         return None, f"No destinations configured for policy '{policy_name}'", 400
 
-    nrequests = db.session.scalars(
-        select(TransferRequest)
-        .join(TransferPolicy)
-        .where(TransferPolicy.name == policy_name)
-        .where(TransferRequest.filename==payload.path.split("/")[-1])
-    ).all()
-
-    if nrequests and any(
-        req.states[0].state not in [StateEnum.SUCCESSFUL, StateEnum.CANCELLED] for req in nrequests
-        ):
-        return None, "A transfer request for this file is already in progress", 409
-
+    filename = payload.path.split("/")[-1]
     if payload.path.startswith(("http://", "https://")):
         parsed_url = urlparse(payload.path)
         filename = os.path.basename(parsed_url.path)
         path = os.path.dirname(parsed_url.path)
     else:
-        filename = payload.path.split("/")[-1]
         path = payload.path.replace(filename, '')
 
     try:
+        request_uids = []
         for dest in dests:
+            # Check if there's already a transfer in progress for this file to this specific destination
+            existing_request = db.session.scalar(
+                select(TransferRequest)
+                .join(TransferPolicy)
+                .where(TransferPolicy.name == policy_name)
+                .where(TransferRequest.filename == filename)
+                .where(TransferRequest.dest_id == dest.id)
+                .where(TransferRequest.states.any(State.state.not_in([StateEnum.SUCCESSFUL, StateEnum.CANCELLED])))
+            )
+
+            if existing_request:
+                app.logger.warning(
+                    "Transfer already in progress",
+                    extra={
+                        'filename': filename,
+                        'destination': dest.target.name,
+                        'policy': policy_name
+                    }
+                )
+                continue
+
             nrequest = TransferRequest(
                 filename=filename,
                 dest=dest,
@@ -231,9 +242,11 @@ def create_commanded_request(payload: CommandedTransferRequestSchema) -> tuple[l
             nrequest.states.append(nstate)
             npolicy.transfers.append(nrequest)
         
+        if not npolicy.transfers:
+            return None, "No new transfers could be created - all destinations have transfers in progress", 409
+        
         db.session.commit()
         
-        request_uids = []
         for nrequest in npolicy.transfers[-len(dests):]:
             if nrequest.uid is None:
                 app.logger.error("UID is None for a newly created transfer request")
