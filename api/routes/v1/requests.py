@@ -18,87 +18,81 @@ bp = Blueprint("requests", __name__)
 @bp.route("/get-status", methods=["GET"])
 def get_transfer_status():
     """
-    list all transfer requests with detailed information
-    output can be filtered by using query params
-    - state: queued / successful / failed / in_progress
-    - queues: name1,name2,...
+    For a given transfer-id, list the transfer request detailed informations
     """
     nglobal_parameters = get_params()
     if nglobal_parameters is None or nglobal_parameters.mode == Mode.OFFLINE:
-        return 
+        return
     else:
         parsed_params = parse_params(request.args.to_dict())
+        if not parsed_params:
+            return {"error": "No transfer-id provided"}, 400
         result = filter_requests(parsed_params)
-        requests = list(db.session.scalars(result))
+        req = db.session.scalar(result)
         
-        # Transform the requests into a more detailed format
-        detailed_requests = []
-        for req in requests:
-            # Get the latest state
-            latest_state = req.states[0] if req.states else None
-            
-            # Calculate transfer rate if both start and end times are available
-            transfer_rate = None
-            if req.start and req.end and req.size:
-                try:
-                    start_time = req.start
-                    end_time = req.end
-                    duration_seconds = (end_time - start_time).total_seconds()
-                    if duration_seconds > 0:
-                        transfer_rate = req.size / duration_seconds  # MB/s
-                except (TypeError, ValueError):
-                    pass
-            
-            # Get failure information
-            failure_count = req.nb_retry
-            failure_reason = None
-            if latest_state and latest_state.failure_reason:
-                failure_reason = latest_state.failure_reason
-            
-            # Get source and destination information
-            source = None
-            destination = None
-            if req.policy and req.policy.src:
-                source = {
-                    "name": req.policy.src.target.name if req.policy.src.target else None,
-                    "path": req.policy.src.path,
-                    "protocol": req.policy.src.target.protocol.value if req.policy.src.target else None
-                }
-            
-            if req.dest:
-                destination = {
-                    "name": req.dest.target.name if req.dest.target else None,
-                    "path": req.dest.path,
-                    "protocol": req.dest.target.protocol.value if req.dest.target else None
-                }
-            
-            # Create detailed request object
-            detailed_request = {
-                "follows_from_tasks": req.follows_from_tasks,
-                "transfer_id": str(req.uid),
-                "status": latest_state.state.value if latest_state else "UNKNOWN",
-                "sub_status": latest_state.sub_state.value if latest_state and latest_state.sub_state else None,
-                "source": source,
-                "destination": destination,
-                "data_type": "file",  # All transfers are files
-                "data_identifier": req.filename,
-                "transfer_begin_time": req.start.isoformat() if req.start else None,
-                "transfer_end_time": req.end.isoformat() if req.end else None,
-                "transfer_rate_mb_s": round(transfer_rate, 2) if transfer_rate else None,
-                "data_size_mb": req.size,
-                "failure_count": failure_count,
-                "failure_reason": failure_reason,
-                "created_at": req.created_at.isoformat() if req.created_at else None,
-                "download_rate_mb_s": req.download_rate,
-                "download_time_s": req.download_time,
-                "upload_rate_mb_s": req.upload_rate,
-                "upload_time_s": req.upload_time,
-                "policy_name": req.policy.name if req.policy else None
+        # Get the latest state
+        latest_state = req.states[0] if req.states else None
+        
+        # Calculate transfer rate if both start and end times are available
+        transfer_rate = None
+        if req.start and req.end and req.size:
+            try:
+                start_time = req.start
+                end_time = req.end
+                duration_seconds = (end_time - start_time).total_seconds()
+                if duration_seconds > 0:
+                    transfer_rate = req.size / duration_seconds  # MB/s
+            except (TypeError, ValueError):
+                pass
+        
+        # Get failure information
+        failure_count = req.nb_retry
+        failure_reason = None
+        if latest_state and latest_state.failure_reason:
+            failure_reason = latest_state.failure_reason
+        
+        # Get source and destination information
+        source = None
+        destination = None
+        if req.policy and req.policy.src:
+            source = {
+                "name": req.policy.src.target.name if req.policy.src.target else None,
+                "path": req.policy.src.path,
+                "protocol": req.policy.src.target.protocol.value if req.policy.src.target else None
             }
-            
-            detailed_requests.append(detailed_request)
         
-        return detailed_requests, 200
+        if req.dest:
+            destination = {
+                "name": req.dest.target.name if req.dest.target else None,
+                "path": req.dest.path,
+                "protocol": req.dest.target.protocol.value if req.dest.target else None
+            }
+        
+        # Create detailed request object
+        detailed_request = {
+            "follows_from_tasks": req.follows_from_tasks,
+            "transfer_id": str(req.uid),
+            "status": latest_state.state.value if latest_state else "UNKNOWN",
+            "sub_status": latest_state.sub_state.value if latest_state and latest_state.sub_state else None,
+            "source": source,
+            "destination": destination,
+            "data_type": "file",  # All transfers are files
+            "data_identifier": req.filename,
+            "transfer_begin_time": req.start.isoformat() if req.start else None,
+            "transfer_end_time": req.end.isoformat() if req.end else None,
+            "transfer_rate_mb_s": round(transfer_rate, 2) if transfer_rate else None,
+            "data_size_mb": req.size,
+            "failure_count": failure_count,
+            "failure_reason": failure_reason,
+            "created_at": req.created_at.isoformat() if req.created_at else None,
+            "download_rate_mb_s": req.download_rate,
+            "download_time_s": req.download_time,
+            "upload_rate_mb_s": req.upload_rate,
+            "upload_time_s": req.upload_time,
+            "policy_name": req.policy.name if req.policy else None
+        }
+        
+        return detailed_request, 200
 
 
 @bp.route("/request", methods=["POST"])

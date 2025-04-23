@@ -62,64 +62,7 @@ def get_next_request(params: NextTransferRequestParams) -> TransferRequest | Non
 
 def filter_requests(params):
     base = select(TransferRequest).order_by(TransferRequest.created_at.asc())
-
-    if params.get("state") is not None:
-        state = StateEnum[params.get("state").upper()]
-        subquery = (
-            select(State.request_id, func.max(State.created_at).label("latest_created_at"))
-            .group_by(State.request_id)
-            .subquery()
-        )
-        base = (
-            base.join(State)
-            .join(
-                subquery,
-                (subquery.c.request_id == State.request_id)
-                & (subquery.c.latest_created_at == State.created_at),
-            )
-            .filter(State.state == state)
-        )
-    if params.get("states") is not None:
-        states = list(map(lambda x: StateEnum[x.upper()], params["states"].split(",")))
-        subquery = (
-            select(State.request_id, func.max(State.created_at).label("latest_created_at"))
-            .group_by(State.request_id)
-            .subquery()
-        )
-        base = (
-            base.join(State)
-            .join(
-                subquery,
-                (subquery.c.request_id == State.request_id)
-                & (subquery.c.latest_created_at == State.created_at),
-            )
-            .filter(State.state.in_(states))
-        )
-    if params.get("queues") is not None:
-        queues = params["queues"].split(",")
-        base = base.select_from(TransferPolicy).join(Queue).filter(Queue.name.in_(queues))
-    if params.get("id") is not None:
-        base = base.filter(TransferRequest.id == params["id"])
-    if params.get("ids") is not None:
-        transfer_ids = params["ids"].split(",")
-        transfer_ids = map(lambda i: int(i), transfer_ids)
-        base = base.filter(TransferRequest.id.in_(transfer_ids))
-    if params.get("uid") is not None:
-        base = base.filter(TransferRequest.uid == params["uid"])
-    if params.get("uids") is not None:
-        transfer_uids = params["uids"].split(",")
-        transfer_uids = map(lambda i: int(i), transfer_uids)
-        base = base.filter(TransferRequest.uid.in_(transfer_uids))
-    if params.get("policy_id") is not None:
-        base = base.filter(TransferRequest.policy_id == params["policy_id"])
-    if params.get("policy_name") is not None:
-        base = base.filter(TransferPolicy.name == params["policy_name"])
-    if params.get("policy_ids") is not None:
-        policy_ids = list(map(lambda x: int(x), params["policy_ids"].split(",")))
-        base = base.filter(TransferRequest.policy_id.in_(policy_ids))
-    if params.get("filename") is not None:
-        base = base.filter(TransferRequest.filename == params["filename"])
-    return base
+    return base.filter(TransferRequest.uid == params["id"])
 
 
 @transactional
