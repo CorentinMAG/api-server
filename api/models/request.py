@@ -22,7 +22,7 @@ class TransferRequest(SQLBase, SerializerMixin):
         "filename",
         "size",
         "uid",
-        "follows_from_tasks",
+        "follows_from_task",
         "states",
         "policy",
         "created_at",
@@ -42,7 +42,7 @@ class TransferRequest(SQLBase, SerializerMixin):
     filename: Mapped[str]
     size: Mapped[float | None] = mapped_column(default=None, index = True)  # in MB
     uid: Mapped[uuid.UUID] = mapped_column(default=uuid.uuid4, unique=True)
-    follows_from_tasks: Mapped[uuid.UUID | None] = mapped_column(default=None)
+    follows_from_task: Mapped[uuid.UUID | None] = mapped_column(default=None)
     states: Mapped[list[State]] = relationship(order_by="State.id.desc()")
     policy_id: Mapped[int | None] = mapped_column(ForeignKey("transfer_policies.id", ondelete="SET NULL"))
     policy: Mapped[TransferPolicy] = relationship(back_populates="transfers")

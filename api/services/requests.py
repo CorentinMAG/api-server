@@ -236,7 +236,7 @@ def create_commanded_request(payload: CommandedTransferRequestSchema) -> tuple[l
                 filename=filename,
                 dest=dest,
                 src_relative_path=path,
-                follows_from_tasks=payload.uid if payload.uid else None
+                follows_from_task=payload.uid if payload.uid else None
             )
             nstate = State(state=StateEnum.QUEUED)
             nrequest.states.append(nstate)

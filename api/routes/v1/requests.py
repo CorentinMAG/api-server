@@ -70,7 +70,7 @@ def get_transfer_status():
         
         # Create detailed request object with grouped information
         detailed_request = {
-            "follows_from_tasks": req.follows_from_tasks,
+            "follows_from_task": req.follows_from_task,
             "transfer_id": str(req.uid),
             "transfer_status": {
                 "status": latest_state.state.value if latest_state else "UNKNOWN",
