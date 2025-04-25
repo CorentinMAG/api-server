@@ -115,18 +115,49 @@ def create_periodical_requests(payload: TriggerTransferRequestSchema) -> None:
                     nrequest.states.append(nstate)
                     nrequests.append(nrequest)
             # if only_new_data is false
-            # and the trigerred file is already in database
-            # and the state is SUCCESSFUL or CANCELLED
-            # we recreate a new transfer request
+            # and the triggered file is already in database
+            # check if ALL existing requests for this file are finished before recreating
             elif not only_new_data:
-                nrequest = next(filter(lambda r: r.filename == filename, requests))
-                latest_state = nrequest.states[0]
-                if latest_state.state == StateEnum.CANCELLED or latest_state.state == StateEnum.SUCCESSFUL:
+                # Find all existing requests for this filename within the current policy
+                existing_requests_for_file = [r for r in requests if r.filename == filename]
+
+                if existing_requests_for_file:
+                    all_finished = True
+                    for req in existing_requests_for_file:
+                        # Assuming req.states is ordered with the latest state first,
+                        # or that there's a reliable way to get the latest state.
+                        # Using states[0] based on previous code structure.
+                        if not req.states: # Should not happen, but safety check
+                           app.logger.warning(f"Request {req.id} for file {filename} has no states.")
+                           all_finished = False # Treat as not finished if state is unknown
+                           break
+                        latest_state = req.states[0].state
+                        if latest_state not in (StateEnum.SUCCESSFUL, StateEnum.CANCELLED):
+                            all_finished = False
+                            app.logger.debug(f"Skipping recreation for {filename}: Request {req.id} to dest {req.dest_id} is still in state {latest_state.value}.")
+                            break # No need to check others if one is not finished
+
+                    if all_finished:
+                        # All existing requests for this file are finished (Successful or Cancelled).
+                        # Recreate requests for all destinations as per original logic,
+                        # but only now that we know previous runs are complete.
+                        app.logger.info(f"All previous requests for {filename} are finished. Recreating requests for all destinations.")
+                        for dest in dests:
+                            nrequest = TransferRequest(filename=filename, size=size, dest=dest)
+                            nstate = State(state=StateEnum.QUEUED)
+                            nrequest.states.append(nstate)
+                            nrequests.append(nrequest)
+                else:
+                    # This case should technically not be reached if filename is in db_files,
+                    # but handle defensively: if no requests found despite being in db_files,
+                    # perhaps they were deleted or detached? Create new ones.
+                    app.logger.warning(f"File {filename} was in db_files but no matching requests found in policy. Creating new requests.")
                     for dest in dests:
                         nrequest = TransferRequest(filename=filename, size=size, dest=dest)
                         nstate = State(state=StateEnum.QUEUED)
                         nrequest.states.append(nstate)
                         nrequests.append(nrequest)
+
         npolicy.transfers.extend(nrequests)
         db.session.add(npolicy)
 

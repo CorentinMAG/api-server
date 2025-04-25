@@ -30,6 +30,10 @@ def get_transfer_status():
         result = filter_requests(parsed_params)
         req = db.session.scalar(result)
         
+        # Check if the request was found
+        if req is None:
+            return {"error": "Transfer request not found"}, 404
+        
         # Get the latest state
         latest_state = req.states[0] if req.states else None
         
