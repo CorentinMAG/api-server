@@ -22,7 +22,7 @@ def get_transfer_status():
     """
     nglobal_parameters = get_params()
     if nglobal_parameters is None or nglobal_parameters.mode == Mode.OFFLINE:
-        return
+        return {"error": "No configuration found"}, 404
     else:
         parsed_params = parse_params(request.args.to_dict())
         if not parsed_params:
