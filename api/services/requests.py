@@ -254,12 +254,7 @@ def create_commanded_request(payload: CommandedTransferRequestSchema) -> tuple[l
 
             if existing_request:
                 app.logger.warning(
-                    "Transfer already in progress",
-                    extra={
-                        'filename': filename,
-                        'destination': dest.target.name,
-                        'policy': policy_name
-                    }
+                    f"Transfer already in progress: {filename}"
                 )
                 continue
 

@@ -188,16 +188,15 @@ The payload consists of several main components. The table below details the fie
 | `mode`                    | Enum (Mode)  | No       | `ONLINE`      | System operation mode (e.g., `ONLINE`) |
 | `tmp_prefix`              | string / null| No       | `null`        | Prefix for temporary files during transfer |
 | `final_prefix`            | string / null| No       | `null`        | Prefix for final files after transfer |
-| `retry_delay`             | int          | Yes      | `3600`        | Delay between retries in seconds |
-| `max_retry`               | int          | Yes      | `5`           | Maximum number of retries |
-| `transfer_requests_history`| int          | Yes      | `31`          | Retention period for requests in days |
-| `compress`                | boolean      | Yes      | `false`       | Enable compression globally |
-| `only_new_data`           | boolean      | Yes      | `true`        | Transfer only new files globally |
-| `transfer_timeout`        | int          | Yes      | `300`         | Timeout for transfers in seconds |
-| `queue_timeout`           | int          | Yes      | `86400`       | Timeout for requests in queue in seconds |
-| `polling_interval`        | int          | Yes      | `10`          | Interval for polling in seconds |
-| `queue_limit`             | int          | Yes      | `100`         | Maximum number of items in a queue |
-| `queue_threshold`         | int          | Yes      | `80`          | Queue threshold percentage |
+| `retry_delay`             | int          | No      | `300`        | Delay between retries in seconds |
+| `max_retry`               | int          | No      | `5`           | Maximum number of retries |
+| `transfer_requests_history`| int          | No      | `31`          | Retention period for requests in days |
+| `only_new_data`           | boolean      | No      | `true`        | Transfer only new files globally |
+| `transfer_timeout`        | int          | No      | `3600`         | Timeout for transfers in seconds |
+| `queue_timeout`           | int          | No      | `86400`       | Timeout for requests in queue in seconds |
+| `polling_interval`        | int          | No      | `10`          | Interval for polling in seconds |
+| `queue_limit`             | int          | No      | `100`         | Maximum number of items in a queue |
+| `queue_threshold`         | int          | No      | `80`          | Queue threshold percentage |
 
 **2. Notification Servers (`notification_servers`)** - List of servers
 
@@ -223,7 +222,7 @@ The payload consists of several main components. The table below details the fie
 | ----------------- | ---------- | -------- | ------------- | ----------------------- |
 | `name`            | string     | Yes      | -             | Unique queue name |
 | `priority`        | int        | No       | `1`           | Queue priority (lower is higher) |
-| `queue_timeout`   | int / null | No       | `300`         | Timeout for items in this queue |
+| `queue_timeout`   | int / null | No       | `86400`         | Timeout for items in this queue |
 | `queue_limit`     | int / null | No       | `100`         | Max items for this queue |
 | `queue_threshold` | int / null | No       | `80`          | Threshold percentage for this queue |
 
@@ -251,7 +250,7 @@ The payload consists of several main components. The table below details the fie
 | ------------ | --------------- | -------- | ------------- | ----------------------- |
 | `name`       | string          | Yes      | -             | Unique policy name |
 | `enabled`    | boolean         | No       | `true`        | Enable/disable policy |
-| `type`       | Enum (Type)     | Yes      | `PERIODICAL`  | PERIODICAL, TRIGGER, COMMANDED |
+| `type`       | Enum (Type)     | Yes      | `PERIODICAL`  | PERIODICAL, COMMANDED |
 | `src`        | object          | Yes      | -             | Source policy object (see below) |
 | `dests`      | list[object]    | Yes      | -             | List of Destination policy objects (see below) |
 | `queue`      | string          | Yes      | -             | Name of the queue to use |
@@ -273,7 +272,7 @@ The payload consists of several main components. The table below details the fie
 | --------------- | --------------- | -------- | ------------- | ----------------------- |
 | `target`        | string          | Yes      | -             | Name of the target to use |
 | `path`          | string / null   | No       | `null`        | Path on the destination target |
-| `bucket`        | string / null   | No       | `null`        | Bucket name (for S3) |
+| `bucket`        | string / null   | No       | `null`        | Bucket name (required for S3) |
 | `tmp_prefix`    | string / null   | No       | `null`        | Temporary file prefix |
 | `final_prefix`  | string / null   | No       | `null`        | Final file prefix |
 | `notifications` | list[object]/null| No      | `null`        | List of Notification objects (see below) |
@@ -296,7 +295,6 @@ The payload consists of several main components. The table below details the fie
 | `max_retry`               | int / null      | No       | `null`        | Override global `max_retry` |
 | `retry_delay`             | int / null      | No       | `null`        | Override global `retry_delay` |
 | `transfer_requests_history`| int / null     | No       | `null`        | Override global history setting |
-| `compress`                | boolean / null  | No       | `null`        | Override global compression setting |
 | `transfer_timeout`        | int / null      | No       | `null`        | Override global transfer timeout |
 | `periodical`              | object / null   | No       | `null`        | Parameters for periodical policies |
 
@@ -325,7 +323,6 @@ curl -X POST http://localhost:9000/configure \
       "retry_delay": 3600,
       "max_retry": 5,
       "transfer_requests_history": 31,
-      "compress": false,
       "only_new_data": true,
       "transfer_timeout": 300,
       "queue_timeout": 86400,

@@ -31,8 +31,6 @@ class TransferPolicyParameters(SQLBase, SerializerMixin):
         "max_retry",
         "retry_delay",
         "transfer_requests_history",
-        "compress",
-        "compress_type",
         "only_new_data",
         "transfer_timeout",
         "periodical",
@@ -42,8 +40,6 @@ class TransferPolicyParameters(SQLBase, SerializerMixin):
     max_retry: Mapped[int | None]
     retry_delay: Mapped[int | None]  # in seconds
     transfer_requests_history: Mapped[int | None]
-    compress: Mapped[bool | None]
-    compress_type: Mapped[str | None]
     only_new_data: Mapped[bool | None]
     transfer_timeout: Mapped[int | None]  # in seconds
 
@@ -61,7 +57,6 @@ class GlobalParameters(SQLBase, SerializerMixin):
         "retry_delay",
         "max_retry",
         "transfer_requests_history",
-        "compress",
         "only_new_data",
         "transfer_timeout",
         "queue_timeout",
@@ -75,16 +70,15 @@ class GlobalParameters(SQLBase, SerializerMixin):
     updated_at: Mapped[str] = mapped_column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
     tmp_prefix: Mapped[str | None]
     final_prefix: Mapped[str | None]
-    retry_delay: Mapped[int] = mapped_column(default=3600)  # in seconds
-    max_retry: Mapped[int] = mapped_column(default=5)
-    transfer_requests_history: Mapped[int] = mapped_column(default=31)
-    compress: Mapped[bool] = mapped_column(default=False)
-    only_new_data: Mapped[bool] = mapped_column(default=True)
-    transfer_timeout: Mapped[int] = mapped_column(default=300)  # in seconds
-    queue_timeout: Mapped[int] = mapped_column(default=86400)  # in seconds
-    polling_interval: Mapped[int] = mapped_column(default=10)  # in seconds
-    queue_limit: Mapped[int] = mapped_column(default=100)
-    queue_threshold: Mapped[int] = mapped_column(default=80)
+    retry_delay: Mapped[int | None] = mapped_column(default=300)  # in seconds
+    max_retry: Mapped[int | None] = mapped_column(default=5)
+    transfer_requests_history: Mapped[int| None] = mapped_column(default=31)
+    only_new_data: Mapped[bool | None] = mapped_column(default=True)
+    transfer_timeout: Mapped[int | None] = mapped_column(default=3600)  # in seconds
+    queue_timeout: Mapped[int | None] = mapped_column(default=86400)  # in seconds
+    polling_interval: Mapped[int | None] = mapped_column(default=10)  # in seconds
+    queue_limit: Mapped[int | None] = mapped_column(default=100)
+    queue_threshold: Mapped[int | None] = mapped_column(default=80)
 
 
 class TargetParameters(SQLBase, SerializerMixin):
@@ -93,8 +87,8 @@ class TargetParameters(SQLBase, SerializerMixin):
     serialize_only = ("use_ssl", "verify")
 
     id: Mapped[int] = mapped_column(primary_key=True)
-    use_ssl: Mapped[bool] = mapped_column(default=True)
-    verify: Mapped[bool] = mapped_column(default=True)
+    use_ssl: Mapped[bool| None] = mapped_column(default=True)
+    verify: Mapped[bool| None] = mapped_column(default=True)
     target_id: Mapped[int] = mapped_column(ForeignKey("targets.id"))
 
 
@@ -115,8 +109,8 @@ class KafkaTopicParameters(ServerParameters, SerializerMixin):
 
     id: Mapped[int] = mapped_column(ForeignKey("server_parameters.id", ondelete="CASCADE"), primary_key=True)
     topic: Mapped[str]
-    replica: Mapped[int] = mapped_column(default=1)
-    partitions: Mapped[int] = mapped_column(default=1)
+    replica: Mapped[int | None] = mapped_column(default=1)
+    partitions: Mapped[int | None] = mapped_column(default=1)
     server_id: Mapped[int] = mapped_column(ForeignKey("notification_servers.id", ondelete="CASCADE"))
     server: Mapped[NotificationServer] = relationship()
 
