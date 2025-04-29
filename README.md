@@ -186,7 +186,7 @@ The payload consists of several main components. The table below details the fie
 | Field Name                | Type         | Required | Default Value | Description/Constraints |
 | ------------------------- | ------------ | -------- | ------------- | ----------------------- |
 | `mode`                    | Enum (Mode)  | No       | `ONLINE`      | System operation mode (e.g., `ONLINE`) |
-| `tmp_prefix`              | string / null| No       | `null`        | Prefix for temporary files during transfer |
+| `tmp_prefix`              | string | No       | `''`        | Prefix for temporary files during transfer |
 | `final_prefix`            | string / null| No       | `null`        | Prefix for final files after transfer |
 | `retry_delay`             | int          | No      | `300`        | Delay between retries in seconds |
 | `max_retry`               | int          | No      | `5`           | Maximum number of retries |
