@@ -331,38 +331,64 @@ def update_request(
         TransferRequest | None,
         db.session.query(TransferRequest).with_for_update().get(request_id)
     )
-    state = StateEnum[params["state"].upper()] if params.get("state") else None
-    sub_state = SubStateEnum[params["sub_state"].upper()] if params.get("sub_state") else None
+    state_param = params.get("state")
+    sub_state_param = params.get("sub_state")
+
+    # Convert string params to Enum types if they exist, otherwise they remain None
+    state_enum = StateEnum[state_param.upper()] if state_param else None
+    sub_state_enum = SubStateEnum[sub_state_param.upper()] if sub_state_param else None
 
     if nrequest and params:
         npolicy = nrequest.policy
-        # if we are updating the request status,
-        # we need to check if it is a FAILED or not
-        if state:
-            nstates = []
+        new_states_to_append: list[State] = []
+
+        if state_enum:  # A main state update is requested
             max_retries = npolicy.parameters.max_retry
-            if state == StateEnum.FAILED:
+            if state_enum == StateEnum.FAILED:
                 failure_reason = params.get("failure_reason")
                 if not max_retries or nrequest.nb_retry + 1 < max_retries:
-                    failed = State(state=StateEnum.FAILED, failure_reason=failure_reason)
-                    queued = State(state=StateEnum.QUEUED)
-                    nstates.extend([failed, queued])
+                    failed_s = State(state=StateEnum.FAILED, failure_reason=failure_reason)
+                    queued_s = State(state=StateEnum.QUEUED)
+                    new_states_to_append.extend([failed_s, queued_s])
                     nrequest.nb_retry += 1
                 elif nrequest.nb_retry + 1 >= max_retries:
-                    nstate = State(
-                        state=StateEnum.CANCELLED.value.upper(),
-                        sub_state=SubStateEnum.NOTIFY.value.upper(),
+                    # Request becomes CANCELLED after max retries
+                    nrequest.end = datetime.datetime.now(datetime.timezone.utc).isoformat()
+                    
+                    # Determine sub_state based on whether notifications are configured for the destination
+                    current_sub_state = None
+                    if nrequest.dest and nrequest.dest.notifications:
+                        current_sub_state = SubStateEnum.NOTIFY
+                    # else: current_sub_state remains None, or could be set to another default if needed
+
+                    cancelled_s = State(
+                        state=StateEnum.CANCELLED,
+                        sub_state=current_sub_state, # Use determined sub_state
                         failure_reason=f"Max retries reached - Last error: {failure_reason}",
                     )
-                    nstates.append(nstate)
-            else:
-                # state is either CANCELLED or SUCCESSFUL
+                    new_states_to_append.append(cancelled_s)
+            elif state_enum in [StateEnum.SUCCESSFUL, StateEnum.CANCELLED]:
+                # Handles direct SUCCESSFUL or CANCELLED updates (not from max_retry logic)
                 nrequest.end = datetime.datetime.now(datetime.timezone.utc).isoformat()
-                nstate = State(state=state, sub_state=sub_state)
-                nstates.append(nstate)
-            nrequest.states.extend(nstates)
+                # sub_state_enum here is the one parsed from params, could be None
+                final_s = State(state=state_enum, sub_state=sub_state_enum)
+                new_states_to_append.append(final_s)
+
+        elif sub_state_enum:  # No main 'state' in params, only 'sub_state' (state_enum is None)
+            if nrequest.states:  # Ensure there are existing states to get the current main state
+                latest_main_state = nrequest.states[0].state # Assuming states are ordered, states[0] is the latest
+                sub_state_update_s = State(state=latest_main_state, sub_state=sub_state_enum)
+                new_states_to_append.append(sub_state_update_s)
+            else:
+                app.logger.warning(
+                    f"Request {request_id} has no prior states. Cannot update sub_state only."
+                )
+        
+        if new_states_to_append:
+            nrequest.states.extend(new_states_to_append)
 
         nrequest.update(params)
+        
         response = nrequest.to_dict()
         response["Purge"] = can_purge(nrequest)
         return response

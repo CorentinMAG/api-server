@@ -185,8 +185,8 @@ The payload consists of several main components. The table below details the fie
 
 | Field Name                | Type         | Required | Default Value | Description/Constraints |
 | ------------------------- | ------------ | -------- | ------------- | ----------------------- |
-| `mode`                    | Enum (Mode)  | No       | `ONLINE`      | System operation mode (e.g., `ONLINE`) |
-| `tmp_prefix`              | string | No       | `''`        | Prefix for temporary files during transfer |
+| `mode`                    | Enum (Mode)  | No       | `online`      | System operation mode (`online` or `offline`) |
+| `tmp_prefix`              | string | No       | `'.'`        | Prefix for temporary files during transfer |
 | `final_prefix`            | string / null| No       | `null`        | Prefix for final files after transfer |
 | `retry_delay`             | int          | No      | `300`        | Delay between retries in seconds |
 | `max_retry`               | int          | No      | `5`           | Maximum number of retries |
@@ -250,7 +250,7 @@ The payload consists of several main components. The table below details the fie
 | ------------ | --------------- | -------- | ------------- | ----------------------- |
 | `name`       | string          | Yes      | -             | Unique policy name |
 | `enabled`    | boolean         | No       | `true`        | Enable/disable policy |
-| `type`       | Enum (Type)     | Yes      | `PERIODICAL`  | PERIODICAL, COMMANDED |
+| `type`       | Enum (Type)     | No      | `periodical`  | periodical, commanded |
 | `src`        | object          | Yes      | -             | Source policy object (see below) |
 | `dests`      | list[object]    | Yes      | -             | List of Destination policy objects (see below) |
 | `queue`      | string          | Yes      | -             | Name of the queue to use |
