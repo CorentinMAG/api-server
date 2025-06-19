@@ -22,7 +22,19 @@ def init_app(app: Flask):
     db_port = os.environ.get("DTR_DB_PORT", "5438")
     create_db = os.environ.get("DTR_DB_CREATE", None)
     url = f"postgresql+psycopg://{db_user}:{db_password}@{db_host}:{db_port}/{db_name}"
-    app.config["SQLALCHEMY_DATABASE_URI"] = url
+    
+    app.config.update({
+        "SQLALCHEMY_DATABASE_URI": url,
+        "SQLALCHEMY_ENGINE_OPTIONS": {
+            "pool_size": 15,
+            "max_overflow": 25,
+            "pool_pre_ping": True,
+            "pool_recycle": 3600,
+            "pool_timeout": 30,
+            "echo_pool": True
+        }
+    })
+    
     db.init_app(app)
 
     if create_db is not None and create_db == "true":

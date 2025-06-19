@@ -6,7 +6,7 @@ from flask import current_app as app
 
 from api.db import db
 from api.models import Queue, State, TransferPolicy, TransferRequest
-from sqlalchemy import or_, select
+from sqlalchemy import or_, select, func
 from sqlalchemy.exc import SQLAlchemyError
 import uuid
 from dtr_common.schema import TriggerTransferRequestSchema, CommandedTransferRequestSchema
@@ -33,20 +33,31 @@ def get_next_request(params: NextTransferRequestParams) -> TransferRequest | Non
     )
 
     if state or sub_state:
-        # select the last state for each TransferRequest
-        # state id is always incremented. We sort by id
-        # because it is more reliable than created_at date
-        # Indeed, multiple records can have the same created_at date
-        # if they are added to the TransferRequest in the same transaction
-        substmt = (
-            select(State.id)
-            .where(State.request_id == TransferRequest.id)
-            .order_by(State.id.desc())
-            .limit(1)
-            .correlate(TransferRequest)
+        # Use a window function to find the latest state for each request.
+        # This is much more efficient than a correlated subquery.
+        latest_state_cte = (
+            select(
+                State.id.label("state_id"),
+                State.request_id,
+                State.state,
+                State.sub_state,
+                func.row_number()
+                .over(partition_by=State.request_id, order_by=State.id.desc())
+                .label("rn"),
+            )
+            .cte("latest_state")
         )
-        statestmt = State.sub_state == sub_state if sub_state else State.state == state
-        base = base.join(State, State.id == substmt.scalar_subquery()).where(statestmt)
+
+        base = base.join(
+            latest_state_cte,
+            latest_state_cte.c.request_id == TransferRequest.id,
+        ).where(latest_state_cte.c.rn == 1)
+
+        if sub_state:
+            base = base.where(latest_state_cte.c.sub_state == sub_state)
+        else:
+            base = base.where(latest_state_cte.c.state == state)
+
 
     if size:
         now = datetime.datetime.now(datetime.timezone.utc)
@@ -55,7 +66,7 @@ def get_next_request(params: NextTransferRequestParams) -> TransferRequest | Non
             or_(TransferRequest.next_retry_min_time.is_(None), TransferRequest.next_retry_min_time <= now),
         )
 
-    base = base.with_for_update(skip_locked=True)
+    base = base.with_for_update(skip_locked=True).limit(1)
     nrequest = db.session.scalar(base)
     return nrequest
 
@@ -73,138 +84,148 @@ def create_periodical_requests(payload: TriggerTransferRequestSchema) -> None:
     # we sort triggered_files by modified_at attribute
     triggered_files = sorted(triggered_files, key=lambda k: k.modified_at, reverse=True)
 
-    npolicy = db.session.scalar(select(TransferPolicy).where(TransferPolicy.id == policy_id))
+    npolicy = db.session.get(TransferPolicy, policy_id)
+    if not npolicy:
+        return
 
-    if npolicy:
-        # if only_new_data is True
-        # files already transferred are not transferred twice
-        only_new_data = npolicy.parameters.only_new_data
-        requests = npolicy.transfers
-        queue = npolicy.queue
-        dests = npolicy.dests
-        nb_dests = len(dests)
+    only_new_data = npolicy.parameters.only_new_data
+    queue = npolicy.queue
+    dests = npolicy.dests
+    nb_dests = len(dests)
 
-        db_files = list(map(lambda r: r.filename, requests))
-        db_queued_files = list(filter(lambda r: r.states[0].state == StateEnum.QUEUED, requests))
+    # Optimized: Count queued files directly in the DB
+    # We build a subquery to find the latest state ID for each request
+    latest_state_subquery = (
+        select(func.max(State.id))
+        .group_by(State.request_id)
+        .where(State.request_id == TransferRequest.id)
+        .correlate(TransferRequest)
+        .scalar_subquery()
+    )
 
-        available_slots = queue.queue_limit - len(db_queued_files)
+    # Now we count how many of those latest states are 'QUEUED'
+    queued_count_stmt = (
+        select(func.count(TransferRequest.id))
+        .join(State, TransferRequest.id == State.request_id)
+        .where(
+            TransferRequest.policy_id == policy_id,
+            State.id == latest_state_subquery,
+            State.state == StateEnum.QUEUED,
+        )
+    )
+    db_queued_files_count = db.session.execute(queued_count_stmt).scalar_one_or_none() or 0
 
-        # if queue is already full
-        if available_slots <= nb_dests:
-            return
-        else:
-            max_files = available_slots // nb_dests
-            triggered_files = triggered_files[:max_files]
 
-        if len(triggered_files) + len(db_queued_files) >= queue.queue_threshold:
-            app.logger.warning(
-                "queue %s is almost full (%d/%d)",
-                queue.name,
-                len(db_queued_files),
-                queue.queue_limit,
+    available_slots = queue.queue_limit - db_queued_files_count
+
+    # if queue is already full
+    if available_slots <= nb_dests:
+        return
+    else:
+        max_files = available_slots // nb_dests
+
+    if db_queued_files_count + len(triggered_files) >= queue.queue_threshold:
+        app.logger.warning(
+            "queue %s is almost full (%d/%d)",
+            queue.name,
+            db_queued_files_count,
+            queue.queue_limit,
+        )
+
+    nrequests: list[TransferRequest] = []
+    files_to_create = []
+
+    # Fast check for existing filenames
+    filenames_in_triggered_files = {f.filename for f in triggered_files}
+    if filenames_in_triggered_files:
+        existing_files_stmt = select(TransferRequest.filename).where(
+            TransferRequest.policy_id == policy_id,
+            TransferRequest.filename.in_(filenames_in_triggered_files),
+        )
+        db_files = set(db.session.execute(existing_files_stmt).scalars().all())
+    else:
+        db_files = set()
+
+
+    for file in triggered_files:
+        if len(files_to_create) >= max_files:
+            break
+
+        if file.filename not in db_files:
+            files_to_create.append(file)
+        elif not only_new_data:
+            # Check if all previous requests for this file are finished.
+            # This is more efficient than loading all requests.
+            unfinished_count_stmt = (
+                select(func.count(TransferRequest.id))
+                .join(State, TransferRequest.id == State.request_id)
+                .where(
+                    TransferRequest.policy_id == policy_id,
+                    TransferRequest.filename == file.filename,
+                    State.id == latest_state_subquery,
+                    State.state.not_in([StateEnum.SUCCESSFUL, StateEnum.CANCELLED]),
+                )
             )
+            unfinished_count = db.session.execute(unfinished_count_stmt).scalar_one()
 
-        nrequests: list[TransferRequest] = []
-        for file in triggered_files:
-            filename = file.filename
-            size = file.size
-            if filename not in db_files:
-                for dest in dests:
-                    nrequest = TransferRequest(filename=filename, size=size, dest=dest)
-                    nstate = State(state=StateEnum.QUEUED)
-                    nrequest.states.append(nstate)
-                    nrequests.append(nrequest)
-            # if only_new_data is false
-            # and the triggered file is already in database
-            # check if ALL existing requests for this file are finished before recreating
-            elif not only_new_data:
-                # Find all existing requests for this filename within the current policy
-                existing_requests_for_file = [r for r in requests if r.filename == filename]
+            if unfinished_count == 0:
+                files_to_create.append(file)
 
-                if existing_requests_for_file:
-                    all_finished = True
-                    for req in existing_requests_for_file:
-                        # Assuming req.states is ordered with the latest state first,
-                        # or that there's a reliable way to get the latest state.
-                        # Using states[0] based on previous code structure.
-                        if not req.states: # Should not happen, but safety check
-                           app.logger.warning(f"Request {req.id} for file {filename} has no states.")
-                           all_finished = False # Treat as not finished if state is unknown
-                           break
-                        latest_state = req.states[0].state
-                        if latest_state not in (StateEnum.SUCCESSFUL, StateEnum.CANCELLED):
-                            all_finished = False
-                            app.logger.debug(f"Skipping recreation for {filename}: Request {req.id} to dest {req.dest_id} is still in state {latest_state.value}.")
-                            break # No need to check others if one is not finished
+    for file in files_to_create:
+        for dest in dests:
+            nrequest = TransferRequest(filename=file.filename, size=file.size, dest=dest)
+            nstate = State(state=StateEnum.QUEUED)
+            nrequest.states.append(nstate)
+            nrequests.append(nrequest)
 
-                    if all_finished:
-                        # All existing requests for this file are finished (Successful or Cancelled).
-                        # Recreate requests for all destinations as per original logic,
-                        # but only now that we know previous runs are complete.
-                        app.logger.info(f"All previous requests for {filename} are finished. Recreating requests for all destinations.")
-                        for dest in dests:
-                            nrequest = TransferRequest(filename=filename, size=size, dest=dest)
-                            nstate = State(state=StateEnum.QUEUED)
-                            nrequest.states.append(nstate)
-                            nrequests.append(nrequest)
-                else:
-                    # This case should technically not be reached if filename is in db_files,
-                    # but handle defensively: if no requests found despite being in db_files,
-                    # perhaps they were deleted or detached? Create new ones.
-                    app.logger.warning(f"File {filename} was in db_files but no matching requests found in policy. Creating new requests.")
-                    for dest in dests:
-                        nrequest = TransferRequest(filename=filename, size=size, dest=dest)
-                        nstate = State(state=StateEnum.QUEUED)
-                        nrequest.states.append(nstate)
-                        nrequests.append(nrequest)
-
+    if nrequests:
         npolicy.transfers.extend(nrequests)
         db.session.add(npolicy)
 
-        ## for each new request we create a report log
-        reports_uid = []
-        for nrequest in nrequests:
-            for dest in npolicy.dests:
-                uid = uuid.uuid4()
-                reports_uid.append(uid)
-                task = {
-                    "type": "REPORT",
-                    "task": {
-                        "uid": str(uid),
-                        "name": "dtr_api_transfer_request",
-                        "event": "BEGIN",
-                        "input": {
-                            "tpln_string": npolicy.name,
-                            "source_url_string": npolicy.src.path,
-                            "filename_string": nrequest.filename,
-                            "target_url_string": dest.path,
-                            "target_logical_name_string": dest.target.name,
-                        },
+    ## for each new request we create a report log
+    reports_uid = []
+    for nrequest in nrequests:
+        for dest in npolicy.dests:
+            uid = uuid.uuid4()
+            reports_uid.append(uid)
+            task = {
+                "type": "REPORT",
+                "task": {
+                    "uid": str(uid),
+                    "name": "dtr_api_transfer_request",
+                    "event": "BEGIN",
+                    "input": {
+                        "tpln_string": npolicy.name,
+                        "source_url_string": npolicy.src.path,
+                        "filename_string": nrequest.filename,
+                        "target_url_string": dest.path,
+                        "target_logical_name_string": dest.target.name,
                     },
-                }
-            app.logger.info("request for transfer", extra=task)
+                },
+            }
+        app.logger.info("request for transfer", extra=task)
 
-        for nrequest, uid in zip(nrequests, reports_uid):
-            for dest in npolicy.dests:
-                task = {
-                    "type": "REPORT",
-                    "task": {
-                        "uid": str(uid),
-                        "name": "dtr_api_transfer_request",
-                        "event": "END",
-                        "status": "OK",
-                        "input": {
-                            "tpln_string": npolicy.name,
-                            "source_url_string": npolicy.src.path,
-                            "filename_string": nrequest.filename,
-                            "target_url_string": dest.path,
-                            "target_logical_name_string": dest.target.name,
-                        },
-                        "error_code": 0,
-                        "output": {"rest_id_string": str(nrequest.uid)},
+    for nrequest, uid in zip(nrequests, reports_uid):
+        for dest in npolicy.dests:
+            task = {
+                "type": "REPORT",
+                "task": {
+                    "uid": str(uid),
+                    "name": "dtr_api_transfer_request",
+                    "event": "END",
+                    "status": "OK",
+                    "input": {
+                        "tpln_string": npolicy.name,
+                        "source_url_string": npolicy.src.path,
+                        "filename_string": nrequest.filename,
+                        "target_url_string": dest.path,
+                        "target_logical_name_string": dest.target.name,
                     },
-                }
-            app.logger.info("end of request transfer", extra=task)
+                    "error_code": 0,
+                    "output": {"rest_id_string": str(nrequest.uid)},
+                },
+            }
+        app.logger.info("end of request transfer", extra=task)
 
 
 @transactional
