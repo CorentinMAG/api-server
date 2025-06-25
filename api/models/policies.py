@@ -42,6 +42,8 @@ class DestinationPolicy(SQLBase, SerializerMixin):
     target: Mapped[Target] = relationship()
     tmp_prefix: Mapped[str | None]
     final_prefix: Mapped[str | None]
+    path_from_filename_delimiter: Mapped[str | None]
+    path_from_filename_expression: Mapped[list[str] | None]
     notifications: Mapped[list[ServerParameters]] = relationship()
 
 
