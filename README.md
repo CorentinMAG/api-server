@@ -313,14 +313,14 @@ Let's assume we want to organize incoming files into a `YYYY/DD` folder structur
     -   *Resulting path so far: `2024/`*
 4.  `$\\d{2}[3]`:
     -   It starts with `$`, so it's a dynamic expression.
-    -   The regex `\\d{2}` is executed on the filename. This finds multiple matches: `00`, `24`, `07`, `15`, `10`, etc.
-    -   The fourth match (`[3]`) is `15`.
-    -   *Resulting path so far: `2024/15`*
+    -   The regex `\\d{2}` is executed on the filename. This finds multiple matches: `00`, `20`, `24`, `07`, `15`, `10`, etc.
+    -   The fourth match (`[3]`) is `07`.
+    -   *Resulting path so far: `2024/07`*
 
 ***Final Result:***
 
-The generated relative path `2024/15` is appended to the policy's base path, and the file is uploaded to the final, fully constructed path:
-`/data/ingest/2024/15/R_MOC_DATA_PNEO3_00_2024-07-15T10-00-00-000.xml`
+The generated relative path `2024/07` is appended to the policy's base path, and the file is uploaded to the final, fully constructed path:
+`/data/ingest/2024/07/R_MOC_DATA_PNEO3_00_2024-07-15T10-00-00-000.xml`
 
 **Notification Object (`notifications`)** - Contained in a list within `dests`
 
