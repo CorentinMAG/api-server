@@ -13,19 +13,19 @@ The ***API Server*** is the **central brain** of the DTR microservices architect
 ### 🔄 **Workflow Diagram**
 
 ```
-+----------------------+      API Requests         +-----------------------+
++----------------------+       API Requests         +-----------------------+
 |                      |--------------------------->|                       |
 |    DTR Services      |                            |      API Server       |
 |                      |<---------------------------|                       |
-+----------+-----------+     API Responses         +-----------------------+
++----------+-----------+      API Responses         +-----------------------+
            |                                          |
            |                                          | Database Operations
            |                                          v
-+----------------------+      Data Access          +-----------------------+
++----------------------+       Data Access          +-----------------------+
 |                      |--------------------------->|                       |
 |   Database Layer     |                            |    PostgreSQL DB      |
 |                      |<---------------------------|                       |
-+----------------------+     Query Results         +-----------------------+
++----------------------+      Query Results         +-----------------------+
 ```
 
 ---
@@ -275,7 +275,52 @@ The payload consists of several main components. The table below details the fie
 | `bucket`        | string / null   | No       | `null`        | Bucket name (required for S3) |
 | `tmp_prefix`    | string / null   | No       | `null`        | Temporary file prefix |
 | `final_prefix`  | string / null   | No       | `null`        | Final file prefix |
+| `path_from_filename_delimiter` | string / null | No | `null` | Delimiter character for dynamic path expressions (e.g., "$"). |
+| `path_from_filename_expression`| list[string] / null | No | `null` | List of expressions to build the path (e.g., ["$\\d{4}[0]", "/", "$\\d{2}[1]"]). |
 | `notifications` | list[object]/null| No      | `null`        | List of Notification objects (see below) |
+
+**Dynamic Destination Path Generation**
+
+The system supports the creation of dynamic destination subdirectories by parsing the source filename. This feature allows for advanced file organization based on information embedded in filenames, such as dates, version numbers, or data types.
+
+The feature is activated on a specific destination policy by providing both `path_from_filename_delimiter` and `path_from_filename_expression`. If either of these fields is missing or empty, the dynamic path logic is skipped, and the standard destination `path` is used.
+
+-   **`path_from_filename_delimiter`**: A single character (e.g., `$`) used to identify which parts of the expression list are dynamic regex patterns.
+-   **`path_from_filename_expression`**: A list of strings that are concatenated to form the new relative path. This list can contain:
+    -   **Literals**: Static path components, such as `archive` or `/`.
+    -   **Expressions**: Strings that must begin with the specified `delimiter`. The format is `DELIMITER<regex>[group_index]`. The system will execute the `<regex>` on the filename and extract the match corresponding to the `[group_index]` (0-indexed).
+
+***Example Scenario:***
+
+Let's assume we want to organize incoming files into a `YYYY/DD` folder structure based on their filename.
+
+-   **Source Filename**: `R_MOC_DATA_PNEO3_00_2024-07-15T10-00-00-000.xml`
+-   **Base Destination Path (`path`)**: `/data/ingest`
+-   **Configuration**:
+    -   `path_from_filename_delimiter`: `$`
+    -   `path_from_filename_expression`: [`$\\d{4}[0]`, `/`, `$\\d{2}[3]`]
+
+***Path Generation Breakdown:***
+
+1.  The worker processes the `path_from_filename_expression` list item by item:
+2.  `$\\d{4}[0]`:
+    -   It starts with `$`, so it's a dynamic expression.
+    -   The regex `\\d{4}` is executed on the filename.
+    -   The first match (`[0]`) is `2024`.
+    -   *Resulting path so far: `2024`*
+3.  `/`:
+    -   This does not start with `$`, so it's treated as a literal string.
+    -   *Resulting path so far: `2024/`*
+4.  `$\\d{2}[3]`:
+    -   It starts with `$`, so it's a dynamic expression.
+    -   The regex `\\d{2}` is executed on the filename. This finds multiple matches: `00`, `24`, `07`, `15`, `10`, etc.
+    -   The fourth match (`[3]`) is `15`.
+    -   *Resulting path so far: `2024/15`*
+
+***Final Result:***
+
+The generated relative path `2024/15` is appended to the policy's base path, and the file is uploaded to the final, fully constructed path:
+`/data/ingest/2024/15/R_MOC_DATA_PNEO3_00_2024-07-15T10-00-00-000.xml`
 
 **Notification Object (`notifications`)** - Contained in a list within `dests`
 
