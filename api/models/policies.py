@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING
 
-from sqlalchemy import DateTime, ForeignKey, func
+from sqlalchemy import DateTime, ForeignKey, func, JSON
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 from sqlalchemy_serializer import SerializerMixin
 
@@ -43,7 +43,7 @@ class DestinationPolicy(SQLBase, SerializerMixin):
     tmp_prefix: Mapped[str | None]
     final_prefix: Mapped[str | None]
     path_from_filename_delimiter: Mapped[str | None]
-    path_from_filename_expression: Mapped[list[str] | None]
+    path_from_filename_expression: Mapped[list[str] | None] = mapped_column(JSON)
     notifications: Mapped[list[ServerParameters]] = relationship()
 
 
