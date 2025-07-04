@@ -1,11 +1,13 @@
+from __future__ import annotations
+
 from .credentials import Credentials
 from .parameters import (
     GlobalParameters,
     KafkaTopicParameters,
     PeriodicalParameters,
-    TransferPolicyParameters,
     ServerParameters,
     TargetParameters,
+    TransferPolicyParameters,
 )
 from .policies import DestinationPolicy, SourcePolicy, TransferPolicy
 from .queue import Queue

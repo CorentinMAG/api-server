@@ -2,10 +2,10 @@ from __future__ import annotations
 
 import datetime
 
+from dtr_common.constantes import State as StateEnum, SubState as SubStateEnum
 from sqlalchemy import DateTime, ForeignKey, func
 from sqlalchemy.orm import Mapped, mapped_column
 from sqlalchemy_serializer import SerializerMixin
-from dtr_common.constantes import State as StateEnum, SubState as SubStateEnum
 
 from ..db import Base as SQLBase
 
@@ -16,8 +16,10 @@ class State(SQLBase, SerializerMixin):
     serialize_only = ("state", "created_at", "failure_reason", "sub_state", "id")
 
     id: Mapped[int] = mapped_column(primary_key=True)
-    state: Mapped[StateEnum] = mapped_column(index = True)
+    state: Mapped[StateEnum] = mapped_column(index=True)
     created_at: Mapped[datetime.datetime] = mapped_column(DateTime, default=func.now())
-    request_id: Mapped[int] = mapped_column(ForeignKey("transfer_requests.id", ondelete="CASCADE"), index = True)
+    request_id: Mapped[int] = mapped_column(
+        ForeignKey("transfer_requests.id", ondelete="CASCADE"), index=True
+    )
     failure_reason: Mapped[str | None]
     sub_state: Mapped[SubStateEnum | None] = mapped_column(default=None, index=True)

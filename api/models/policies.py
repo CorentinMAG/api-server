@@ -2,15 +2,15 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING
 
-from sqlalchemy import DateTime, ForeignKey, func, JSON
+from dtr_common.constantes import Type
+from sqlalchemy import JSON, DateTime, ForeignKey, func
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 from sqlalchemy_serializer import SerializerMixin
 
 from ..db import Base as SQLBase
-from dtr_common.constantes import Type
 
 if TYPE_CHECKING:
-    from .parameters import TransferPolicyParameters, ServerParameters
+    from .parameters import ServerParameters, TransferPolicyParameters
     from .queue import Queue
     from .request import TransferRequest
     from .target import Target

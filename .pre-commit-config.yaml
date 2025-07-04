@@ -5,17 +5,29 @@ default_language_version:
 repos:
   - repo: local
     hooks:
+      - id: setup-deps
+        name: install-dependencies
+        entry: python api-server/scripts/install_deps.py
+        language: python
+        always_run: true
+        pass_filenames: false
+        stages: [pre-commit]
       - id: formatter
         name: ruff-formatter
-        entry: ruff format
+        entry: ruff format api-server/
         language: python
         types: [python]
         require_serial: true
-        verbose: true
       - id: linter
         name: ruff-linter
-        entry: ruff check
+        entry: ruff check api-server/ --fix
         language: python
         types: [python]
         require_serial: true
-        verbose: true
+      - id: tests
+        name: pytest-coverage
+        entry: python api-server/scripts/run_tests_precommit.py
+        language: python
+        always_run: true
+        require_serial: true
+        pass_filenames: false

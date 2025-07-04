@@ -1,12 +1,14 @@
+from __future__ import annotations
+
+import os
 from logging.config import fileConfig
 
-from sqlalchemy.orm import Session
 from sqlalchemy import create_engine
-from api.db import Base
+from sqlalchemy.orm import Session
+from sqlalchemy_utils import create_database, database_exists
+
 from alembic import context
-import os
-from sqlalchemy_utils import database_exists, create_database
-import api.models
+from api.db import Base
 
 target_metadata = Base.metadata
 

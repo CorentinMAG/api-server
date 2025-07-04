@@ -1,4 +1,7 @@
 ruff==0.2.2
-mypy==1.4.1
-mypy-extensions==1.0.0
 pre-commit==3.3.3
+pytest
+pytest-cov
+pytest-mock
+requests
+werkzeug==2.3.7

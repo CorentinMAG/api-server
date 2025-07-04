@@ -1,6 +1,11 @@
 __pycache__
 main.py
-.ruff_cache
-.mypy_cache
 app.log
 *.tar.gz
+__pycache__
+.mypy_cache
+.pytest_cache/
+.ruff_cache
+datadir
+.coverage
+htmlcov/

@@ -1,17 +1,23 @@
+from __future__ import annotations
+
+import datetime
+from typing import TypedDict, cast
+
+from dtr_common.constantes import Type
 from sqlalchemy import or_
+
 from api.db import db
 from api.models import (
     DestinationPolicy,
+    PeriodicalParameters,
     Queue,
     SourcePolicy,
     Target,
-    TransferPolicyParameters,
     TransferPolicy,
-    PeriodicalParameters,
+    TransferPolicyParameters,
 )
-import datetime
-from typing import cast, TypedDict
-from dtr_common.constantes import Type
+
+from .utils import db_retry, transactional
 
 
 class FilterPolicyParams(TypedDict, total=False):
@@ -25,6 +31,7 @@ class FilterPolicyParams(TypedDict, total=False):
     next_polling_min_time: bool
 
 
+@db_retry(total=3, initial_delay=1, max_delay=5)
 def filter_policies(params: FilterPolicyParams):
     base = db.session.query(TransferPolicy)
 
@@ -63,8 +70,8 @@ def filter_policies(params: FilterPolicyParams):
     return base
 
 
+@transactional
 def update_policy(policy_id: int, payload: dict):
     npolicy = cast(TransferPolicy | None, db.session.query(TransferPolicy).get(policy_id))
     if npolicy:
         npolicy.update(payload)
-        db.session.commit()

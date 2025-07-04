@@ -1,11 +1,8 @@
+from __future__ import annotations
+
 from flask import Blueprint
-from . import configure
-from . import mode
-from . import policies
-from . import requests
-from . import notifications
-from . import trigger
-from . import worker
+
+from . import configure, mode, notifications, policies, requests, trigger, worker
 
 v1 = Blueprint("api_v1", __name__)
 

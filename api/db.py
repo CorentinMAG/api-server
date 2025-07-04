@@ -1,10 +1,14 @@
-import os
+from __future__ import annotations
 
+from dtr_common.exceptions.errors import RetryError
+from dtr_common.retry import retry_database_operation
 from flask import Flask
 from flask_sqlalchemy import SQLAlchemy
-from sqlalchemy.orm import DeclarativeBase
 from sqlalchemy import create_engine
-from sqlalchemy_utils import database_exists, create_database
+from sqlalchemy.orm import DeclarativeBase
+from sqlalchemy_utils import create_database, database_exists
+
+from config import CREATE_DB, DATABASE_URL, SQLALCHEMY_ENGINE_OPTIONS, logger
 
 
 class Base(DeclarativeBase):
@@ -15,37 +19,55 @@ db = SQLAlchemy(model_class=Base)
 
 
 def init_app(app: Flask):
-    db_user = os.environ.get("DTR_DB_USER", "dtr")
-    db_password = os.environ["DTR_DB_PASSWORD"]
-    db_name = os.environ.get("DTR_DB_NAME", "postgres")
-    db_host = os.environ.get("DTR_DB_HOST", "127.0.0.1")
-    db_port = os.environ.get("DTR_DB_PORT", "5438")
-    create_db = os.environ.get("DTR_DB_CREATE", None)
-    url = f"postgresql+psycopg://{db_user}:{db_password}@{db_host}:{db_port}/{db_name}"
-    
-    app.config.update({
-        "SQLALCHEMY_DATABASE_URI": url,
-        "SQLALCHEMY_ENGINE_OPTIONS": {
-            "pool_size": 15,
-            "max_overflow": 25,
+    if not DATABASE_URL:
+        raise ValueError("DATABASE_URL is not configured. Please check your environment variables.")
+
+    # Base configuration
+    config = {
+        "SQLALCHEMY_DATABASE_URI": DATABASE_URL,
+    }
+
+    # Add engine options only if they exist
+    if SQLALCHEMY_ENGINE_OPTIONS:
+        config["SQLALCHEMY_ENGINE_OPTIONS"] = {
             "pool_pre_ping": True,
             "pool_recycle": 3600,
-            "pool_timeout": 30,
-            "echo_pool": True
+            "echo_pool": True,
+            **SQLALCHEMY_ENGINE_OPTIONS,
         }
-    })
-    
+
+    app.config.update(config)
+
     db.init_app(app)
 
-    if create_db is not None and create_db == "true":
-        # create database if it does not exists
-        engine = create_engine(url)
-        if not database_exists(engine.url):
-            create_database(engine.url)
-        else:
-            # Connect to the database if exits
-            engine.connect()
-        # create all tables
-        with app.app_context():
-            db.create_all()
-            app.logger.debug("database tables have been created")
+    if CREATE_DB:
+        def _initialize_database():
+            """Initialize database with proper error handling and retry."""
+            # create database if it does not exists
+            engine = create_engine(DATABASE_URL)
+            if not database_exists(engine.url):
+                create_database(engine.url)
+                logger.info("New database created.", extra={"db_url": engine.url})
+            else:
+                # Connect to the database if exits
+                engine.connect()
+                logger.debug("Connected to existing database.", extra={"db_url": engine.url})
+
+            # create all tables
+            with app.app_context():
+                db.create_all()
+                logger.debug("Database tables have been created.")
+
+        try:
+            retry_database_operation(
+                _initialize_database,
+                logger=logger,
+                total=5,
+                backoff_factor=2,
+                initial_delay=2,
+                max_delay=30
+            )
+        except RetryError as e:
+            logger.error(f"Failed to initialize database after retries: {str(e)}")
+            # Don't crash the application, let it try to connect later
+            logger.warning("Application will start but database operations may fail until connection is restored")

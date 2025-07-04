@@ -408,7 +408,7 @@ curl -X POST http://localhost:9000/configure \
     "transfer_policies": [
       {
         "name": "daily-backup",
-        "type": "PERIODICAL",
+        "type": "periodical",
         "src": {
           "target": "source-sftp",
           "path": "/data",
@@ -514,13 +514,13 @@ curl -X GET "http://localhost:9000/dtr/v1/get-status?id=a1b2c3d4-e5f6-7890-1234-
 
 ### 2. Create Commanded Transfer Request (`POST /transfer-request`)
 
-Initiates a new data transfer based on an existing "COMMANDED" type transfer policy. This is used for on-demand transfers.
+Initiates a new data transfer based on an existing "commanded" type transfer policy. This is used for on-demand transfers.
 
 **Request Body:**
 
 | Field             | Type             | Required | Description |
 | ----------------- | ---------------- | -------- | ----------- |
-| `transfer_policy` | string           | Yes      | Name of the existing COMMANDED transfer policy to use |
+| `transfer_policy` | string           | Yes      | Name of the existing commanded transfer policy to use |
 | `path`            | string           | Yes      | Full path or URL to the source file/resource |
 | `uid`             | string (UUID) / null | No       | Optional UUID to link this request to an external task |
 | `timestamp`       | string (ISO 8601) / null | No   | Optional timestamp for the request |

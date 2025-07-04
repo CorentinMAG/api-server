@@ -1,22 +1,7 @@
-from typing import cast
-import copy
+from __future__ import annotations
 
-from api.db import db
-from api.models import (
-    Credentials,
-    DestinationPolicy,
-    KafkaTopicParameters,
-    NotificationServer,
-    PeriodicalParameters,
-    Queue,
-    SourcePolicy,
-    Target,
-    TransferPolicyParameters,
-    TransferPolicy,
-    GlobalParameters,
-    TargetParameters,
-    ServerParameters,
-)
+import copy
+from typing import cast
 
 from dtr_common.constantes import Type
 from dtr_common.schema import (
@@ -27,6 +12,24 @@ from dtr_common.schema import (
     TargetSchema,
     TransferPolicySchema,
 )
+
+from api.db import db
+from api.models import (
+    Credentials,
+    DestinationPolicy,
+    GlobalParameters,
+    KafkaTopicParameters,
+    NotificationServer,
+    PeriodicalParameters,
+    Queue,
+    ServerParameters,
+    SourcePolicy,
+    Target,
+    TargetParameters,
+    TransferPolicy,
+    TransferPolicyParameters,
+)
+
 from .utils import transactional
 
 
@@ -117,7 +120,11 @@ def create_policies(
                 if v is None:
                     params[k] = getattr(ngparams, k)
         else:
-            params = {k: v for k, v in ngparams.to_dict().items() if k in TransferPolicyParameters.__mapper__.columns}
+            params = {
+                k: v
+                for k, v in ngparams.to_dict().items()
+                if k in TransferPolicyParameters.__mapper__.columns
+            }
         nparams = TransferPolicyParameters(**params)
 
         if tr_type == Type.PERIODICAL:
@@ -131,7 +138,6 @@ def create_policies(
         nsrc = SourcePolicy(**src)
 
         for dest in dests:
-
             if dest.get("notifications") is not None:
                 nnotifications: list[ServerParameters] = []
                 for notification in dest["notifications"]:
@@ -155,13 +161,7 @@ def create_policies(
         ndests = list(map(lambda dest: DestinationPolicy(**dest), dests))
 
         npolicy = TransferPolicy(
-            name=name,
-            type=tr_type,
-            enabled=enabled,
-            queue=nqueue,
-            parameters=nparams,
-            src=nsrc,
-            dests=ndests
+            name=name, type=tr_type, enabled=enabled, queue=nqueue, parameters=nparams, src=nsrc, dests=ndests
         )
 
         npolicies.append(npolicy)

@@ -1,5 +1,8 @@
+from __future__ import annotations
+
+from typing import Optional, cast
+
 from flask import current_app as app
-from typing import cast, Optional
 
 from ..db import db
 from ..models import GlobalParameters, TransferPolicy
