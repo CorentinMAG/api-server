@@ -1,13 +1,13 @@
 from __future__ import annotations
 
-import logging
 import inspect
+import logging
 from functools import wraps
 
 from dtr_common.exceptions.errors import RetryError
 from dtr_common.retry import retry_database_operation
 from flask import current_app as app
-from sqlalchemy.exc import SQLAlchemyError, OperationalError, DisconnectionError, TimeoutError, DatabaseError
+from sqlalchemy.exc import DatabaseError, DisconnectionError, OperationalError, SQLAlchemyError, TimeoutError
 
 from ..db import db
 
@@ -81,7 +81,7 @@ def transactional(f):
                 total=3,  # Reduced retries for API responsiveness
                 backoff_factor=2,
                 initial_delay=1,
-                max_delay=10  # Reduced max delay for API responsiveness
+                max_delay=10,  # Reduced max delay for API responsiveness
             )
         except RetryError as e:
             # After all retries failed, log and re-raise as SQLAlchemyError
@@ -103,6 +103,7 @@ def db_retry(total: int = 3, backoff_factor: int = 2, initial_delay: int = 1, ma
         initial_delay: Initial delay in seconds before first retry
         max_delay: Maximum delay between retries
     """
+
     def decorator(f):
         @wraps(f)
         def decorated_function(*args, **kwargs):
@@ -117,7 +118,7 @@ def db_retry(total: int = 3, backoff_factor: int = 2, initial_delay: int = 1, ma
                     total=total,
                     backoff_factor=backoff_factor,
                     initial_delay=initial_delay,
-                    max_delay=max_delay
+                    max_delay=max_delay,
                 )
             except RetryError as e:
                 logger = _get_logger()
@@ -125,4 +126,5 @@ def db_retry(total: int = 3, backoff_factor: int = 2, initial_delay: int = 1, ma
                 raise SQLAlchemyError(f"Database operation failed after retries: {str(e)}")
 
         return decorated_function
+
     return decorator

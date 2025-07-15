@@ -99,7 +99,7 @@ def create_periodical_requests(
         validation_service: Service for business rule validation
         transfer_request_repo: Repository for transfer request operations
         logger: Logger instance
-    
+
     Returns:
         int: number of transfer requests effectively created (0 if none)
     """

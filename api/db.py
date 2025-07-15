@@ -41,6 +41,7 @@ def init_app(app: Flask):
     db.init_app(app)
 
     if CREATE_DB:
+
         def _initialize_database():
             """Initialize database with proper error handling and retry."""
             # create database if it does not exists
@@ -59,6 +60,7 @@ def init_app(app: Flask):
 
                 # Create default global parameters if they don't exist
                 from api.models import GlobalParameters
+
                 existing_params = db.session.query(GlobalParameters).first()
                 if not existing_params:
                     default_params = GlobalParameters()
@@ -71,14 +73,11 @@ def init_app(app: Flask):
 
         try:
             retry_database_operation(
-                _initialize_database,
-                logger=logger,
-                total=5,
-                backoff_factor=2,
-                initial_delay=2,
-                max_delay=30
+                _initialize_database, logger=logger, total=5, backoff_factor=2, initial_delay=2, max_delay=30
             )
         except RetryError as e:
             logger.error(f"Failed to initialize database after retries: {str(e)}")
             # Don't crash the application, let it try to connect later
-            logger.warning("Application will start but database operations may fail until connection is restored")
+            logger.warning(
+                "Application will start but database operations may fail until connection is restored"
+            )

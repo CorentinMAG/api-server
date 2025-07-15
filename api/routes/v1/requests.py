@@ -1,6 +1,7 @@
 """
 Transfer requests API routes with dependency injection.
 """
+
 from __future__ import annotations
 
 from typing import Optional
@@ -212,6 +213,7 @@ def new_requests():
         # Log and return error if service construction fails
         current_app.logger.error("Service initialization failed: %s", str(e), exc_info=True)
         from api.utils.responses import error_response as _er
+
         return _er("Service initialization failed", status_code=500)
 
     try:
@@ -226,9 +228,7 @@ def new_requests():
             return _build_error_response("Invalid payload", 400)
 
         # Service layer call with dependency injection
-        created = create_periodical_requests(
-            schema, logger=logger, validation_service=validation_service
-        )
+        created = create_periodical_requests(schema, logger=logger, validation_service=validation_service)
 
         if created:
             logger.info("Periodical transfer requests created (%d)", created)
@@ -259,6 +259,7 @@ def new_commanded_request():
     except Exception as e:
         current_app.logger.error("Service initialization failed: %s", str(e), exc_info=True)
         from api.utils.responses import error_response as _er
+
         return _er("Service initialization failed", status_code=500)
 
     try:
@@ -274,9 +275,7 @@ def new_commanded_request():
 
         # Service layer call with dependency injection
         # Call service layer without unsupported arguments to avoid TypeError
-        request_uids, error_message, status_code = create_commanded_request(
-            schema, logger=logger
-        )
+        request_uids, error_message, status_code = create_commanded_request(schema, logger=logger)
 
         if request_uids:
             logger.info(f"Commanded transfer request created: {request_uids}")
@@ -302,8 +301,9 @@ def update_requests(id: int):
     try:
         services = _get_request_services()
         logger = services["logger"]
-    except Exception as e:
+    except Exception:
         from api.utils.responses import error_response as _er
+
         return _er("Service initialization failed", status_code=500)
 
     try:
@@ -337,8 +337,9 @@ def filter_requests_route():
         services = _get_request_services()
         transfer_repo = services["transfer_repo"]
         logger = services["logger"]
-    except Exception as e:
+    except Exception:
         from api.utils.responses import error_response as _er
+
         return _er("Service initialization failed", status_code=500)
 
     try:

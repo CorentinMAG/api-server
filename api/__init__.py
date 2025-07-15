@@ -154,7 +154,7 @@ def create_app():
 
         error_details = {
             "error": "database error occurred",
-            "type": "connection_error" if is_connection_error else "database_error"
+            "type": "connection_error" if is_connection_error else "database_error",
         }
 
         if is_connection_error:

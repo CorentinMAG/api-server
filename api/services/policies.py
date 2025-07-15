@@ -5,6 +5,7 @@ from typing import TypedDict, cast
 
 from dtr_common.constantes import Type
 from sqlalchemy import or_
+from sqlalchemy.orm import exc as orm_exc
 
 from api.db import db
 from api.models import (
@@ -18,7 +19,6 @@ from api.models import (
 )
 
 from .utils import db_retry, transactional
-from sqlalchemy.orm import exc as orm_exc
 
 
 class FilterPolicyParams(TypedDict, total=False):
@@ -86,6 +86,7 @@ def update_policy(policy_id: int, payload: dict):
     npolicy = cast(TransferPolicy | None, db.session.query(TransferPolicy).get(policy_id))
     if not npolicy:
         from flask import current_app
+
         current_app.logger.warning("TransferPolicy %s not found for update", policy_id)
         return
 
@@ -96,10 +97,9 @@ def update_policy(policy_id: int, payload: dict):
         if npolicy.parameters.periodical is None:
             # on crée toujours la sous-entrée periodical
             npolicy.parameters.periodical = PeriodicalParameters(
-                polling_interval = payload
-                    .get("parameters", {})
-                    .get("periodical", {})
-                    .get("polling_interval", 10)   # défaut
+                polling_interval=payload.get("parameters", {})
+                .get("periodical", {})
+                .get("polling_interval", 10)  # défaut
             )
 
     try:

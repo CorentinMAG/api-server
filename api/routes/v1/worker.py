@@ -1,6 +1,7 @@
 """
 Worker API routes with dependency injection and error handling.
 """
+
 from __future__ import annotations
 
 import datetime
@@ -62,10 +63,10 @@ def worker():
 
             # The request object is still bound to the session, so we can serialize it.
             response_data = next_request.to_dict()
-            
+
             # Commit the transaction to finalize the state change and release the lock.
             db.session.commit()
-            
+
             logger.info(f"Assigned transfer request {next_request.uid} to worker")
             return success_response({"request": response_data})
 

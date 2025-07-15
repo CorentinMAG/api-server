@@ -1,6 +1,7 @@
 """
 Configuration API routes with dependency injection and error handling.
 """
+
 from __future__ import annotations
 
 from dtr_common.schema import ConfigurationSchema

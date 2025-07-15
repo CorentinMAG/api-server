@@ -63,9 +63,7 @@ class DestinationPolicy(SQLBase, SerializerMixin):
         "target",  # expose protocol etc. for destinations too
     )
 
-    serialize_rules = (
-        "-target.parameters.secret_key",
-    )
+    serialize_rules = ("-target.parameters.secret_key",)
 
     id: Mapped[int] = mapped_column(primary_key=True)
     path: Mapped[str | None]
