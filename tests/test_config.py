@@ -5,6 +5,7 @@ These tests ensure that all environment variables are loaded correctly,
 default values are applied when expected, and the logger is
 initialized properly. Achieving 100% coverage here is critical.
 """
+
 from __future__ import annotations
 
 import sys

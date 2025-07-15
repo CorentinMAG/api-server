@@ -4,6 +4,7 @@ Repository package providing data access abstractions.
 This package implements the repository pattern to abstract database operations
 and enable dependency injection for better testability.
 """
+
 from __future__ import annotations
 
 from .base import BaseRepository, TransactionalRepository

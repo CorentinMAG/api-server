@@ -1,12 +1,13 @@
 from __future__ import annotations
 
 import logging
+import inspect
 from functools import wraps
 
 from dtr_common.exceptions.errors import RetryError
 from dtr_common.retry import retry_database_operation
 from flask import current_app as app
-from sqlalchemy.exc import SQLAlchemyError
+from sqlalchemy.exc import SQLAlchemyError, OperationalError, DisconnectionError, TimeoutError, DatabaseError
 
 from ..db import db
 
@@ -32,6 +33,11 @@ def transactional(f):
         def _execute_with_transaction():
             """Inner function that executes the wrapped function with transaction management."""
             try:
+                # Intelligently pass the session only if the function expects it.
+                sig = inspect.signature(f)
+                if "db_session" in sig.parameters:
+                    kwargs["db_session"] = db.session
+
                 result = f(*args, **kwargs)
                 # Check if we're in a Flask application context
                 try:
@@ -54,9 +60,20 @@ def transactional(f):
                         pass
                     else:
                         raise
+
+                if isinstance(
+                    e,
+                    (
+                        OperationalError,
+                        DisconnectionError,
+                        TimeoutError,
+                        DatabaseError,
+                    ),
+                ):
+                    raise e
+
                 raise SQLAlchemyError(f"Database transaction failed: {str(e)}")
 
-        # Use the retry mechanism for database operations
         try:
             return retry_database_operation(
                 _execute_with_transaction,

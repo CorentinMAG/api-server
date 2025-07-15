@@ -4,6 +4,7 @@ API Routes Integration Tests
 Comprehensive test suite for all API routes with dependency injection testing,
 error handling validation, and comprehensive coverage patterns.
 """
+
 from __future__ import annotations
 
 from unittest.mock import Mock, patch
@@ -80,9 +81,10 @@ class TestRequestsRoutes:
 
     def test_get_transfer_status_success(self, client, mock_transfer_request):
         """Test successful transfer status retrieval."""
-        with patch("api.routes.v1.requests.get_params") as mock_get_params, patch(
-            "api.routes.v1.requests._get_request_services"
-        ) as mock_services:
+        with (
+            patch("api.routes.v1.requests.get_params") as mock_get_params,
+            patch("api.routes.v1.requests._get_request_services") as mock_services,
+        ):
             # Configure mocks
             mock_get_params.return_value = Mock(mode=Mode.ONLINE)
             mock_transfer_repo = Mock()
@@ -100,9 +102,10 @@ class TestRequestsRoutes:
 
     def test_get_transfer_status_not_found(self, client):
         """Test transfer status when transfer ID is not found."""
-        with patch("api.routes.v1.requests.get_params") as mock_get_params, patch(
-            "api.routes.v1.requests._get_request_services"
-        ) as mock_services:
+        with (
+            patch("api.routes.v1.requests.get_params") as mock_get_params,
+            patch("api.routes.v1.requests._get_request_services") as mock_services,
+        ):
             # Configure mocks
             mock_get_params.return_value = Mock(mode=Mode.ONLINE)
             mock_transfer_repo = Mock()
@@ -128,9 +131,10 @@ class TestRequestsRoutes:
 
     def test_get_transfer_status_offline_mode(self, client):
         """Test transfer status when system is offline."""
-        with patch("api.routes.v1.requests.get_params") as mock_get_params, patch(
-            "api.routes.v1.requests._get_request_services"
-        ) as mock_services:
+        with (
+            patch("api.routes.v1.requests.get_params") as mock_get_params,
+            patch("api.routes.v1.requests._get_request_services") as mock_services,
+        ):
             mock_get_params.return_value = Mock(mode=Mode.OFFLINE)
             mock_services.return_value = {"transfer_repo": Mock(), "logger": Mock()}
 
@@ -142,11 +146,12 @@ class TestRequestsRoutes:
 
     def test_new_requests_success(self, client):
         """Test successful creation of periodical requests."""
-        with patch("api.routes.v1.requests.create_periodical_requests") as mock_create, patch(
-            "api.routes.v1.requests._get_request_services"
-        ) as mock_services, patch(
-            "api.routes.v1.requests.TriggerTransferRequestSchema"
-        ) as mock_schema, patch("api.routes.v1.requests.db") as mock_db:
+        with (
+            patch("api.routes.v1.requests.create_periodical_requests") as mock_create,
+            patch("api.routes.v1.requests._get_request_services") as mock_services,
+            patch("api.routes.v1.requests.TriggerTransferRequestSchema") as mock_schema,
+            patch("api.routes.v1.requests.db") as mock_db,
+        ):
             # Configure mocks
             mock_services.return_value = {"validation_service": Mock(), "logger": Mock()}
             mock_schema.return_value = Mock()
@@ -193,11 +198,12 @@ class TestRequestsRoutes:
 
     def test_new_commanded_request_success(self, client):
         """Test successful creation of commanded request."""
-        with patch("api.routes.v1.requests.create_commanded_request") as mock_create, patch(
-            "api.routes.v1.requests._get_request_services"
-        ) as mock_services, patch(
-            "api.routes.v1.requests.CommandedTransferRequestSchema"
-        ) as mock_schema, patch("api.routes.v1.requests.db") as mock_db:
+        with (
+            patch("api.routes.v1.requests.create_commanded_request") as mock_create,
+            patch("api.routes.v1.requests._get_request_services") as mock_services,
+            patch("api.routes.v1.requests.CommandedTransferRequestSchema") as mock_schema,
+            patch("api.routes.v1.requests.db") as mock_db,
+        ):
             # Configure mocks
             mock_services.return_value = {"validation_service": Mock(), "logger": Mock()}
             mock_schema.return_value = Mock()
@@ -224,11 +230,12 @@ class TestRequestsRoutes:
 
     def test_new_commanded_request_failure(self, client):
         """Test commanded request creation failure."""
-        with patch("api.routes.v1.requests.create_commanded_request") as mock_create, patch(
-            "api.routes.v1.requests._get_request_services"
-        ) as mock_services, patch(
-            "api.routes.v1.requests.CommandedTransferRequestSchema"
-        ) as mock_schema, patch("api.routes.v1.requests.db") as mock_db:
+        with (
+            patch("api.routes.v1.requests.create_commanded_request") as mock_create,
+            patch("api.routes.v1.requests._get_request_services") as mock_services,
+            patch("api.routes.v1.requests.CommandedTransferRequestSchema") as mock_schema,
+            patch("api.routes.v1.requests.db") as mock_db,
+        ):
             # Configure mocks
             mock_services.return_value = {"validation_service": Mock(), "logger": Mock()}
             mock_schema.return_value = Mock()
@@ -257,9 +264,10 @@ class TestRequestsRoutes:
 
     def test_update_requests_success(self, client):
         """Test successful request update."""
-        with patch("api.routes.v1.requests.update_request") as mock_update, patch(
-            "api.routes.v1.requests._get_request_services"
-        ) as mock_services:
+        with (
+            patch("api.routes.v1.requests.update_request") as mock_update,
+            patch("api.routes.v1.requests._get_request_services") as mock_services,
+        ):
             # Configure mocks
             mock_services.return_value = {"logger": Mock()}
             mock_update.return_value = {"status": "updated"}
@@ -279,9 +287,10 @@ class TestRequestsRoutes:
 
     def test_filter_requests_success(self, client, mock_transfer_request):
         """Test successful request filtering."""
-        with patch("api.routes.v1.requests.get_params") as mock_get_params, patch(
-            "api.routes.v1.requests._get_request_services"
-        ) as mock_services:
+        with (
+            patch("api.routes.v1.requests.get_params") as mock_get_params,
+            patch("api.routes.v1.requests._get_request_services") as mock_services,
+        ):
             # Configure mocks
             mock_get_params.return_value = Mock(mode=Mode.ONLINE)
             mock_transfer_repo = Mock()
@@ -301,9 +310,10 @@ class TestRequestsRoutes:
 
     def test_filter_requests_offline_mode(self, client):
         """Test request filtering in offline mode."""
-        with patch("api.routes.v1.requests.get_params") as mock_get_params, patch(
-            "api.routes.v1.requests._get_request_services"
-        ) as mock_services:
+        with (
+            patch("api.routes.v1.requests.get_params") as mock_get_params,
+            patch("api.routes.v1.requests._get_request_services") as mock_services,
+        ):
             mock_get_params.return_value = Mock(mode=Mode.OFFLINE)
             mock_services.return_value = {"transfer_repo": Mock(), "logger": Mock()}
 
@@ -334,11 +344,12 @@ class TestPoliciesRoutes:
         mock_policy = Mock(spec=TransferPolicy)
         mock_policy.to_dict.return_value = {"id": 1, "name": "test-policy"}
 
-        with patch("api.routes.v1.policies.get_params") as mock_get_params, patch(
-            "api.routes.v1.policies.filter_policies"
-        ) as mock_filter, patch("api.routes.v1.policies.db") as mock_db, patch(
-            "api.routes.v1.policies._get_policy_services"
-        ) as mock_services:
+        with (
+            patch("api.routes.v1.policies.get_params") as mock_get_params,
+            patch("api.routes.v1.policies.filter_policies") as mock_filter,
+            patch("api.routes.v1.policies.db") as mock_db,
+            patch("api.routes.v1.policies._get_policy_services") as mock_services,
+        ):
             # Configure mocks
             mock_get_params.return_value = Mock(mode=Mode.ONLINE)
             mock_filter.return_value = Mock()
@@ -367,9 +378,10 @@ class TestPoliciesRoutes:
 
     def test_policies_get_offline_mode(self, client):
         """Test policies retrieval in offline mode."""
-        with patch("api.routes.v1.policies.get_params") as mock_get_params, patch(
-            "api.routes.v1.policies._get_policy_services"
-        ) as mock_services:
+        with (
+            patch("api.routes.v1.policies.get_params") as mock_get_params,
+            patch("api.routes.v1.policies._get_policy_services") as mock_services,
+        ):
             mock_get_params.return_value = Mock(mode=Mode.OFFLINE)
             mock_services.return_value = {"policy_repo": Mock(), "logger": Mock(), "db_session": Mock()}
 
@@ -388,9 +400,10 @@ class TestPoliciesRoutes:
 
     def test_post_policies_success(self, client):
         """Test successful policies creation."""
-        with patch("api.routes.v1.policies.create_policies") as mock_create, patch(
-            "api.routes.v1.policies._get_policy_services"
-        ) as mock_services:
+        with (
+            patch("api.routes.v1.policies.create_policies") as mock_create,
+            patch("api.routes.v1.policies._get_policy_services") as mock_services,
+        ):
             # Configure mocks
             mock_services.return_value = {
                 "validation_service": Mock(),
@@ -419,9 +432,10 @@ class TestPoliciesRoutes:
 
     def test_put_policy_success(self, client):
         """Test successful policy update."""
-        with patch("api.routes.v1.policies.update_policy") as mock_update, patch(
-            "api.routes.v1.policies._get_policy_services"
-        ) as mock_services:
+        with (
+            patch("api.routes.v1.policies.update_policy") as mock_update,
+            patch("api.routes.v1.policies._get_policy_services") as mock_services,
+        ):
             # Configure mocks
             mock_policy_repo = Mock()
             mock_policy_repo.get_by_id.return_value = Mock(spec=TransferPolicy)
@@ -446,11 +460,12 @@ class TestWorkerRoutes:
 
     def test_worker_configuration_success(self, client, mock_transfer_request):
         """Test successful worker configuration."""
-        with patch("api.routes.v1.worker.get_params") as mock_get_params, patch(
-            "api.routes.v1.worker.get_next_request"
-        ) as mock_get_next, patch("api.routes.v1.worker.db") as mock_db, patch(
-            "api.routes.v1.worker._get_worker_services"
-        ) as mock_services:
+        with (
+            patch("api.routes.v1.worker.get_params") as mock_get_params,
+            patch("api.routes.v1.worker.get_next_request") as mock_get_next,
+            patch("api.routes.v1.worker.db") as mock_db,
+            patch("api.routes.v1.worker._get_worker_services") as mock_services,
+        ):
             # Configure mocks
             mock_get_params.return_value = Mock(mode=Mode.ONLINE)
             mock_get_next.return_value = mock_transfer_request
@@ -474,9 +489,10 @@ class TestWorkerRoutes:
 
     def test_worker_configuration_offline(self, client):
         """Test worker configuration in offline mode."""
-        with patch("api.routes.v1.worker.get_params") as mock_get_params, patch(
-            "api.routes.v1.worker._get_worker_services"
-        ) as mock_services:
+        with (
+            patch("api.routes.v1.worker.get_params") as mock_get_params,
+            patch("api.routes.v1.worker._get_worker_services") as mock_services,
+        ):
             mock_get_params.return_value = Mock(mode=Mode.OFFLINE)
             mock_services.return_value = {"logger": Mock(), "db_session": Mock()}
 
@@ -492,9 +508,11 @@ class TestWorkerRoutes:
 
     def test_worker_configuration_no_request(self, client):
         """Test worker configuration with no available request."""
-        with patch("api.routes.v1.worker.get_params") as mock_get_params, patch(
-            "api.routes.v1.worker.get_next_request"
-        ) as mock_get_next, patch("api.routes.v1.worker._get_worker_services") as mock_services:
+        with (
+            patch("api.routes.v1.worker.get_params") as mock_get_params,
+            patch("api.routes.v1.worker.get_next_request") as mock_get_next,
+            patch("api.routes.v1.worker._get_worker_services") as mock_services,
+        ):
             # Configure mocks
             mock_get_params.return_value = Mock(mode=Mode.ONLINE)
             mock_get_next.return_value = None
@@ -519,11 +537,12 @@ class TestTriggerRoutes:
         mock_policy = Mock(spec=TransferPolicy)
         mock_policy.to_dict.return_value = {"id": 1, "name": "test-policy"}
 
-        with patch("api.routes.v1.trigger.get_params") as mock_get_params, patch(
-            "api.routes.v1.trigger.filter_policies"
-        ) as mock_filter, patch("api.routes.v1.trigger.db") as mock_db, patch(
-            "api.routes.v1.trigger._get_trigger_services"
-        ) as mock_services:
+        with (
+            patch("api.routes.v1.trigger.get_params") as mock_get_params,
+            patch("api.routes.v1.trigger.filter_policies") as mock_filter,
+            patch("api.routes.v1.trigger.db") as mock_db,
+            patch("api.routes.v1.trigger._get_trigger_services") as mock_services,
+        ):
             # Configure mocks
             mock_get_params.return_value = Mock(mode=Mode.ONLINE)
             mock_filter.return_value = Mock()
@@ -551,9 +570,10 @@ class TestTriggerRoutes:
 
     def test_trigger_configuration_offline(self, client):
         """Test trigger configuration in offline mode."""
-        with patch("api.routes.v1.trigger.get_params") as mock_get_params, patch(
-            "api.routes.v1.trigger._get_trigger_services"
-        ) as mock_services:
+        with (
+            patch("api.routes.v1.trigger.get_params") as mock_get_params,
+            patch("api.routes.v1.trigger._get_trigger_services") as mock_services,
+        ):
             mock_get_params.return_value = Mock(mode=Mode.OFFLINE)
             mock_services.return_value = {"logger": Mock()}
 
@@ -576,9 +596,11 @@ class TestNotificationRoutes:
 
     def test_notifications_success(self, client, mock_transfer_request):
         """Test successful notifications retrieval."""
-        with patch("api.routes.v1.notifications.get_params") as mock_get_params, patch(
-            "api.routes.v1.notifications.get_next_request"
-        ) as mock_get_next, patch("api.routes.v1.notifications._get_notification_services") as mock_services:
+        with (
+            patch("api.routes.v1.notifications.get_params") as mock_get_params,
+            patch("api.routes.v1.notifications.get_next_request") as mock_get_next,
+            patch("api.routes.v1.notifications._get_notification_services") as mock_services,
+        ):
             # Configure mocks
             mock_get_params.return_value = Mock(mode=Mode.ONLINE)
             mock_get_next.return_value = mock_transfer_request
@@ -596,9 +618,10 @@ class TestNotificationRoutes:
 
     def test_notifications_offline(self, client):
         """Test notifications in offline mode."""
-        with patch("api.routes.v1.notifications.get_params") as mock_get_params, patch(
-            "api.routes.v1.notifications._get_notification_services"
-        ) as mock_services:
+        with (
+            patch("api.routes.v1.notifications.get_params") as mock_get_params,
+            patch("api.routes.v1.notifications._get_notification_services") as mock_services,
+        ):
             mock_get_params.return_value = Mock(mode=Mode.OFFLINE)
             mock_services.return_value = {"logger": Mock()}
 
@@ -614,9 +637,11 @@ class TestNotificationRoutes:
 
     def test_notifications_no_request(self, client):
         """Test notifications with no available request."""
-        with patch("api.routes.v1.notifications.get_params") as mock_get_params, patch(
-            "api.routes.v1.notifications.get_next_request"
-        ) as mock_get_next, patch("api.routes.v1.notifications._get_notification_services") as mock_services:
+        with (
+            patch("api.routes.v1.notifications.get_params") as mock_get_params,
+            patch("api.routes.v1.notifications.get_next_request") as mock_get_next,
+            patch("api.routes.v1.notifications._get_notification_services") as mock_services,
+        ):
             # Configure mocks
             mock_get_params.return_value = Mock(mode=Mode.ONLINE)
             mock_get_next.return_value = None
@@ -638,11 +663,12 @@ class TestConfigurationRoutes:
 
     def test_configure_success(self, client):
         """Test successful configuration."""
-        with patch("api.routes.v1.configure.set_configuration") as mock_set, patch(
-            "api.routes.v1.configure.del_configuration"
-        ) as mock_del, patch("api.routes.v1.configure._get_configuration_services") as mock_services, patch(
-            "api.routes.v1.configure.ConfigurationSchema"
-        ) as mock_schema:
+        with (
+            patch("api.routes.v1.configure.set_configuration") as mock_set,
+            patch("api.routes.v1.configure.del_configuration") as mock_del,
+            patch("api.routes.v1.configure._get_configuration_services") as mock_services,
+            patch("api.routes.v1.configure.ConfigurationSchema") as mock_schema,
+        ):
             # Configure mocks
             mock_set.return_value = None
             mock_del.return_value = None
@@ -669,9 +695,10 @@ class TestConfigurationRoutes:
 
     def test_unconfigure_success(self, client):
         """Test successful unconfiguration."""
-        with patch("api.routes.v1.configure.del_configuration") as mock_del, patch(
-            "api.routes.v1.configure._get_configuration_services"
-        ) as mock_services:
+        with (
+            patch("api.routes.v1.configure.del_configuration") as mock_del,
+            patch("api.routes.v1.configure._get_configuration_services") as mock_services,
+        ):
             mock_del.return_value = None
             mock_services.return_value = {
                 "logger": Mock(),
@@ -696,9 +723,10 @@ class TestModeRoutes:
 
     def test_get_global_parameters_success(self, client):
         """Test successful global parameters retrieval."""
-        with patch("api.routes.v1.mode.get_params") as mock_get_params, patch(
-            "api.routes.v1.mode._get_mode_services"
-        ) as mock_services:
+        with (
+            patch("api.routes.v1.mode.get_params") as mock_get_params,
+            patch("api.routes.v1.mode._get_mode_services") as mock_services,
+        ):
             mock_params = Mock()
             mock_params.to_dict.return_value = {"mode": "ONLINE", "retention_days": 30}
             mock_get_params.return_value = mock_params
@@ -712,9 +740,10 @@ class TestModeRoutes:
 
     def test_get_global_parameters_none(self, client):
         """Test global parameters retrieval when none exist."""
-        with patch("api.routes.v1.mode.get_params") as mock_get_params, patch(
-            "api.routes.v1.mode._get_mode_services"
-        ) as mock_services:
+        with (
+            patch("api.routes.v1.mode.get_params") as mock_get_params,
+            patch("api.routes.v1.mode._get_mode_services") as mock_services,
+        ):
             mock_get_params.return_value = None
             mock_services.return_value = {"logger": Mock()}
 

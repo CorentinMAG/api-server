@@ -5,6 +5,7 @@ This module reads environment variables, sets up default values,
 and initializes a structured logger for the entire application.
 It follows the standard DTR pod architecture for configuration.
 """
+
 from __future__ import annotations
 
 import os

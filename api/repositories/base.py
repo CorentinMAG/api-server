@@ -4,6 +4,7 @@ Abstract base repository providing common database operations.
 This module implements the repository pattern with dependency injection
 to abstract database access and make services testable.
 """
+
 from __future__ import annotations
 
 import logging
@@ -45,14 +46,18 @@ class BaseRepository(ABC, Generic[T]):
                 backoff_factor=2,
                 initial_delay=1,
                 max_delay=10,
-                *args, **kwargs
+                *args,
+                **kwargs,
             )
         except RetryError as e:
-            self.logger.error(f"Database operation failed after retries in {self.__class__.__name__}: {str(e)}")
+            self.logger.error(
+                f"Database operation failed after retries in {self.__class__.__name__}: {str(e)}"
+            )
             raise SQLAlchemyError(f"Database operation failed after retries: {str(e)}")
 
     def get_by_id(self, entity_id: Any) -> Optional[T]:
         """Get entity by primary key."""
+
         def _get_by_id():
             return self.db_session.get(self.model_class, entity_id)
 
@@ -63,6 +68,7 @@ class BaseRepository(ABC, Generic[T]):
 
     def get_all(self, limit: Optional[int] = None, offset: Optional[int] = None) -> List[T]:
         """Get all entities with optional pagination."""
+
         def _get_all():
             query = select(self.model_class)
             if offset:
@@ -78,6 +84,7 @@ class BaseRepository(ABC, Generic[T]):
 
     def create(self, entity: T) -> T:
         """Create a new entity."""
+
         def _create():
             self.db_session.add(entity)
             return entity
@@ -86,6 +93,7 @@ class BaseRepository(ABC, Generic[T]):
 
     def create_many(self, entities: List[T]) -> List[T]:
         """Create multiple entities."""
+
         def _create_many():
             self.db_session.add_all(entities)
             return entities
@@ -94,6 +102,7 @@ class BaseRepository(ABC, Generic[T]):
 
     def update(self, entity: T) -> T:
         """Update an existing entity."""
+
         def _update():
             self.db_session.merge(entity)
             return entity
@@ -102,6 +111,7 @@ class BaseRepository(ABC, Generic[T]):
 
     def delete(self, entity_or_id: T | Any) -> bool:
         """Delete an entity by instance or ID."""
+
         def _delete():
             if isinstance(entity_or_id, self.model_class):
                 entity = entity_or_id
@@ -122,6 +132,7 @@ class BaseRepository(ABC, Generic[T]):
 
     def count(self) -> int:
         """Count total entities."""
+
         def _count():
             stmt = select(func.count(self.model_class.id))
             return self.db_session.execute(stmt).scalar() or 0
@@ -133,6 +144,7 @@ class BaseRepository(ABC, Generic[T]):
 
     def exists(self, entity_id: Any) -> bool:
         """Check if entity exists by ID."""
+
         def _exists():
             stmt = select(func.count(self.model_class.id)).where(self.model_class.id == entity_id)
             return self.db_session.execute(stmt).first() is not None
@@ -166,6 +178,7 @@ class TransactionalRepository(BaseRepository[T]):
 
     def save_changes(self) -> None:
         """Manually commit changes."""
+
         def _save_changes():
             self.db_session.commit()
 

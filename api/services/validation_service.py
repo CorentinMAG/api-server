@@ -4,6 +4,7 @@ Validation Service for transfer request business rules.
 This service handles validation logic for transfer requests,
 policies, and business constraints.
 """
+
 from __future__ import annotations
 
 from typing import List, Optional
@@ -85,7 +86,7 @@ class ValidationService:
             return True
 
         # If policy only accepts new data and file exists, reject
-        if only_new_data:
+        if only_new_data is None or only_new_data:
             return False
 
         # For non-new-data policies, check if all previous requests are finished

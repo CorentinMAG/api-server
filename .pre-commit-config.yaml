@@ -7,26 +7,26 @@ repos:
     hooks:
       - id: setup-deps
         name: install-dependencies
-        entry: python api-server/scripts/install_deps.py
+        entry: python scripts/install_deps.py
         language: python
         always_run: true
         pass_filenames: false
         stages: [pre-commit]
       - id: formatter
         name: ruff-formatter
-        entry: ruff format api-server/
+        entry: ruff format
         language: python
         types: [python]
         require_serial: true
       - id: linter
         name: ruff-linter
-        entry: ruff check api-server/ --fix
+        entry: ruff check --fix
         language: python
         types: [python]
         require_serial: true
       - id: tests
         name: pytest-coverage
-        entry: python api-server/scripts/run_tests_precommit.py
+        entry: python scripts/run_tests_precommit.py
         language: python
         always_run: true
         require_serial: true

@@ -1,4 +1,5 @@
 """Unit tests for api.services.queue_service - Queue management testing"""
+
 from __future__ import annotations
 
 from unittest.mock import Mock

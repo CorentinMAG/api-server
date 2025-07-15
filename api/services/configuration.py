@@ -113,18 +113,24 @@ def create_policies(
         queue = policy.queue
         nqueue = next(filter(lambda q: q.name == queue, nqueues))
 
-        # if some params are set to None, we take the default one in GlobalParameter
-        if policy.parameters:
-            params = {k: v for k, v in policy.parameters.model_dump().items() if k in ngparams.to_dict()}
-            for k, v in params.items():
-                if v is None:
-                    params[k] = getattr(ngparams, k)
-        else:
-            params = {
-                k: v
-                for k, v in ngparams.to_dict().items()
-                if k in TransferPolicyParameters.__mapper__.columns
-            }
+        _param_keys: tuple[str, ...] = (
+            "max_retry",
+            "retry_delay",
+            "transfer_requests_history",
+            "only_new_data",
+            "transfer_timeout",
+        )
+
+        # Base: copy defaults from GlobalParameters
+        params: dict[str, object] = {k: getattr(ngparams, k) for k in _param_keys}
+
+        # Overrides coming from the payload (if any)
+        if policy.parameters is not None:
+            for key, value in policy.parameters.model_dump().items():
+                if key in _param_keys and value is not None:
+                    params[key] = value
+
+        # At this point all expected keys have a concrete value.
         nparams = TransferPolicyParameters(**params)
 
         if tr_type == Type.PERIODICAL:

@@ -1,4 +1,5 @@
 """Unit tests for api.services.configuration - Complex setup testing"""
+
 from __future__ import annotations
 
 from unittest.mock import Mock, patch
@@ -46,9 +47,10 @@ class TestCreateServers:
         server_data.model_dump.return_value = {"name": "test_server", "host": "localhost", "port": 22}
         server_data.credentials = cred_data
 
-        with patch("api.services.configuration.Credentials") as mock_creds, patch(
-            "api.services.configuration.NotificationServer"
-        ) as mock_server:
+        with (
+            patch("api.services.configuration.Credentials") as mock_creds,
+            patch("api.services.configuration.NotificationServer") as mock_server,
+        ):
             mock_creds_instance = Mock()
             mock_creds.return_value = mock_creds_instance
 
@@ -151,9 +153,10 @@ class TestCreateTargets:
         target_data.credentials = None
         target_data.parameters = params_data
 
-        with patch("api.services.configuration.TargetParameters") as mock_params, patch(
-            "api.services.configuration.Target"
-        ) as mock_target_class:
+        with (
+            patch("api.services.configuration.TargetParameters") as mock_params,
+            patch("api.services.configuration.Target") as mock_target_class,
+        ):
             mock_params_instance = Mock()
             mock_params.return_value = mock_params_instance
 
@@ -191,9 +194,11 @@ class TestCreateTargets:
         target_data.credentials = cred_data
         target_data.parameters = params_data
 
-        with patch("api.services.configuration.Credentials") as mock_creds, patch(
-            "api.services.configuration.TargetParameters"
-        ) as mock_params, patch("api.services.configuration.Target") as mock_target_class:
+        with (
+            patch("api.services.configuration.Credentials") as mock_creds,
+            patch("api.services.configuration.TargetParameters") as mock_params,
+            patch("api.services.configuration.Target") as mock_target_class,
+        ):
             mock_creds_instance = Mock()
             mock_creds.return_value = mock_creds_instance
 
@@ -262,13 +267,13 @@ class TestCreatePolicies:
 
         policies = [mock_policy]
 
-        with patch("api.services.configuration.SourcePolicy") as mock_src_policy, patch(
-            "api.services.configuration.DestinationPolicy"
-        ) as mock_dest_policy, patch(
-            "api.services.configuration.TransferPolicyParameters"
-        ) as mock_transfer_params, patch(
-            "api.services.configuration.PeriodicalParameters"
-        ) as mock_period_params, patch("api.services.configuration.TransferPolicy") as mock_transfer_policy:
+        with (
+            patch("api.services.configuration.SourcePolicy") as mock_src_policy,
+            patch("api.services.configuration.DestinationPolicy") as mock_dest_policy,
+            patch("api.services.configuration.TransferPolicyParameters") as mock_transfer_params,
+            patch("api.services.configuration.PeriodicalParameters") as mock_period_params,
+            patch("api.services.configuration.TransferPolicy") as mock_transfer_policy,
+        ):
             # Mock SQLAlchemy mapper for TransferPolicyParameters
             mock_mapper = Mock()
             mock_mapper.columns = ["max_retry", "queue_timeout", "polling_interval"]
@@ -332,11 +337,12 @@ class TestCreatePolicies:
 
         policies = [mock_policy]
 
-        with patch("api.services.configuration.SourcePolicy") as mock_src_policy, patch(
-            "api.services.configuration.DestinationPolicy"
-        ) as mock_dest_policy, patch(
-            "api.services.configuration.TransferPolicyParameters"
-        ) as mock_transfer_params, patch("api.services.configuration.TransferPolicy") as mock_transfer_policy:
+        with (
+            patch("api.services.configuration.SourcePolicy") as mock_src_policy,
+            patch("api.services.configuration.DestinationPolicy") as mock_dest_policy,
+            patch("api.services.configuration.TransferPolicyParameters") as mock_transfer_params,
+            patch("api.services.configuration.TransferPolicy") as mock_transfer_policy,
+        ):
             # Mock SQLAlchemy mapper for TransferPolicyParameters
             mock_mapper = Mock()
             mock_mapper.columns = ["max_retry", "queue_timeout", "polling_interval"]
@@ -403,15 +409,14 @@ class TestCreatePolicies:
 
         policies = [mock_policy]
 
-        with patch("api.services.configuration.SourcePolicy") as mock_src_policy, patch(
-            "api.services.configuration.DestinationPolicy"
-        ) as mock_dest_policy, patch(
-            "api.services.configuration.TransferPolicyParameters"
-        ) as mock_transfer_params, patch(
-            "api.services.configuration.TransferPolicy"
-        ) as mock_transfer_policy, patch(
-            "api.services.configuration.KafkaTopicParameters"
-        ) as mock_kafka_params, patch("api.services.configuration.copy") as mock_copy:
+        with (
+            patch("api.services.configuration.SourcePolicy") as mock_src_policy,
+            patch("api.services.configuration.DestinationPolicy") as mock_dest_policy,
+            patch("api.services.configuration.TransferPolicyParameters") as mock_transfer_params,
+            patch("api.services.configuration.TransferPolicy") as mock_transfer_policy,
+            patch("api.services.configuration.KafkaTopicParameters") as mock_kafka_params,
+            patch("api.services.configuration.copy") as mock_copy,
+        ):
             # Mock SQLAlchemy mapper for TransferPolicyParameters
             mock_mapper = Mock()
             mock_mapper.columns = ["max_retry", "queue_timeout", "polling_interval"]

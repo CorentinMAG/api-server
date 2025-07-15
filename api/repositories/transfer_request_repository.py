@@ -4,6 +4,7 @@ TransferRequest repository providing specialized database operations.
 This repository implements complex queries specific to transfer request
 management, including queue operations and state filtering.
 """
+
 from __future__ import annotations
 
 from datetime import datetime, timezone

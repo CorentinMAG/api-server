@@ -4,6 +4,7 @@ Queue Service for transfer request queue management.
 This service handles queue capacity checking, limits, and optimization
 logic as part of the service layer decomposition.
 """
+
 from __future__ import annotations
 
 from typing import NamedTuple

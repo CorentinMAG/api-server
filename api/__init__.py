@@ -9,10 +9,15 @@ from werkzeug.exceptions import HTTPException, NotFound
 
 from config import IS_DEBUG, logger
 
+from .db import db, init_app as init_db_app
+
 
 def create_app():
     app = Flask(__name__, instance_relative_config=False)
     app.logger = logger
+
+    # Initialize extensions
+    init_db_app(app)
 
     @app.route("/", methods=["GET"])
     def index():
@@ -225,8 +230,8 @@ def create_app():
 
     app.register_blueprint(v1, url_prefix="/dtr/v1")
 
-    from . import db
-
-    db.init_app(app)
+    @app.teardown_appcontext
+    def shutdown_session(exception=None):
+        db.session.remove()
 
     return app

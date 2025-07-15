@@ -1,4 +1,5 @@
 """Unit tests for api.services.requests - Critical service testing"""
+
 from __future__ import annotations
 
 import uuid
@@ -527,9 +528,11 @@ class TestHelperFunctions:
         mock_policy.transfers = []
 
         # Patch TransferRequest and State to avoid DB dependencies
-        with patch("api.services.requests.TransferRequest") as mock_tr_class, patch(
-            "api.services.requests.State"
-        ) as mock_state_class, patch("api.services.requests.db"):
+        with (
+            patch("api.services.requests.TransferRequest") as mock_tr_class,
+            patch("api.services.requests.State") as mock_state_class,
+            patch("api.services.requests.db"),
+        ):
             mock_request = Mock()
             mock_state = Mock()
             mock_tr_class.return_value = mock_request

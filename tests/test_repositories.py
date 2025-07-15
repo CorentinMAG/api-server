@@ -8,6 +8,7 @@ This test suite validates:
 - Performance benchmarks
 - Specialized repository queries
 """
+
 from __future__ import annotations
 
 import os
@@ -162,8 +163,10 @@ class TestBaseRepositoryFunctionality:
         mock_result = Mock()
         mock_result.rowcount = 1
 
-        with patch.object(db_session, "get", return_value=mock_entity) as mock_get, \
-             patch.object(db_session, "execute", return_value=mock_result) as mock_execute:
+        with (
+            patch.object(db_session, "get", return_value=mock_entity) as mock_get,
+            patch.object(db_session, "execute", return_value=mock_result) as mock_execute,
+        ):
             result = queue_repo.delete_by_id(1)
 
             assert result is True
@@ -345,9 +348,10 @@ class TestQueueRepository:
         mock_queue.queue_threshold = 80
         mock_queue.queue_timeout = 3600
 
-        with patch.object(queue_repo, "get_by_id", return_value=mock_queue), patch.object(
-            db_session, "execute"
-        ) as mock_execute:
+        with (
+            patch.object(queue_repo, "get_by_id", return_value=mock_queue),
+            patch.object(db_session, "execute") as mock_execute,
+        ):
             mock_execute.return_value.scalar.return_value = 3
 
             result = queue_repo.get_queue_statistics(1)
@@ -705,9 +709,10 @@ class TestDatabaseConstraints:
         mock_queue = Mock()
         mock_queue.name = "duplicate_queue"
 
-        with patch.object(db_session, "add") as mock_add, patch.object(
-            db_session, "commit", side_effect=IntegrityError("", "", "")
-        ) as mock_commit:
+        with (
+            patch.object(db_session, "add") as mock_add,
+            patch.object(db_session, "commit", side_effect=IntegrityError("", "", "")) as mock_commit,
+        ):
             with pytest.raises(IntegrityError):
                 queue_repo.create(mock_queue)
                 db_session.commit()
@@ -723,9 +728,10 @@ class TestDatabaseConstraints:
         mock_request = Mock()
         mock_request.policy_id = 99999  # Non-existent policy
 
-        with patch.object(db_session, "add") as mock_add, patch.object(
-            db_session, "commit", side_effect=IntegrityError("", "", "")
-        ) as mock_commit:
+        with (
+            patch.object(db_session, "add") as mock_add,
+            patch.object(db_session, "commit", side_effect=IntegrityError("", "", "")) as mock_commit,
+        ):
             with pytest.raises(IntegrityError):
                 request_repo.create(mock_request)
                 db_session.commit()
@@ -822,9 +828,11 @@ class TestTransactionalRepository:
         mock_queue = Mock()
         mock_queue.name = "rollback_queue"
 
-        with patch.object(db_session, "add") as mock_add, patch.object(
-            db_session, "commit", side_effect=SQLAlchemyError("Database error")
-        ) as mock_commit, patch.object(db_session, "rollback") as mock_rollback:
+        with (
+            patch.object(db_session, "add") as mock_add,
+            patch.object(db_session, "commit", side_effect=SQLAlchemyError("Database error")) as mock_commit,
+            patch.object(db_session, "rollback") as mock_rollback,
+        ):
             # Simulate transactional repository behavior with error
             try:
                 queue_repo.create(mock_queue)

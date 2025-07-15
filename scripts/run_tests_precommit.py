@@ -3,6 +3,7 @@
 Cross-platform script to run tests for pre-commit hooks.
 Ensures a consistent testing environment.
 """
+
 from __future__ import annotations
 
 import os

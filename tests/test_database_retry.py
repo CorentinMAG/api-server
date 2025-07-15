@@ -4,6 +4,7 @@ Tests for database retry functionality.
 This module tests that the database retry mechanisms work correctly
 when database connection issues occur.
 """
+
 from __future__ import annotations
 
 from unittest.mock import Mock
@@ -35,10 +36,11 @@ class TestDatabaseRetryMechanism:
         error_types = [
             OperationalError("Connection failed", None, None),
             DisconnectionError("Disconnected", None, None),
-            TimeoutError("Timeout", None, None)
+            TimeoutError("Timeout", None, None),
         ]
 
         for error in error_types:
+
             @db_retry(total=2, initial_delay=0.01, max_delay=0.1)
             def mock_db_operation():
                 raise error
@@ -74,9 +76,9 @@ class TestDatabaseRetryMechanism:
 
         # Should get a standard Python logger as fallback
         assert logger is not None
-        assert hasattr(logger, 'error')
-        assert hasattr(logger, 'warning')
-        assert hasattr(logger, 'info')
+        assert hasattr(logger, "error")
+        assert hasattr(logger, "warning")
+        assert hasattr(logger, "info")
 
     def test_retry_with_mock_operation(self):
         """Test retry mechanism with a mock that succeeds after failures."""
@@ -93,11 +95,7 @@ class TestDatabaseRetryMechanism:
             return "success"
 
         result = retry_database_operation(
-            mock_operation,
-            logger=_get_logger(),
-            total=3,
-            initial_delay=0.01,
-            max_delay=0.1
+            mock_operation, logger=_get_logger(), total=3, initial_delay=0.01, max_delay=0.1
         )
 
         assert result == "success"
@@ -112,7 +110,7 @@ class TestDatabaseRetryMechanism:
         repo = QueueRepository(mock_session)
 
         # Test that the repository has retry protection
-        assert hasattr(repo, '_execute_with_retry')
+        assert hasattr(repo, "_execute_with_retry")
         assert callable(repo._execute_with_retry)
 
     def test_health_endpoints_have_retry(self):
@@ -125,13 +123,13 @@ class TestDatabaseRetryMechanism:
 
         with app.test_client() as client:
             # Basic health should work
-            response = client.get('/healthz')
+            response = client.get("/healthz")
             assert response.status_code == 200
 
             # These endpoints should have retry protection built in
             # Even if they fail due to no DB, they shouldn't crash the app
-            response = client.get('/health')
+            response = client.get("/health")
             assert response.status_code in [200, 503]  # Should handle DB errors gracefully
 
-            response = client.get('/ready')
+            response = client.get("/ready")
             assert response.status_code in [200, 503]  # Should handle DB errors gracefully

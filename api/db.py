@@ -27,7 +27,7 @@ def init_app(app: Flask):
         "SQLALCHEMY_DATABASE_URI": DATABASE_URL,
     }
 
-    # Add engine options only if they exist
+    # Add engine options only if they exist (not for SQLite)
     if SQLALCHEMY_ENGINE_OPTIONS:
         config["SQLALCHEMY_ENGINE_OPTIONS"] = {
             "pool_pre_ping": True,
@@ -56,6 +56,17 @@ def init_app(app: Flask):
             # create all tables
             with app.app_context():
                 db.create_all()
+
+                # Create default global parameters if they don't exist
+                from api.models import GlobalParameters
+                existing_params = db.session.query(GlobalParameters).first()
+                if not existing_params:
+                    default_params = GlobalParameters()
+                    db.session.add(default_params)
+                    logger.debug("Default global parameters created.")
+
+                # Ensure tables are committed immediately so other services can see them
+                db.session.commit()
                 logger.debug("Database tables have been created.")
 
         try:

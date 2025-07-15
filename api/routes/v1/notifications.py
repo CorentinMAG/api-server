@@ -1,6 +1,7 @@
 """
 Notifications API routes with dependency injection and error handling.
 """
+
 from __future__ import annotations
 
 from dtr_common.constantes import Mode, SubState

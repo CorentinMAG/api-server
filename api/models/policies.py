@@ -19,6 +19,26 @@ if TYPE_CHECKING:
 class SourcePolicy(SQLBase, SerializerMixin):
     __tablename__ = "source_policies"
 
+    # Include nested target to expose protocol/host/... in API serialization,
+    # but avoid potentially sensitive credential secrets.
+    # Credentials.password is already a SecretStr which serializes to "********";
+    # if additional masking is needed, adapt serialize_rules.
+    serialize_only = (
+        "id",
+        "purge",
+        "path",
+        "bucket",
+        "pattern",
+        "target",  # nested Target will include protocol
+    )
+
+    # Prevent lazy loading of heavy relationships or circular refs (eg. backrefs)
+    serialize_rules = (
+        # Do not expose secrets like target.parameters.secret_key, but keep password available
+        # for internal services (trigger/worker) that still rely on it.
+        "-target.parameters.secret_key",
+    )
+
     id: Mapped[int] = mapped_column(primary_key=True)
     purge: Mapped[bool] = mapped_column(default=False)
     path: Mapped[str | None]
@@ -31,6 +51,21 @@ class SourcePolicy(SQLBase, SerializerMixin):
 
 class DestinationPolicy(SQLBase, SerializerMixin):
     __tablename__ = "destination_policies"
+
+    serialize_only = (
+        "id",
+        "path",
+        "bucket",
+        "tmp_prefix",
+        "final_prefix",
+        "path_from_filename_delimiter",
+        "path_from_filename_expression",
+        "target",  # expose protocol etc. for destinations too
+    )
+
+    serialize_rules = (
+        "-target.parameters.secret_key",
+    )
 
     id: Mapped[int] = mapped_column(primary_key=True)
     path: Mapped[str | None]

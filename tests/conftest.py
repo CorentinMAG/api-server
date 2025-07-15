@@ -5,6 +5,7 @@ This file provides common fixtures for mocking, environment setup,
 and creating test clients and database sessions, making tests
 more maintainable and readable.
 """
+
 from __future__ import annotations
 
 import os

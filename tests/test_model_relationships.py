@@ -8,6 +8,7 @@ This test suite validates:
 - Data integrity tests
 - Migration compatibility
 """
+
 from __future__ import annotations
 
 import pytest

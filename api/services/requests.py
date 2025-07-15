@@ -31,7 +31,6 @@ class NextTransferRequestParams(TypedDict, total=False):
     sub_state: SubStateEnum
 
 
-@db_retry(total=3, initial_delay=1, max_delay=5)
 def get_next_request(
     params: NextTransferRequestParams, db_session: Optional[Session] = None
 ) -> TransferRequest | None:
@@ -78,7 +77,7 @@ def get_next_request(
             or_(TransferRequest.next_retry_min_time.is_(None), TransferRequest.next_retry_min_time <= now),
         )
 
-    base = base.with_for_update(skip_locked=True).limit(1)
+    base = base.with_for_update(of=TransferRequest, skip_locked=True).limit(1)
     nrequest = db_session.scalar(base)
     return nrequest
 
@@ -90,7 +89,7 @@ def create_periodical_requests(
     validation_service: Optional[ValidationService] = None,
     transfer_request_repo: Optional[TransferRequestRepository] = None,
     logger=None,
-) -> None:
+) -> int:
     """
     Create periodical transfer requests using dependency injection.
 
@@ -100,6 +99,9 @@ def create_periodical_requests(
         validation_service: Service for business rule validation
         transfer_request_repo: Repository for transfer request operations
         logger: Logger instance
+    
+    Returns:
+        int: number of transfer requests effectively created (0 if none)
     """
     # Initialize services with defaults if not provided (backward compatibility)
     if transfer_request_repo is None:
@@ -134,7 +136,7 @@ def create_periodical_requests(
     # Get policy and validate
     npolicy = db.session.get(TransferPolicy, policy_id)
     if not npolicy:
-        return
+        return 0
 
     # Validate policy constraints (skip if validation_service is None in tests)
     if validation_service is not None:
@@ -142,10 +144,14 @@ def create_periodical_requests(
         if not is_valid:
             if logger:
                 logger.warning(f"Policy validation failed: {error_msg}")
-            return
+            return 0
 
     # Extract policy parameters
-    only_new_data = npolicy.parameters.only_new_data if npolicy.parameters else False
+    if npolicy.parameters and npolicy.parameters.only_new_data is not None:
+        only_new_data = npolicy.parameters.only_new_data
+    else:
+        only_new_data = True
+
     queue = npolicy.queue
     dests = npolicy.dests
     nb_dests = len(dests)
@@ -156,7 +162,7 @@ def create_periodical_requests(
 
         # Return early if queue is full
         if capacity_info.is_full:
-            return
+            return 0
 
         # Log warning if near threshold
         queue_service.log_queue_warning_if_needed(capacity_info, queue)
@@ -182,6 +188,8 @@ def create_periodical_requests(
     # Generate reports for created requests (skip if logger is None)
     if requests_created and logger:
         _generate_transfer_reports(requests_created, npolicy, logger)
+
+    return len(requests_created)
 
 
 def _create_transfer_requests_for_files(
@@ -422,7 +430,8 @@ def update_request(
 
         nrequest.update(params)
 
-        response = nrequest.to_dict()
+        with db.session.no_autoflush:
+            response = nrequest.to_dict()
         response["Purge"] = can_purge(nrequest)
         return response
     return None

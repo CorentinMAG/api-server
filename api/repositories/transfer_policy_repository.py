@@ -4,6 +4,7 @@ TransferPolicy repository providing specialized database operations.
 This repository implements complex queries specific to transfer policy
 management, including policy filtering and validation operations.
 """
+
 from __future__ import annotations
 
 from typing import List, Optional

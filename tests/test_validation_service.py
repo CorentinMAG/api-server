@@ -1,4 +1,5 @@
 """Unit tests for api.services.validation_service - Business rule validation testing"""
+
 from __future__ import annotations
 
 from unittest.mock import Mock

@@ -3,6 +3,7 @@
 Dependency management script for api-server component.
 Automates installation of production and development dependencies.
 """
+
 from __future__ import annotations
 
 import subprocess
@@ -14,9 +15,7 @@ def run_command(cmd: list[str], description: str) -> bool:
     """Run a command and return success status"""
     print(f"🔄 {description}...")
     try:
-        subprocess.run(
-            cmd, check=True, capture_output=True, text=True, cwd=Path(__file__).parent.parent
-        )
+        subprocess.run(cmd, check=True, capture_output=True, text=True, cwd=Path(__file__).parent.parent)
         print(f"✅ {description} completed")
         return True
     except subprocess.CalledProcessError as e:

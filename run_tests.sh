@@ -8,7 +8,7 @@ cd "$(dirname "$0")"
 
 # Ensure all dependencies are installed before running tests
 echo "Installing dependencies..."
-python scripts/install_deps.py
+python3 scripts/install_deps.py --dev
 echo "Dependencies installed."
 
 # Set test environment variables
@@ -31,7 +31,7 @@ export FLASK_ENV="testing"
 export PYTHONPATH="$(pwd)/..:$(pwd):$PYTHONPATH"
 
 # Run tests with coverage
-python -m pytest tests/ \
+python3 -m pytest tests/ \
     --cov=. \
     --cov-report=html \
     --cov-report=term-missing \

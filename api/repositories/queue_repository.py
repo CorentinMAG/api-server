@@ -3,6 +3,7 @@ Queue repository providing specialized database operations.
 
 This repository implements queue-specific queries and management operations.
 """
+
 from __future__ import annotations
 
 from typing import List, Optional
