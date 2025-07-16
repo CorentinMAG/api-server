@@ -52,19 +52,6 @@ class SourcePolicy(SQLBase, SerializerMixin):
 class DestinationPolicy(SQLBase, SerializerMixin):
     __tablename__ = "destination_policies"
 
-    serialize_only = (
-        "id",
-        "path",
-        "bucket",
-        "tmp_prefix",
-        "final_prefix",
-        "path_from_filename_delimiter",
-        "path_from_filename_expression",
-        "target",  # expose protocol etc. for destinations too
-    )
-
-    serialize_rules = ("-target.parameters.secret_key",)
-
     id: Mapped[int] = mapped_column(primary_key=True)
     path: Mapped[str | None]
     bucket: Mapped[str | None]
@@ -122,6 +109,7 @@ def update_rec(obj: SQLBase, mapping: dict):
     for key, value in mapping.items():
         if key in obj.__mapper__.relationships:
             relation = getattr(obj, key)
-            update_rec(relation, value)
+            if relation is not None:
+                update_rec(relation, value)
         elif key in obj.__mapper__.column_attrs:
             setattr(obj, key, value)
