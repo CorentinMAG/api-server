@@ -14,7 +14,7 @@ from dtr_common.constantes import State as StateEnum, SubState as SubStateEnum
 from sqlalchemy import func, or_, select
 from sqlalchemy.orm import Session, joinedload
 
-from api.models import Queue, State, TransferPolicy, TransferRequest
+from api.models import Queue, State, TransferPolicy, TransferRequest, SourcePolicy, DestinationPolicy
 
 from .base import BaseRepository
 
@@ -181,3 +181,78 @@ class TransferRequestRepository(BaseRepository[TransferRequest]):
         """Find a transfer request by its UID."""
         stmt = select(TransferRequest).where(TransferRequest.uid == uid)
         return self.db_session.scalar(stmt)
+
+    def filter_requests(
+        self,
+        id: Optional[int] = None,
+        states: Optional[str] = None,
+        sources: Optional[str] = None,
+        targets: Optional[str] = None,
+        limit: Optional[int] = None,
+    ) -> List[TransferRequest]:
+        """
+        Filter transfer requests by various criteria.
+
+        Args:
+            id: Filter by request ID
+            states: Comma-separated list of states to filter by
+            sources: Comma-separated list of source names to filter by
+            targets: Comma-separated list of target names to filter by
+            limit: Maximum number of results to return
+
+        Returns:
+            List of filtered transfer requests
+        """
+        from api.models import Target
+
+        # Start with base query
+        query = select(TransferRequest).options(joinedload(TransferRequest.states))
+
+        # Apply filters
+        if id is not None:
+            query = query.where(TransferRequest.id == id)
+
+        if states:
+            state_list = [s.strip().upper() for s in states.split(",")]
+            # Join with states table to filter by current state
+            latest_state_subquery = (
+                select(func.max(State.id))
+                .group_by(State.request_id)
+                .where(State.request_id == TransferRequest.id)
+                .correlate(TransferRequest)
+                .scalar_subquery()
+            )
+            query = (
+                query.join(State, TransferRequest.id == State.request_id)
+                .where(
+                    State.id == latest_state_subquery,
+                    State.state.in_(state_list)
+                )
+            )
+
+        if sources:
+            source_list = [s.strip() for s in sources.split(",")]
+            query = (
+                query.join(TransferPolicy)
+                .join(SourcePolicy)
+                .join(Target)
+                .where(Target.name.in_(source_list))
+            )
+
+        if targets:
+            target_list = [t.strip() for t in targets.split(",")]
+            query = (
+                query.join(TransferPolicy)
+                .join(DestinationPolicy)
+                .join(Target)
+                .where(Target.name.in_(target_list))
+            )
+
+        # Apply limit
+        if limit:
+            query = query.limit(limit)
+
+        # Order by creation date (newest first)
+        query = query.order_by(TransferRequest.created_at.desc())
+
+        return list(self.db_session.execute(query).scalars().unique().all())

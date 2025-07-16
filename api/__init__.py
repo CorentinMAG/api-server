@@ -67,7 +67,7 @@ def create_app():
         @db_retry(total=2, initial_delay=0.5, max_delay=2)
         def check_readiness():
             """Check database readiness with retry"""
-            db.session.execute(db.text("SELECT COUNT(*) FROM alembic_version"))
+            db.session.execute(db.text("SELECT 1"))
             return True
 
         try:
