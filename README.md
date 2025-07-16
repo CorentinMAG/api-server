@@ -327,7 +327,7 @@ The generated relative path `2024/15` is appended to the policy's base path, and
 | Field Name   | Type   | Required | Default Value | Description/Constraints |
 | ------------ | ------ | -------- | ------------- | ----------------------- |
 | `server`     | string | Yes      | -             | Name of the notification server |
-| `topic`      | string | Yes      | -             | Kafka topic name (if type is Kafka) |
+| `topics`      | string | Yes      | -             | Kafka topics name (if type is Kafka) |
 | `replica`    | int    | No       | `1`           | Kafka replica count |
 | `partitions` | int    | No       | `1`           | Kafka partition count |
 | `...`        | any    | No       | -             | Other server-specific parameters |
