@@ -1,4 +1,4 @@
-#!/bin/bash
+#!/bin/sh
 # scripts/docker-entrypoint.sh - Enhanced production-ready container entry point
 
 set -e
@@ -56,11 +56,6 @@ while [ $attempt -le $max_attempts ]; do
     attempt=$((attempt + 1))
 done
 
-if [ $attempt -gt $max_attempts ]; then
-    echo "ERROR: Database is not accessible after $max_attempts attempts"
-    exit 1
-fi
-
 # Run database migrations if needed
 if [ "$DTR_DB_CREATE" = "true" ]; then
     echo "Running database migrations..."
@@ -79,5 +74,4 @@ exec gunicorn \
   --max-requests=1000 \
   --max-requests-jitter=100 \
   --preload \
-  --log-level=${DTR_LOG_LEVEL,,} \
   'api:create_app()'
