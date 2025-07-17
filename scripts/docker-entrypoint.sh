@@ -66,6 +66,6 @@ if [ "$DTR_DB_CREATE" = "true" ]; then
 fi
 
 echo "Starting gunicorn server..."
-exec gunicorn \
+gunicorn \
   --bind=0.0.0.0:80 \
   'api:create_app()'
