@@ -68,10 +68,4 @@ fi
 echo "Starting gunicorn server..."
 exec gunicorn \
   --bind=0.0.0.0:80 \
-  --workers=4 \
-  --timeout=120 \
-  --keepalive=5 \
-  --max-requests=1000 \
-  --max-requests-jitter=100 \
-  --preload \
   'api:create_app()'
