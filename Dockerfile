@@ -49,11 +49,6 @@ RUN chmod -R +x ./scripts
 HEALTHCHECK --interval=30s --timeout=10s --start-period=60s --retries=3 \
     CMD curl -f http://localhost:80/healthz || exit 1
 
-# Use non-root user for security
-RUN addgroup -g 1000 dtr && \
-    adduser -u 1000 -G dtr -s /bin/sh -D dtr && \
-    chown -R dtr:dtr /opt/api
-
 USER dtr
 
 EXPOSE 80
