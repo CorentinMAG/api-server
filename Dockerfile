@@ -49,8 +49,6 @@ RUN chmod -R +x ./scripts
 HEALTHCHECK --interval=30s --timeout=10s --start-period=60s --retries=3 \
     CMD curl -f http://localhost:80/healthz || exit 1
 
-USER dtr
-
 EXPOSE 80
 
 ENTRYPOINT ["/opt/api/scripts/docker-entrypoint.sh"]
