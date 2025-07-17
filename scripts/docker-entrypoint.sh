@@ -1,4 +1,4 @@
-#!/bin/sh
+#!/bin/bash
 # scripts/docker-entrypoint.sh - Enhanced production-ready container entry point
 
 set -e
@@ -79,6 +79,5 @@ exec gunicorn \
   --max-requests=1000 \
   --max-requests-jitter=100 \
   --preload \
-  --log-level=$(echo "$DTR_LOG_LEVEL" | tr '[:upper:]' '[:lower:]') \
+  --log-level=${DTR_LOG_LEVEL,,} \
   'api:create_app()'
-
