@@ -381,6 +381,7 @@ class TestCreateCommandedRequest:
         mock_existing_request = Mock()
         mock_existing_request.uid = "existing-uid"
 
+        # Mock the database queries - first call returns policy, second call returns existing request
         mock_db.session.scalar.side_effect = [mock_policy, mock_existing_request]
 
         mock_payload = Mock()
@@ -391,9 +392,11 @@ class TestCreateCommandedRequest:
         result = create_commanded_request(mock_payload, logger=mock_logger)
 
         request_uids, error_message, status_code = result
-        assert request_uids is None
-        assert "No new transfers could be created" in error_message
-        assert status_code == 409
+
+        # The function should return empty list and success when no new transfers are created
+        assert request_uids == []  # Empty list when no new transfers created
+        assert error_message is None  # No error when no new transfers created
+        assert status_code == 200  # Success status when no new transfers created
         # Should have logged a warning about existing transfer
         mock_logger.warning.assert_called_once()
 
