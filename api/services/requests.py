@@ -333,13 +333,6 @@ def create_commanded_request(
             nrequest.states.append(nstate)
             npolicy.transfers.append(nrequest)
 
-        if not npolicy.transfers:
-            return (
-                None,
-                "No new transfers could be created - all destinations have transfers in progress",
-                409,
-            )
-
         db.session.commit()
 
         for nrequest in npolicy.transfers[-len(dests) :]:

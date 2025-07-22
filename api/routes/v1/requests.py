@@ -51,16 +51,6 @@ def _get_request_services():
     }
 
 
-def _build_error_response(message: str, status_code: int = 400) -> tuple:
-    """Standardized error response builder."""
-    return error_response(message, status_code=status_code)
-
-
-def _build_success_response(data: dict, status_code: int = 200) -> tuple:
-    """Standardized success response builder."""
-    return success_response(data, status_code=status_code)
-
-
 class TransferStatusQuery(BaseModel):
     id: str = Field(..., alias="id")
 
@@ -202,8 +192,6 @@ def _build_destination_info(transfer_request) -> Optional[dict]:
 def new_requests():
     """
     Create new periodical transfer requests.
-
-    Refactored to use dependency injection and validation services.
     """
     try:
         services = _get_request_services()
@@ -219,13 +207,13 @@ def new_requests():
     try:
         payload = request.get_json(silent=True)
         if not payload:
-            return _build_error_response("No payload provided", 400)
+            return error_response("No payload provided", 400)
 
         # Schema validation with explicit error handling
         try:
             schema = TriggerTransferRequestSchema(**payload)
         except ValidationError:
-            return _build_error_response("Invalid payload", 400)
+            return error_response("Invalid payload", 400)
 
         # Service layer call with dependency injection
         created = create_periodical_requests(schema, logger=logger, validation_service=validation_service)
@@ -235,22 +223,20 @@ def new_requests():
         else:
             logger.debug("No new periodical transfer requests created (duplicates or queue full)")
 
-        return _build_success_response({}, 200)
+        return success_response({}, 200)
 
     except SQLAlchemyError as se:
         logger.error(f"Database error while creating periodical requests: {str(se)}")
-        return _build_error_response("Database error", 500)
+        return error_response("Database error", 500)
     except Exception as e:
         logger.error(f"Error creating periodical requests: {str(e)}")
-        return _build_error_response("Failed to create transfer requests", 500)
+        return error_response("Failed to create transfer requests", 500)
 
 
 @bp.route("/transfer-request", methods=["POST"])
 def new_commanded_request():
     """
     Create new commanded transfer request.
-
-    Refactored with dependency injection and improved error handling.
     """
     try:
         services = _get_request_services()
@@ -265,13 +251,13 @@ def new_commanded_request():
     try:
         payload = request.get_json(silent=True)
         if not payload:
-            return _build_error_response("No payload provided")
+            return error_response("No payload provided")
 
         # Schema validation with explicit error handling
         try:
             schema = CommandedTransferRequestSchema(**payload)
         except ValidationError:
-            return _build_error_response("Invalid payload", 400)
+            return error_response("Invalid payload", 400)
 
         # Service layer call with dependency injection
         # Call service layer without unsupported arguments to avoid TypeError
@@ -279,24 +265,22 @@ def new_commanded_request():
 
         if request_uids:
             logger.info(f"Commanded transfer request created: {request_uids}")
-            return _build_success_response({"transfer_id": request_uids})
+            return success_response({"transfer_id": request_uids})
 
-        return _build_error_response(error_message or "Failed to create transfer request", status_code or 500)
+        return error_response(error_message or "Failed to create transfer request", status_code or 500)
 
     except SQLAlchemyError as se:
         logger.error(f"Database error while creating commanded request: {str(se)}")
-        return _build_error_response("Database error", 500)
+        return error_response("Database error", 500)
     except Exception as e:
         logger.error(f"Error creating commanded request: {str(e)}")
-        return _build_error_response("Failed to create transfer request", 500)
+        return error_response("Failed to create transfer request", 500)
 
 
 @bp.route("/request/<int:id>", methods=["PUT"])
 def update_requests(id: int):
     """
     Update transfer request.
-
-    Refactored with dependency injection and validation.
     """
     try:
         services = _get_request_services()
@@ -309,7 +293,7 @@ def update_requests(id: int):
     try:
         payload = request.json
         if not payload:
-            return _build_error_response("No payload provided")
+            return error_response("No payload provided")
 
         # Service layer call with dependency injection
         # Call service layer without unsupported arguments to avoid TypeError
@@ -317,21 +301,19 @@ def update_requests(id: int):
 
         if response:
             logger.info(f"Transfer request {id} updated successfully")
-            return _build_success_response(response)
+            return success_response(response)
 
-        return _build_success_response({})
+        return success_response({})
 
     except Exception as e:
         logger.error(f"Error updating request {id}: {str(e)}")
-        return _build_error_response("Failed to update transfer request", 500)
+        return error_response("Failed to update transfer request", 500)
 
 
 @bp.route("/filter", methods=["GET"])
 def filter_requests_route():
     """
     Filter transfer requests with dependency injection.
-
-    Refactored to use repository pattern and validation services.
     """
     try:
         services = _get_request_services()
@@ -346,7 +328,7 @@ def filter_requests_route():
         # Parameter validation
         params = get_params()
         if params.mode == Mode.OFFLINE:
-            return _build_error_response("System is in OFFLINE mode")
+            return error_response("System is in OFFLINE mode")
 
         parsed_params = parse_params(request.args.to_dict())
 
@@ -360,8 +342,8 @@ def filter_requests_route():
         )
 
         logger.info(f"Filtered {len(requests)} transfer requests")
-        return _build_success_response({"requests": [req.to_dict() for req in requests]})
+        return success_response({"requests": [req.to_dict() for req in requests]})
 
     except Exception as e:
         logger.error(f"Error filtering requests: {str(e)}")
-        return _build_error_response("Failed to filter transfer requests", 500)
+        return error_response("Failed to filter transfer requests", 500)
