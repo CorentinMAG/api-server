@@ -1,12 +1,20 @@
-from flask import Blueprint, request
-from api.services.filters import get_params
-from dtr_common.constantes import Mode
+"""
+Transfer policies API routes with dependency injection.
+"""
+
+from __future__ import annotations
+
 from typing import cast
+
+from dtr_common.constantes import Mode
 from dtr_common.utils import parse_params
-from api.services.policies import filter_policies, update_policy
-from api.services.configuration import create_policies
+from flask import Blueprint, request
+
 from api.db import db
 from api.models import TransferPolicy
+from api.services.configuration import create_policies
+from api.services.filters import get_params
+from api.services.policies import filter_policies, update_policy
 
 bp = Blueprint("policies", __name__)
 
@@ -56,7 +64,7 @@ def post_policies():
     return "", 201
 
 
-@bp.route("policies/<int:id>", methods=["PUT"])
+@bp.route("/policies/<int:id>", methods=["PUT"])
 def put_policy(id: int):
     payload = request.json
 

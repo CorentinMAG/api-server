@@ -11,7 +11,7 @@ from ..db import Base as SQLBase
 from .states import State
 
 if TYPE_CHECKING:
-    from .policies import TransferPolicy, DestinationPolicy
+    from .policies import DestinationPolicy, TransferPolicy
 
 
 class TransferRequest(SQLBase, SerializerMixin):
@@ -40,15 +40,15 @@ class TransferRequest(SQLBase, SerializerMixin):
 
     id: Mapped[int] = mapped_column(primary_key=True)
     filename: Mapped[str]
-    size: Mapped[float | None] = mapped_column(default=None, index = True)  # in MB
+    size: Mapped[float | None] = mapped_column(default=None, index=True)  # in MB
     uid: Mapped[uuid.UUID] = mapped_column(default=uuid.uuid4, unique=True)
     follows_from_task: Mapped[uuid.UUID | None] = mapped_column(default=None)
     states: Mapped[list[State]] = relationship(order_by="State.id.desc()")
     policy_id: Mapped[int | None] = mapped_column(ForeignKey("transfer_policies.id", ondelete="SET NULL"))
     policy: Mapped[TransferPolicy] = relationship(back_populates="transfers")
-    created_at: Mapped[str] = mapped_column(DateTime, default=func.now(), index = True)
+    created_at: Mapped[str] = mapped_column(DateTime, default=func.now(), index=True)
     nb_retry: Mapped[int] = mapped_column(default=0)
-    next_retry_min_time: Mapped[str | None] = mapped_column(DateTime, default=None, index = True)
+    next_retry_min_time: Mapped[str | None] = mapped_column(DateTime, default=None, index=True)
     start: Mapped[str | None] = mapped_column(DateTime, default=None)
     end: Mapped[str | None] = mapped_column(DateTime, default=None)
     download_rate: Mapped[float | None]

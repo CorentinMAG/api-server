@@ -2,9 +2,9 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING
 
+from dtr_common.constantes import Protocol
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 from sqlalchemy_serializer import SerializerMixin
-from dtr_common.constantes import Protocol
 
 from ..db import Base as SQLBase
 

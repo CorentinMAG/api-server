@@ -2,15 +2,15 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING
 
-from sqlalchemy import DateTime, ForeignKey, func, JSON
+from dtr_common.constantes import Type
+from sqlalchemy import JSON, DateTime, ForeignKey, func
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 from sqlalchemy_serializer import SerializerMixin
 
 from ..db import Base as SQLBase
-from dtr_common.constantes import Type
 
 if TYPE_CHECKING:
-    from .parameters import TransferPolicyParameters, ServerParameters
+    from .parameters import ServerParameters, TransferPolicyParameters
     from .queue import Queue
     from .request import TransferRequest
     from .target import Target
@@ -18,6 +18,26 @@ if TYPE_CHECKING:
 
 class SourcePolicy(SQLBase, SerializerMixin):
     __tablename__ = "source_policies"
+
+    # Include nested target to expose protocol/host/... in API serialization,
+    # but avoid potentially sensitive credential secrets.
+    # Credentials.password is already a SecretStr which serializes to "********";
+    # if additional masking is needed, adapt serialize_rules.
+    serialize_only = (
+        "id",
+        "purge",
+        "path",
+        "bucket",
+        "pattern",
+        "target",  # nested Target will include protocol
+    )
+
+    # Prevent lazy loading of heavy relationships or circular refs (eg. backrefs)
+    serialize_rules = (
+        # Do not expose secrets like target.parameters.secret_key, but keep password available
+        # for internal services (trigger/worker) that still rely on it.
+        "-target.parameters.secret_key",
+    )
 
     id: Mapped[int] = mapped_column(primary_key=True)
     purge: Mapped[bool] = mapped_column(default=False)
@@ -89,6 +109,7 @@ def update_rec(obj: SQLBase, mapping: dict):
     for key, value in mapping.items():
         if key in obj.__mapper__.relationships:
             relation = getattr(obj, key)
-            update_rec(relation, value)
+            if relation is not None:
+                update_rec(relation, value)
         elif key in obj.__mapper__.column_attrs:
             setattr(obj, key, value)

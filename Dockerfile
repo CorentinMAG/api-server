@@ -16,8 +16,7 @@ ENV DTR_DB_NAME=dtr \
     DTR_API_VERSION=$DOCKER_TAG \
     DTR_VERSION=$DOCKER_TAG \
     DTR_DB_CREATE=false \
-    DTR_LOG_LEVEL=INFO 
-
+    DTR_LOG_LEVEL=INFO
 
 WORKDIR /opt/api
 
@@ -31,7 +30,9 @@ RUN apk --no-check-certificate update && \
     postgresql-dev \
     gcc \
     python3-dev \
-    musl-dev && \
+    musl-dev \
+    curl \
+    netcat-openbsd && \
     rm /etc/apk/repositories
 
 RUN echo "[global]" > /etc/pip.conf && \
@@ -43,5 +44,11 @@ COPY ./ ./
 
 RUN pip3 install -r requirements.txt && rm /etc/pip.conf
 RUN chmod -R +x ./scripts
+
+# Health check for Kubernetes/Docker
+HEALTHCHECK --interval=30s --timeout=10s --start-period=60s --retries=3 \
+    CMD curl -f http://localhost:80/healthz || exit 1
+
+EXPOSE 80
 
 ENTRYPOINT ["/opt/api/scripts/docker-entrypoint.sh"]

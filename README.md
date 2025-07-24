@@ -313,21 +313,21 @@ Let's assume we want to organize incoming files into a `YYYY/DD` folder structur
     -   *Resulting path so far: `2024/`*
 4.  `$\\d{2}[3]`:
     -   It starts with `$`, so it's a dynamic expression.
-    -   The regex `\\d{2}` is executed on the filename. This finds multiple matches: `00`, `20`, `24`, `07`, `15`, `10`, etc.
-    -   The fourth match (`[3]`) is `07`.
-    -   *Resulting path so far: `2024/07`*
+    -   The regex `\\d{2}` is executed on the filename. This finds multiple matches: `00`, `24`, `07`, `15`, `10`, etc.
+    -   The fourth match (`[3]`) is `15`.
+    -   *Resulting path so far: `2024/15`*
 
 ***Final Result:***
 
-The generated relative path `2024/07` is appended to the policy's base path, and the file is uploaded to the final, fully constructed path:
-`/data/ingest/2024/07/R_MOC_DATA_PNEO3_00_2024-07-15T10-00-00-000.xml`
+The generated relative path `2024/15` is appended to the policy's base path, and the file is uploaded to the final, fully constructed path:
+`/data/ingest/2024/15/R_MOC_DATA_PNEO3_00_2024-07-15T10-00-00-000.xml`
 
 **Notification Object (`notifications`)** - Contained in a list within `dests`
 
 | Field Name   | Type   | Required | Default Value | Description/Constraints |
 | ------------ | ------ | -------- | ------------- | ----------------------- |
 | `server`     | string | Yes      | -             | Name of the notification server |
-| `topic`      | string | Yes      | -             | Kafka topic name (if type is Kafka) |
+| `topics`      | string | Yes      | -             | Kafka topics name (if type is Kafka) |
 | `replica`    | int    | No       | `1`           | Kafka replica count |
 | `partitions` | int    | No       | `1`           | Kafka partition count |
 | `...`        | any    | No       | -             | Other server-specific parameters |
@@ -408,7 +408,7 @@ curl -X POST http://localhost:9000/configure \
     "transfer_policies": [
       {
         "name": "daily-backup",
-        "type": "PERIODICAL",
+        "type": "periodical",
         "src": {
           "target": "source-sftp",
           "path": "/data",
@@ -514,13 +514,13 @@ curl -X GET "http://localhost:9000/dtr/v1/get-status?id=a1b2c3d4-e5f6-7890-1234-
 
 ### 2. Create Commanded Transfer Request (`POST /transfer-request`)
 
-Initiates a new data transfer based on an existing "COMMANDED" type transfer policy. This is used for on-demand transfers.
+Initiates a new data transfer based on an existing "commanded" type transfer policy. This is used for on-demand transfers.
 
 **Request Body:**
 
 | Field             | Type             | Required | Description |
 | ----------------- | ---------------- | -------- | ----------- |
-| `transfer_policy` | string           | Yes      | Name of the existing COMMANDED transfer policy to use |
+| `transfer_policy` | string           | Yes      | Name of the existing commanded transfer policy to use |
 | `path`            | string           | Yes      | Full path or URL to the source file/resource |
 | `uid`             | string (UUID) / null | No       | Optional UUID to link this request to an external task |
 | `timestamp`       | string (ISO 8601) / null | No   | Optional timestamp for the request |

@@ -1,5 +1,8 @@
+from __future__ import annotations
+
+from typing import Optional, cast
+
 from flask import current_app as app
-from typing import cast, Optional
 
 from ..db import db
 from ..models import GlobalParameters, TransferPolicy
@@ -17,8 +20,12 @@ def switch_mode(mode: str) -> None:
 
 
 def get_params() -> GlobalParameters | None:
-    params = db.session.query(GlobalParameters).first()
-    return params
+    try:
+        params = db.session.query(GlobalParameters).first()
+        return params
+    except Exception as e:
+        app.logger.warning(f"Could not retrieve global parameters: {str(e)}")
+        return None
 
 
 def check_policy_params(

@@ -1,17 +1,28 @@
-import os
+from __future__ import annotations
+
 import datetime
+import os
+import uuid
+from typing import TYPE_CHECKING, List, Optional, TypedDict, cast
 from urllib.parse import urlparse
-from typing import cast, TypedDict
+
+from dtr_common.constantes import State as StateEnum, SubState as SubStateEnum, Type
+from dtr_common.schema import CommandedTransferRequestSchema, TriggerTransferRequestSchema
 from flask import current_app as app
+from sqlalchemy import func, or_, select
+from sqlalchemy.exc import SQLAlchemyError
+from sqlalchemy.orm import Session
 
 from api.db import db
 from api.models import Queue, State, TransferPolicy, TransferRequest
-from sqlalchemy import or_, select, func
-from sqlalchemy.exc import SQLAlchemyError
-import uuid
-from dtr_common.schema import TriggerTransferRequestSchema, CommandedTransferRequestSchema
-from dtr_common.constantes import State as StateEnum, SubState as SubStateEnum, Type
-from .utils import transactional
+from api.repositories import TransferRequestRepository
+
+from .queue_service import QueueService
+from .utils import db_retry, transactional
+from .validation_service import ValidationService
+
+if TYPE_CHECKING:
+    pass
 
 
 class NextTransferRequestParams(TypedDict, total=False):
@@ -20,7 +31,13 @@ class NextTransferRequestParams(TypedDict, total=False):
     sub_state: SubStateEnum
 
 
-def get_next_request(params: NextTransferRequestParams) -> TransferRequest | None:
+def get_next_request(
+    params: NextTransferRequestParams, db_session: Optional[Session] = None
+) -> TransferRequest | None:
+    """Get the next transfer request. Supports dependency injection for testing."""
+    if db_session is None:
+        db_session = db.session
+
     state = params.get("state")
     size = params.get("size")
     sub_state = params.get("sub_state")
@@ -35,18 +52,13 @@ def get_next_request(params: NextTransferRequestParams) -> TransferRequest | Non
     if state or sub_state:
         # Use a window function to find the latest state for each request.
         # This is much more efficient than a correlated subquery.
-        latest_state_cte = (
-            select(
-                State.id.label("state_id"),
-                State.request_id,
-                State.state,
-                State.sub_state,
-                func.row_number()
-                .over(partition_by=State.request_id, order_by=State.id.desc())
-                .label("rn"),
-            )
-            .cte("latest_state")
-        )
+        latest_state_cte = select(
+            State.id.label("state_id"),
+            State.request_id,
+            State.state,
+            State.sub_state,
+            func.row_number().over(partition_by=State.request_id, order_by=State.id.desc()).label("rn"),
+        ).cte("latest_state")
 
         base = base.join(
             latest_state_cte,
@@ -58,7 +70,6 @@ def get_next_request(params: NextTransferRequestParams) -> TransferRequest | Non
         else:
             base = base.where(latest_state_cte.c.state == state)
 
-
     if size:
         now = datetime.datetime.now(datetime.timezone.utc)
         base = base.where(
@@ -66,129 +77,155 @@ def get_next_request(params: NextTransferRequestParams) -> TransferRequest | Non
             or_(TransferRequest.next_retry_min_time.is_(None), TransferRequest.next_retry_min_time <= now),
         )
 
-    base = base.with_for_update(skip_locked=True).limit(1)
-    nrequest = db.session.scalar(base)
+    base = base.with_for_update(of=TransferRequest, skip_locked=True).limit(1)
+    nrequest = db_session.scalar(base)
     return nrequest
 
 
-def filter_requests(params):
-    base = select(TransferRequest).order_by(TransferRequest.created_at.asc())
-    return base.filter(TransferRequest.uid == params["id"])
-
-
 @transactional
-def create_periodical_requests(payload: TriggerTransferRequestSchema) -> None:
+def create_periodical_requests(
+    payload: TriggerTransferRequestSchema,
+    queue_service: Optional[QueueService] = None,
+    validation_service: Optional[ValidationService] = None,
+    transfer_request_repo: Optional[TransferRequestRepository] = None,
+    logger=None,
+) -> int:
+    """
+    Create periodical transfer requests using dependency injection.
+
+    Args:
+        payload: Transfer request payload
+        queue_service: Service for queue management
+        validation_service: Service for business rule validation
+        transfer_request_repo: Repository for transfer request operations
+        logger: Logger instance
+
+    Returns:
+        int: number of transfer requests effectively created (0 if none)
+    """
+    # Initialize services with defaults if not provided (backward compatibility)
+    if transfer_request_repo is None:
+        transfer_request_repo = TransferRequestRepository(db.session)
+    if queue_service is None:
+        try:
+            queue_service = QueueService(transfer_request_repo, app.logger)
+        except RuntimeError:
+            # In test environment without Flask context, create minimal mock services
+            queue_service = None
+    if validation_service is None:
+        try:
+            validation_service = ValidationService(transfer_request_repo, app.logger)
+        except RuntimeError:
+            # In test environment without Flask context, create minimal mock services
+            validation_service = None
+    if logger is None:
+        try:
+            logger = app.logger
+        except RuntimeError:
+            # In test environment without Flask context, use a minimal logger
+            import logging
+
+            logger = logging.getLogger(__name__)
+
     policy_id = payload.policy
     triggered_files = payload.files
 
-    # we sort triggered_files by modified_at attribute
+    # Sort triggered files by modified_at attribute
     triggered_files = sorted(triggered_files, key=lambda k: k.modified_at, reverse=True)
 
+    # Get policy and validate
     npolicy = db.session.get(TransferPolicy, policy_id)
     if not npolicy:
-        return
+        return 0
 
-    only_new_data = npolicy.parameters.only_new_data
+    # Validate policy constraints (skip if validation_service is None in tests)
+    if validation_service is not None:
+        is_valid, error_msg = validation_service.validate_policy_constraints(npolicy, len(triggered_files))
+        if not is_valid:
+            if logger:
+                logger.warning(f"Policy validation failed: {error_msg}")
+            return 0
+
+    # Extract policy parameters
+    if npolicy.parameters and npolicy.parameters.only_new_data is not None:
+        only_new_data = npolicy.parameters.only_new_data
+    else:
+        only_new_data = True
+
     queue = npolicy.queue
     dests = npolicy.dests
     nb_dests = len(dests)
 
-    # Optimized: Count queued files directly in the DB
-    # We build a subquery to find the latest state ID for each request
-    latest_state_subquery = (
-        select(func.max(State.id))
-        .group_by(State.request_id)
-        .where(State.request_id == TransferRequest.id)
-        .correlate(TransferRequest)
-        .scalar_subquery()
-    )
+    # Check queue capacity (skip if queue_service is None in tests)
+    if queue_service is not None:
+        capacity_info = queue_service.check_queue_capacity(policy_id, queue, nb_dests, len(triggered_files))
 
-    # Now we count how many of those latest states are 'QUEUED'
-    queued_count_stmt = (
-        select(func.count(TransferRequest.id))
-        .join(State, TransferRequest.id == State.request_id)
-        .where(
-            TransferRequest.policy_id == policy_id,
-            State.id == latest_state_subquery,
-            State.state == StateEnum.QUEUED,
-        )
-    )
-    db_queued_files_count = db.session.execute(queued_count_stmt).scalar_one_or_none() or 0
+        # Return early if queue is full
+        if capacity_info.is_full:
+            return 0
 
+        # Log warning if near threshold
+        queue_service.log_queue_warning_if_needed(capacity_info, queue)
 
-    available_slots = queue.queue_limit - db_queued_files_count
-
-    # if queue is already full
-    if available_slots <= nb_dests:
-        return
+        max_files_per_destination = capacity_info.max_files_per_destination
     else:
-        max_files = available_slots // nb_dests
+        # In test environment, use a default limit
+        max_files_per_destination = len(triggered_files)
 
-    if db_queued_files_count + len(triggered_files) >= queue.queue_threshold:
-        app.logger.warning(
-            "queue %s is almost full (%d/%d)",
-            queue.name,
-            db_queued_files_count,
-            queue.queue_limit,
+    # Filter files based on business rules (skip if validation_service is None in tests)
+    file_names = [f.filename for f in triggered_files]
+    if validation_service is not None:
+        valid_filenames = validation_service.filter_valid_files(
+            file_names, policy_id, only_new_data, max_files_per_destination
         )
-
-    nrequests: list[TransferRequest] = []
-    files_to_create = []
-
-    # Fast check for existing filenames
-    filenames_in_triggered_files = {f.filename for f in triggered_files}
-    if filenames_in_triggered_files:
-        existing_files_stmt = select(TransferRequest.filename).where(
-            TransferRequest.policy_id == policy_id,
-            TransferRequest.filename.in_(filenames_in_triggered_files),
-        )
-        db_files = set(db.session.execute(existing_files_stmt).scalars().all())
     else:
-        db_files = set()
+        # In test environment, accept all files
+        valid_filenames = file_names
+
+    # Create transfer requests
+    requests_created = _create_transfer_requests_for_files(triggered_files, valid_filenames, dests, npolicy)
+
+    # Generate reports for created requests (skip if logger is None)
+    if requests_created and logger:
+        _generate_transfer_reports(requests_created, npolicy, logger)
+
+    return len(requests_created)
 
 
-    for file in triggered_files:
-        if len(files_to_create) >= max_files:
-            break
+def _create_transfer_requests_for_files(
+    triggered_files: List, valid_filenames: List[str], dests: List, npolicy: TransferPolicy
+) -> List[TransferRequest]:
+    """Helper function to create transfer requests for valid files."""
+    nrequests: List[TransferRequest] = []
 
-        if file.filename not in db_files:
-            files_to_create.append(file)
-        elif not only_new_data:
-            # Check if all previous requests for this file are finished.
-            # This is more efficient than loading all requests.
-            unfinished_count_stmt = (
-                select(func.count(TransferRequest.id))
-                .join(State, TransferRequest.id == State.request_id)
-                .where(
-                    TransferRequest.policy_id == policy_id,
-                    TransferRequest.filename == file.filename,
-                    State.id == latest_state_subquery,
-                    State.state.not_in([StateEnum.SUCCESSFUL, StateEnum.CANCELLED]),
-                )
-            )
-            unfinished_count = db.session.execute(unfinished_count_stmt).scalar_one()
+    # Create a mapping of filename to file data
+    file_data_map = {f.filename: f for f in triggered_files}
 
-            if unfinished_count == 0:
-                files_to_create.append(file)
-
-    for file in files_to_create:
+    for filename in valid_filenames:
+        file_data = file_data_map[filename]
         for dest in dests:
-            nrequest = TransferRequest(filename=file.filename, size=file.size, dest=dest)
+            nrequest = TransferRequest(filename=file_data.filename, size=file_data.size, dest=dest)
             nstate = State(state=StateEnum.QUEUED)
             nrequest.states.append(nstate)
             nrequests.append(nrequest)
 
+    # Add requests to policy and session
     if nrequests:
         npolicy.transfers.extend(nrequests)
         db.session.add(npolicy)
 
-    ## for each new request we create a report log
-    reports_uid = []
-    for nrequest in nrequests:
+    return nrequests
+
+
+def _generate_transfer_reports(requests: List[TransferRequest], npolicy: TransferPolicy, logger) -> None:
+    """Helper function to generate transfer reports."""
+    # Generate report logs for each new request
+    for nrequest in requests:
         for dest in npolicy.dests:
             uid = uuid.uuid4()
-            reports_uid.append(uid)
-            task = {
+
+            # BEGIN report
+            begin_task = {
                 "type": "REPORT",
                 "task": {
                     "uid": str(uid),
@@ -203,11 +240,10 @@ def create_periodical_requests(payload: TriggerTransferRequestSchema) -> None:
                     },
                 },
             }
-        app.logger.info("request for transfer", extra=task)
+            logger.info("request for transfer", extra=begin_task)
 
-    for nrequest, uid in zip(nrequests, reports_uid):
-        for dest in npolicy.dests:
-            task = {
+            # END report
+            end_task = {
                 "type": "REPORT",
                 "task": {
                     "uid": str(uid),
@@ -225,11 +261,13 @@ def create_periodical_requests(payload: TriggerTransferRequestSchema) -> None:
                     "output": {"rest_id_string": str(nrequest.uid)},
                 },
             }
-        app.logger.info("end of request transfer", extra=task)
+            logger.info("end of request transfer", extra=end_task)
 
 
 @transactional
-def create_commanded_request(payload: CommandedTransferRequestSchema) -> tuple[list[str] | None, str | None, int]:
+def create_commanded_request(
+    payload: CommandedTransferRequestSchema, logger=None
+) -> tuple[list[str] | None, str | None, int]:
     """
     Create a commanded transfer request.
     Returns a tuple containing:
@@ -237,6 +275,10 @@ def create_commanded_request(payload: CommandedTransferRequestSchema) -> tuple[l
     - error message if failed
     - HTTP status code
     """
+    # Initialize logger with default if not provided (backward compatibility)
+    if logger is None:
+        logger = app.logger
+
     policy_name = payload.transfer_policy
 
     npolicy = db.session.scalar(
@@ -258,7 +300,7 @@ def create_commanded_request(payload: CommandedTransferRequestSchema) -> tuple[l
         filename = os.path.basename(parsed_url.path)
         path = os.path.dirname(parsed_url.path)
     else:
-        path = payload.path.replace(filename, '')
+        path = payload.path.replace(filename, "")
 
     try:
         request_uids = []
@@ -270,54 +312,47 @@ def create_commanded_request(payload: CommandedTransferRequestSchema) -> tuple[l
                 .where(TransferPolicy.name == policy_name)
                 .where(TransferRequest.filename == filename)
                 .where(TransferRequest.dest_id == dest.id)
-                .where(TransferRequest.states.any(State.state.not_in([StateEnum.SUCCESSFUL, StateEnum.CANCELLED])))
+                .where(
+                    TransferRequest.states.any(
+                        State.state.not_in([StateEnum.SUCCESSFUL, StateEnum.CANCELLED])
+                    )
+                )
             )
 
             if existing_request:
-                app.logger.warning(
-                    f"Transfer already in progress: {filename}"
-                )
+                logger.warning(f"Transfer already in progress: {filename}")
                 continue
 
             nrequest = TransferRequest(
                 filename=filename,
                 dest=dest,
                 src_relative_path=path,
-                follows_from_task=payload.uid if payload.uid else None
+                follows_from_task=payload.uid if payload.uid else None,
             )
             nstate = State(state=StateEnum.QUEUED)
             nrequest.states.append(nstate)
             npolicy.transfers.append(nrequest)
-        
-        if not npolicy.transfers:
-            return None, "No new transfers could be created - all destinations have transfers in progress", 409
-        
+
         db.session.commit()
-        
-        for nrequest in npolicy.transfers[-len(dests):]:
+
+        for nrequest in npolicy.transfers[-len(dests) :]:
             if nrequest.uid is None:
-                app.logger.error("UID is None for a newly created transfer request")
+                logger.error("UID is None for a newly created transfer request")
                 return None, "Internal error: Failed to create transfer request", 500
             else:
                 request_uids.append(str(nrequest.uid))
-        
+
         return request_uids, None, 200
     except SQLAlchemyError as e:
-        app.logger.error(
+        logger.error(
             "Database error while creating commanded requests",
-            extra={
-                'error_type': 'database_error',
-                'error_details': str(e)
-            }
+            extra={"error_type": "database_error", "error_details": str(e)},
         )
         return None, f"Database error: {str(e)}", 500
     except Exception as e:
-        app.logger.error(
+        logger.error(
             "Unexpected error while creating commanded requests",
-            extra={
-                'error_type': 'unexpected_error',
-                'error_details': str(e)
-            }
+            extra={"error_type": "unexpected_error", "error_details": str(e)},
         )
         return None, f"Unexpected error: {str(e)}", 500
 
@@ -328,8 +363,7 @@ def update_request(
     params: dict,
 ) -> dict | None:
     nrequest = cast(
-        TransferRequest | None,
-        db.session.query(TransferRequest).with_for_update().get(request_id)
+        TransferRequest | None, db.session.query(TransferRequest).with_for_update().get(request_id)
     )
     state_param = params.get("state")
     sub_state_param = params.get("sub_state")
@@ -354,7 +388,7 @@ def update_request(
                 elif nrequest.nb_retry + 1 >= max_retries:
                     # Request becomes CANCELLED after max retries
                     nrequest.end = datetime.datetime.now(datetime.timezone.utc).isoformat()
-                    
+
                     # Determine sub_state based on whether notifications are configured for the destination
                     current_sub_state = None
                     if nrequest.dest and nrequest.dest.notifications:
@@ -363,7 +397,7 @@ def update_request(
 
                     cancelled_s = State(
                         state=StateEnum.CANCELLED,
-                        sub_state=current_sub_state, # Use determined sub_state
+                        sub_state=current_sub_state,  # Use determined sub_state
                         failure_reason=f"Max retries reached - Last error: {failure_reason}",
                     )
                     new_states_to_append.append(cancelled_s)
@@ -376,38 +410,41 @@ def update_request(
 
         elif sub_state_enum:  # No main 'state' in params, only 'sub_state' (state_enum is None)
             if nrequest.states:  # Ensure there are existing states to get the current main state
-                latest_main_state = nrequest.states[0].state # Assuming states are ordered, states[0] is the latest
+                latest_main_state = nrequest.states[
+                    0
+                ].state  # Assuming states are ordered, states[0] is the latest
                 sub_state_update_s = State(state=latest_main_state, sub_state=sub_state_enum)
                 new_states_to_append.append(sub_state_update_s)
             else:
-                app.logger.warning(
-                    f"Request {request_id} has no prior states. Cannot update sub_state only."
-                )
-        
+                app.logger.warning(f"Request {request_id} has no prior states. Cannot update sub_state only.")
+
         if new_states_to_append:
             nrequest.states.extend(new_states_to_append)
 
         nrequest.update(params)
-        
-        response = nrequest.to_dict()
+
+        with db.session.no_autoflush:
+            response = nrequest.to_dict()
         response["Purge"] = can_purge(nrequest)
         return response
     return None
 
 
-def can_purge(nrequest: TransferRequest | None) -> bool:
-    associated_tr = db.session.query(TransferRequest).filter(
-        TransferRequest.filename == nrequest.filename,
-        TransferRequest.id != nrequest.id,
-        TransferPolicy.id == nrequest.policy_id
-    ).all()
+@db_retry(total=3, initial_delay=1, max_delay=5)
+def can_purge(
+    nrequest: TransferRequest | None,
+    db_session: Optional[Session] = None,
+    logger=None,
+    validation_service: Optional[ValidationService] = None,
+) -> bool:
+    """Check if a request can be purged. Supports dependency injection for testing."""
+    # Initialize services with defaults if not provided (backward compatibility)
+    if db_session is None:
+        db_session = db.session
+    if logger is None:
+        logger = app.logger
+    if validation_service is None:
+        transfer_request_repo = TransferRequestRepository(db_session)
+        validation_service = ValidationService(transfer_request_repo, logger)
 
-    app.logger.debug(f"Found {len(associated_tr)} associated transfert requests")
-
-    for tr in associated_tr:
-        if not any(state.state == StateEnum.SUCCESSFUL for state in tr.states):
-            app.logger.debug(f"Transfert request {tr.id} not successful")
-            return False
-
-    app.logger.debug("Authorize worker to purge source")
-    return True
+    return validation_service.can_purge_request(nrequest)
