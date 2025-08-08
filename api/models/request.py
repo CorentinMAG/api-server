@@ -59,6 +59,12 @@ class TransferRequest(SQLBase, SerializerMixin):
     dest: Mapped[DestinationPolicy] = relationship(foreign_keys=[dest_id])
     src_relative_path: Mapped[str | None]
 
+    @property
+    def avg_data_rate(self) -> float:
+        d_rate = 0 if self.download_rate is None else self.download_rate
+        u_rate = 0 if self.upload_rate is None else self.upload_rate
+        return round((d_rate + u_rate) / 2, 2)
+
     def update(self, mapping: dict):
         for key, value in mapping.items():
             if key in self.__mapper__.column_attrs.keys():

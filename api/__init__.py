@@ -1,7 +1,4 @@
 from __future__ import annotations
-
-import os
-
 from flask import Flask, request
 from pydantic import ValidationError
 from sqlalchemy.exc import SQLAlchemyError
@@ -25,124 +22,20 @@ def create_app():
 
     @app.route("/healthz", methods=["GET"])
     def healthz():
-        """Basic health check endpoint for Kubernetes readiness probes"""
+        """
+        Basic health check endpoint for Kubernetes readiness probes
+        """
         return {"status": "healthy", "service": "api-server"}
-
-    @app.route("/health", methods=["GET"])
-    def health():
-        """Comprehensive health check with database connectivity"""
-        from api.db import db
-        from api.services.utils import db_retry
-
-        @db_retry(total=2, initial_delay=0.5, max_delay=2)
-        def check_database():
-            """Check database connectivity with retry"""
-            db.session.execute(db.text("SELECT 1"))
-            return "healthy"
-
-        try:
-            db_status = check_database()
-        except Exception as e:
-            app.logger.error("Database health check failed: %s", str(e))
-            db_status = "unhealthy"
-            return {
-                "status": "unhealthy",
-                "service": "api-server",
-                "checks": {"database": db_status, "error": str(e)},
-            }, 503
-
-        return {
-            "status": "healthy",
-            "service": "api-server",
-            "version": os.environ.get("DTR_API_VERSION", "unknown"),
-            "checks": {"database": db_status},
-        }
-
-    @app.route("/ready", methods=["GET"])
-    def ready():
-        """Kubernetes readiness probe - checks if service is ready to accept traffic"""
-        from api.db import db
-        from api.services.utils import db_retry
-
-        @db_retry(total=2, initial_delay=0.5, max_delay=2)
-        def check_readiness():
-            """Check database readiness with retry"""
-            db.session.execute(db.text("SELECT 1"))
-            return True
-
-        try:
-            check_readiness()
-            return {
-                "status": "ready",
-                "service": "api-server",
-                "version": os.environ.get("DTR_API_VERSION", "unknown"),
-            }
-        except Exception as e:
-            app.logger.warning("Readiness check failed: %s", str(e))
-            return {"status": "not_ready", "service": "api-server", "error": str(e)}, 503
-
-    @app.route("/metrics", methods=["GET"])
-    def metrics():
-        """Basic metrics endpoint for monitoring"""
-        from api.db import db
-        from api.models import TransferPolicy, TransferRequest
-        from api.services.utils import db_retry
-
-        @db_retry(total=2, initial_delay=0.5, max_delay=2)
-        def collect_metrics():
-            """Collect metrics with database retry"""
-            total_requests = db.session.query(TransferRequest).count()
-            total_policies = db.session.query(TransferPolicy).count()
-            return total_requests, total_policies
-
-        try:
-            total_requests, total_policies = collect_metrics()
-            return {
-                "service": "api-server",
-                "version": os.environ.get("DTR_API_VERSION", "unknown"),
-                "metrics": {
-                    "total_transfer_requests": total_requests,
-                    "total_transfer_policies": total_policies,
-                    "database_connections": "available",
-                },
-            }
-        except Exception as e:
-            app.logger.error("Metrics collection failed: %s", str(e))
-            return {"service": "api-server", "error": "metrics_unavailable", "message": str(e)}, 500
 
     @app.errorhandler(HTTPException)
     def handle_http_exception(e: HTTPException):
-        response = e.get_response()
-        app.logger.error(
-            "HTTP Exception occurred",
-            extra={
-                "error_type": "http_exception",
-                "description": e.description,
-                "code": e.code,
-                "endpoint": request.endpoint,
-                "method": request.method,
-                "path": request.path,
-                "component": "api",
-                "trace": True if IS_DEBUG else False,
-            },
-        )
-        return response
+        app.logger.error("HTTP Exception occurred: %s", e.description)
+        return {"error": e.description}, e.code
 
     @app.errorhandler(NotFound)
     def handle_not_found_error(e: NotFound):
         url = request.url
-        app.logger.error(
-            "Resource not found",
-            extra={
-                "error_type": "not_found",
-                "url": url,
-                "endpoint": request.endpoint,
-                "method": request.method,
-                "path": request.path,
-                "component": "api",
-                "trace": True if IS_DEBUG else False,
-            },
-        )
+        app.logger.error("Resource not found: %s", url)
         return {"error": "requested url does not exist", "details": {"url": url}}, 404
 
     @app.errorhandler(SQLAlchemyError)
@@ -189,42 +82,14 @@ def create_app():
 
     @app.errorhandler(ValidationError)
     def handle_validation_error(e: ValidationError):
-        errors = e.errors()
-        app.logger.error(
-            "Validation error occurred",
-            extra={
-                "error_type": "validation_error",
-                "validation_errors": errors,
-                "endpoint": request.endpoint,
-                "method": request.method,
-                "path": request.path,
-                "component": "api",
-                "trace": True if IS_DEBUG else False,
-            },
-        )
-        return {"errors": errors}, 400
+        app.logger.error("Validation error occurred: %s", e.errors())
+        return e.json(), 500
 
     @app.errorhandler(Exception)
     def handle_exception(e: Exception):
-        app.logger.error(
-            "Unhandled exception occurred",
-            extra={
-                "error_type": "unhandled_exception",
-                "error_class": e.__class__.__name__,
-                "error_details": str(e),
-                "endpoint": request.endpoint,
-                "method": request.method,
-                "path": request.path,
-                "component": "api",
-                "trace": True if IS_DEBUG else False,
-            },
-        )
-        return {"error": "internal server error"}, 500
-
-    # @app.before_request
-    # def log_request():
-    #     body = request.json if request.is_json else "NO BODY"
-    #     app.logger.debug("headers: %s body: %s", dict(request.headers), body)
+        error_name = e.__class__.__name__
+        app.logger.error("Unhandled exception occurred (%s): %s", error_name, str(e))
+        return {"error": str(e)}, 500
 
     from api.routes import v1
 

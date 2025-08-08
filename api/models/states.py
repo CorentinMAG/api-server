@@ -13,7 +13,7 @@ from ..db import Base as SQLBase
 class State(SQLBase, SerializerMixin):
     __tablename__ = "states"
 
-    serialize_only = ("state", "created_at", "failure_reason", "sub_state", "id")
+    serialize_only = ("state", "created_at", "failure_reason", "sub_state")
 
     id: Mapped[int] = mapped_column(primary_key=True)
     state: Mapped[StateEnum] = mapped_column(index=True)

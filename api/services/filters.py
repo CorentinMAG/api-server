@@ -16,7 +16,7 @@ def switch_mode(mode: str) -> None:
         app.logger.error("no global parameters, the dtr doesn't know how to switch mode")
     else:
         params.mode = mode
-        app.logger.info("dtr has switched to %s mode", mode)
+        app.logger.info("dtr has switched to %s mode", mode.value.upper())
 
 
 def get_params() -> GlobalParameters | None:

@@ -1,16 +1,14 @@
 from __future__ import annotations
 
 import datetime
-import os
 import uuid
-from typing import TYPE_CHECKING, List, Optional, TypedDict, cast
+from typing import List, Optional, TypedDict, cast
 from urllib.parse import urlparse
 
 from dtr_common.constantes import State as StateEnum, SubState as SubStateEnum, Type
 from dtr_common.schema import CommandedTransferRequestSchema, TriggerTransferRequestSchema
 from flask import current_app as app
 from sqlalchemy import func, or_, select
-from sqlalchemy.exc import SQLAlchemyError
 from sqlalchemy.orm import Session
 
 from api.db import db
@@ -21,14 +19,17 @@ from .queue_service import QueueService
 from .utils import db_retry, transactional
 from .validation_service import ValidationService
 
-if TYPE_CHECKING:
-    pass
-
 
 class NextTransferRequestParams(TypedDict, total=False):
     state: StateEnum
     size: int
     sub_state: SubStateEnum
+
+
+def get_request(uuid: uuid.UUID) -> TransferRequest | None:
+    stmt = select(TransferRequest).join(TransferPolicy).join(Queue).where(TransferRequest.uid == uuid)
+    request = db.session.execute(stmt).scalar()
+    return request
 
 
 def get_next_request(
@@ -264,10 +265,9 @@ def _generate_transfer_reports(requests: List[TransferRequest], npolicy: Transfe
             logger.info("end of request transfer", extra=end_task)
 
 
-@transactional
 def create_commanded_request(
-    payload: CommandedTransferRequestSchema, logger=None
-) -> tuple[list[str] | None, str | None, int]:
+    payload: CommandedTransferRequestSchema
+) -> list[uuid.UUID]:
     """
     Create a commanded transfer request.
     Returns a tuple containing:
@@ -276,8 +276,7 @@ def create_commanded_request(
     - HTTP status code
     """
     # Initialize logger with default if not provided (backward compatibility)
-    if logger is None:
-        logger = app.logger
+    logger = app.logger
 
     policy_name = payload.transfer_policy
 
@@ -288,73 +287,50 @@ def create_commanded_request(
     )
 
     if not npolicy:
-        return None, f"Transfer policy '{policy_name}' not found or is not a commanded policy", 404
+        raise ValueError(f"transfer policy: {policy_name} not found or is not a commanded policy")
 
     dests = npolicy.dests
-    if not dests:
-        return None, f"No destinations configured for policy '{policy_name}'", 400
 
-    filename = payload.path.split("/")[-1]
-    if payload.path.startswith(("http://", "https://")):
-        parsed_url = urlparse(payload.path)
-        filename = os.path.basename(parsed_url.path)
-        path = os.path.dirname(parsed_url.path)
-    else:
-        path = payload.path.replace(filename, "")
-
-    try:
-        request_uids = []
-        for dest in dests:
-            # Check if there's already a transfer in progress for this file to this specific destination
-            existing_request = db.session.scalar(
-                select(TransferRequest)
-                .join(TransferPolicy)
-                .where(TransferPolicy.name == policy_name)
-                .where(TransferRequest.filename == filename)
-                .where(TransferRequest.dest_id == dest.id)
-                .where(
-                    TransferRequest.states.any(
-                        State.state.not_in([StateEnum.SUCCESSFUL, StateEnum.CANCELLED])
-                    )
+    # in path, we can have a subpath
+    # or a complete http url so we need a bit of logic
+    path = urlparse(payload.path)
+    filename = path.path.split("/")[-1]
+    relative_path = path.path.replace(filename, "").rstrip("/")
+    nrequests: list[TransferRequest] = []
+    for dest in dests:
+        # Check if there's already a transfer in progress for this file to this specific destination
+        nrequest = db.session.scalar(
+            select(TransferRequest)
+            .join(TransferPolicy)
+            .where(TransferPolicy.name == policy_name)
+            .where(TransferRequest.filename == filename)
+            .where(TransferRequest.dest == dest)
+            .where(
+                TransferRequest.states.any(
+                    State.state.not_in([StateEnum.SUCCESSFUL, StateEnum.CANCELLED])
                 )
             )
+        )
 
-            if existing_request:
-                logger.warning(f"Transfer already in progress: {filename}")
-                continue
-
+        if nrequest:
+            logger.warning("Transfer already in progress policy: %s filename: %s destination: %s", policy_name, filename, dest.target.name)
+        else:
+            # create a new transfer request
             nrequest = TransferRequest(
                 filename=filename,
                 dest=dest,
-                src_relative_path=path,
+                src_relative_path=relative_path,
                 follows_from_task=payload.uid if payload.uid else None,
             )
             nstate = State(state=StateEnum.QUEUED)
             nrequest.states.append(nstate)
             npolicy.transfers.append(nrequest)
+            nrequests.append(nrequest)
 
-        db.session.commit()
+    db.session.commit()
 
-        for nrequest in npolicy.transfers[-len(dests) :]:
-            if nrequest.uid is None:
-                logger.error("UID is None for a newly created transfer request")
-                return None, "Internal error: Failed to create transfer request", 500
-            else:
-                request_uids.append(str(nrequest.uid))
-
-        return request_uids, None, 200
-    except SQLAlchemyError as e:
-        logger.error(
-            "Database error while creating commanded requests",
-            extra={"error_type": "database_error", "error_details": str(e)},
-        )
-        return None, f"Database error: {str(e)}", 500
-    except Exception as e:
-        logger.error(
-            "Unexpected error while creating commanded requests",
-            extra={"error_type": "unexpected_error", "error_details": str(e)},
-        )
-        return None, f"Unexpected error: {str(e)}", 500
+    uuids = [r.uid for r in nrequests[::-1]]
+    return uuids
 
 
 @transactional
@@ -365,86 +341,69 @@ def update_request(
     nrequest = cast(
         TransferRequest | None, db.session.query(TransferRequest).with_for_update().get(request_id)
     )
-    state_param = params.get("state")
-    sub_state_param = params.get("sub_state")
+    # state and sub_state parameters are mutually exclusive
+    state = StateEnum[params["state"].upper()] if params.get("state") else None
+    sub_state = SubStateEnum[params["sub_state"].upper()] if params.get("sub_state") else None
 
-    # Convert string params to Enum types if they exist, otherwise they remain None
-    state_enum = StateEnum[state_param.upper()] if state_param else None
-    sub_state_enum = SubStateEnum[sub_state_param.upper()] if sub_state_param else None
+    if state is not None and sub_state is not None:
+        raise ValueError("state and sub_state parameters are mutually exclusive")
 
     if nrequest and params:
         npolicy = nrequest.policy
-        new_states_to_append: list[State] = []
-
-        if state_enum:  # A main state update is requested
+        # if we are updating the request status,
+        # we need to check if it is a FAILED or not
+        if state:
+            nstates: list[State] = []
             max_retries = npolicy.parameters.max_retry
-            if state_enum == StateEnum.FAILED:
+            if state == StateEnum.FAILED:
                 failure_reason = params.get("failure_reason")
-                if not max_retries or nrequest.nb_retry + 1 < max_retries:
-                    failed_s = State(state=StateEnum.FAILED, failure_reason=failure_reason)
-                    queued_s = State(state=StateEnum.QUEUED)
-                    new_states_to_append.extend([failed_s, queued_s])
+                if nrequest.nb_retry + 1 < max_retries:
+                    failed = State(state=StateEnum.FAILED, failure_reason=failure_reason)
+                    queued = State(state=StateEnum.QUEUED)
+                    nstates.extend([failed, queued])
                     nrequest.nb_retry += 1
                 elif nrequest.nb_retry + 1 >= max_retries:
                     # Request becomes CANCELLED after max retries
                     nrequest.end = datetime.datetime.now(datetime.timezone.utc).isoformat()
-
                     # Determine sub_state based on whether notifications are configured for the destination
-                    current_sub_state = None
-                    if nrequest.dest and nrequest.dest.notifications:
-                        current_sub_state = SubStateEnum.NOTIFY
-                    # else: current_sub_state remains None, or could be set to another default if needed
-
-                    cancelled_s = State(
+                    cancelled = State(
                         state=StateEnum.CANCELLED,
-                        sub_state=current_sub_state,  # Use determined sub_state
+                        sub_state=SubStateEnum.NOTIFY if nrequest.dest.notifications is not None else None,
                         failure_reason=f"Max retries reached - Last error: {failure_reason}",
                     )
-                    new_states_to_append.append(cancelled_s)
-            elif state_enum in [StateEnum.SUCCESSFUL, StateEnum.CANCELLED]:
+                    nstates.append(cancelled)
+            elif state in [StateEnum.SUCCESSFUL, StateEnum.CANCELLED]:
                 # Handles direct SUCCESSFUL or CANCELLED updates (not from max_retry logic)
                 nrequest.end = datetime.datetime.now(datetime.timezone.utc).isoformat()
                 # sub_state_enum here is the one parsed from params, could be None
-                final_s = State(state=state_enum, sub_state=sub_state_enum)
-                new_states_to_append.append(final_s)
-
-        elif sub_state_enum:  # No main 'state' in params, only 'sub_state' (state_enum is None)
-            if nrequest.states:  # Ensure there are existing states to get the current main state
-                latest_main_state = nrequest.states[
-                    0
-                ].state  # Assuming states are ordered, states[0] is the latest
-                sub_state_update_s = State(state=latest_main_state, sub_state=sub_state_enum)
-                new_states_to_append.append(sub_state_update_s)
-            else:
-                app.logger.warning(f"Request {request_id} has no prior states. Cannot update sub_state only.")
-
-        if new_states_to_append:
-            nrequest.states.extend(new_states_to_append)
-
+                final_s = State(state=state, sub_state=SubStateEnum.NOTIFY if nrequest.dest.notifications is not None else None)
+                nstates.append(final_s)
+            nrequest.states.extend(nstates)
+        elif sub_state:
+            if nrequest.states:
+                last_state = nrequest.states[0]
+                new_state = State(state = last_state.state, sub_state=sub_state)
+                nrequest.states.append(new_state)
         nrequest.update(params)
-
-        with db.session.no_autoflush:
-            response = nrequest.to_dict()
+        response = nrequest.to_dict()
         response["Purge"] = can_purge(nrequest)
         return response
     return None
 
 
-@db_retry(total=3, initial_delay=1, max_delay=5)
+@db_retry(total=3, backoff=5)
 def can_purge(
-    nrequest: TransferRequest | None,
-    db_session: Optional[Session] = None,
-    logger=None,
-    validation_service: Optional[ValidationService] = None,
+    nrequest: TransferRequest,
 ) -> bool:
     """Check if a request can be purged. Supports dependency injection for testing."""
     # Initialize services with defaults if not provided (backward compatibility)
-    if db_session is None:
-        db_session = db.session
-    if logger is None:
-        logger = app.logger
-    if validation_service is None:
-        transfer_request_repo = TransferRequestRepository(db_session)
-        validation_service = ValidationService(transfer_request_repo, logger)
-
-    return validation_service.can_purge_request(nrequest)
+    requests = db.session.query(TransferRequest).filter(
+        TransferRequest.id != nrequest.id,
+        TransferRequest.filename == nrequest.filename,
+        TransferPolicy.id == nrequest.policy_id
+    ).all()
+    app.logger.debug("Found %d associated requests", len(requests))
+    for r in requests:
+        if not any(state.state == StateEnum.SUCCESSFUL for state in r.states):
+            return False
+    return True

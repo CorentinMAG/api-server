@@ -45,10 +45,6 @@ COPY ./ ./
 RUN pip3 install -r requirements.txt && rm /etc/pip.conf
 RUN chmod -R +x ./scripts
 
-# Health check for Kubernetes/Docker
-HEALTHCHECK --interval=30s --timeout=10s --start-period=60s --retries=3 \
-    CMD curl -f http://localhost:80/healthz || exit 1
-
 EXPOSE 80
 
 ENTRYPOINT ["/opt/api/scripts/docker-entrypoint.sh"]

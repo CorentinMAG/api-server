@@ -1,7 +1,4 @@
 from __future__ import annotations
-
-from dtr_common.exceptions.errors import RetryError
-from dtr_common.retry import retry_database_operation
 from flask import Flask
 from flask_sqlalchemy import SQLAlchemy
 from sqlalchemy import create_engine
@@ -56,10 +53,10 @@ def init_app(app: Flask):
 
             # create all tables
             with app.app_context():
+                from api.models import GlobalParameters
                 db.create_all()
 
                 # Create default global parameters if they don't exist
-                from api.models import GlobalParameters
 
                 existing_params = db.session.query(GlobalParameters).first()
                 if not existing_params:
@@ -70,14 +67,4 @@ def init_app(app: Flask):
                 # Ensure tables are committed immediately so other services can see them
                 db.session.commit()
                 logger.debug("Database tables have been created.")
-
-        try:
-            retry_database_operation(
-                _initialize_database, logger=logger, total=5, backoff_factor=2, initial_delay=2, max_delay=30
-            )
-        except RetryError as e:
-            logger.error(f"Failed to initialize database after retries: {str(e)}")
-            # Don't crash the application, let it try to connect later
-            logger.warning(
-                "Application will start but database operations may fail until connection is restored"
-            )
+        _initialize_database()

@@ -24,7 +24,6 @@ class SourcePolicy(SQLBase, SerializerMixin):
     # Credentials.password is already a SecretStr which serializes to "********";
     # if additional masking is needed, adapt serialize_rules.
     serialize_only = (
-        "id",
         "purge",
         "path",
         "bucket",
@@ -52,6 +51,15 @@ class SourcePolicy(SQLBase, SerializerMixin):
 class DestinationPolicy(SQLBase, SerializerMixin):
     __tablename__ = "destination_policies"
 
+    serialize_only = (
+        "path",
+        "bucket",
+        "target",
+        "tmp_prefix",
+        "final_prefix",
+        "notifications"
+    )
+
     id: Mapped[int] = mapped_column(primary_key=True)
     path: Mapped[str | None]
     bucket: Mapped[str | None]
@@ -72,14 +80,14 @@ class TransferPolicy(SQLBase, SerializerMixin):
 
     serialize_only = (
         "id",
+        "created_at",
         "name",
         "enabled",
         "type",
         "src",
         "dests",
         "parameters",
-        "queue",
-        "created_at",
+        "queue"
     )
 
     id: Mapped[int] = mapped_column(primary_key=True)

@@ -73,13 +73,13 @@ class GlobalParameters(SQLBase, SerializerMixin):
     final_prefix: Mapped[str | None]
     retry_delay: Mapped[int | None] = mapped_column(default=300)  # in seconds
     max_retry: Mapped[int | None] = mapped_column(default=5)
-    transfer_requests_history: Mapped[int | None] = mapped_column(default=31)
-    only_new_data: Mapped[bool | None] = mapped_column(default=True)
-    transfer_timeout: Mapped[int | None] = mapped_column(default=3600)  # in seconds
-    queue_timeout: Mapped[int | None] = mapped_column(default=86400)  # in seconds
-    polling_interval: Mapped[int | None] = mapped_column(default=10)  # in seconds
-    queue_limit: Mapped[int | None] = mapped_column(default=100)
-    queue_threshold: Mapped[int | None] = mapped_column(default=80)
+    transfer_requests_history: Mapped[int] = mapped_column(default=31)
+    only_new_data: Mapped[bool] = mapped_column(default=True)
+    transfer_timeout: Mapped[int] = mapped_column(default=3600)  # in seconds
+    queue_timeout: Mapped[int] = mapped_column(default=86400)  # in seconds
+    polling_interval: Mapped[int] = mapped_column(default=10)  # in seconds
+    queue_limit: Mapped[int] = mapped_column(default=100)
+    queue_threshold: Mapped[int] = mapped_column(default=80)
 
 
 class TargetParameters(SQLBase, SerializerMixin):
@@ -88,8 +88,8 @@ class TargetParameters(SQLBase, SerializerMixin):
     serialize_only = ("use_ssl", "verify")
 
     id: Mapped[int] = mapped_column(primary_key=True)
-    use_ssl: Mapped[bool | None] = mapped_column(default=True)
-    verify: Mapped[bool | None] = mapped_column(default=True)
+    use_ssl: Mapped[bool] = mapped_column(default=True)
+    verify: Mapped[bool] = mapped_column(default=True)
     target_id: Mapped[int] = mapped_column(ForeignKey("targets.id"))
 
 

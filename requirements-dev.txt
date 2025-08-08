@@ -1,7 +1,5 @@
-ruff==0.2.2
-pre-commit==3.3.3
-pytest
-pytest-cov
-pytest-mock
-requests
-werkzeug==2.3.7
+ruff==0.12.5
+pre-commit==4.2.0
+pytest==8.4.1
+pytest-cov==6.2.1
+pytest-mock==3.14.1
