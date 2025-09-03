@@ -158,32 +158,3 @@ class BaseRepository(ABC, Generic[T]):
     def find_by_criteria(self, **criteria) -> List[T]:
         """Find entities by custom criteria. Must be implemented by subclasses."""
         pass
-
-
-class TransactionalRepository(BaseRepository[T]):
-    """Repository with automatic transaction management."""
-
-    def __enter__(self):
-        return self
-
-    def __exit__(self, exc_type, exc_val, exc_tb):
-        if exc_type is None:
-            try:
-                self.db_session.commit()
-            except SQLAlchemyError:
-                self.db_session.rollback()
-                raise
-        else:
-            self.db_session.rollback()
-
-    def save_changes(self) -> None:
-        """Manually commit changes."""
-
-        def _save_changes():
-            self.db_session.commit()
-
-        try:
-            self._execute_with_retry(_save_changes)
-        except SQLAlchemyError:
-            self.db_session.rollback()
-            raise

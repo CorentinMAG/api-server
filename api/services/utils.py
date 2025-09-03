@@ -1,6 +1,5 @@
 from __future__ import annotations
 
-import logging
 from functools import wraps
 from flask import current_app as app
 import time

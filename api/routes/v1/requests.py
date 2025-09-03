@@ -4,19 +4,16 @@ Transfer requests API routes with dependency injection.
 
 from __future__ import annotations
 
-from typing import Optional
-
 from dtr_common.constantes import Mode
 from dtr_common.schema.requests import (
     CommandedTransferRequestSchema,
     TriggerTransferRequestSchema,
 )
 from dtr_common.utils import parse_params
-from flask import Blueprint, current_app, request
+from flask import Blueprint, request
 
 from api.services.filters import get_params
 from api.services.requests import create_commanded_request, create_periodical_requests, update_request
-from api.utils.responses import error_response, success_response
 from api.services.requests import get_request
 import uuid
 
