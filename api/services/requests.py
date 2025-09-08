@@ -368,7 +368,7 @@ def update_request(
                     # Determine sub_state based on whether notifications are configured for the destination
                     cancelled = State(
                         state=StateEnum.CANCELLED,
-                        sub_state=SubStateEnum.NOTIFY if nrequest.dest.notifications is not None else None,
+                        sub_state=SubStateEnum.NOTIFY if nrequest.dest.notifications else None,
                         failure_reason=f"Max retries reached - Last error: {failure_reason}",
                     )
                     nstates.append(cancelled)
@@ -376,7 +376,7 @@ def update_request(
                 # Handles direct SUCCESSFUL or CANCELLED updates (not from max_retry logic)
                 nrequest.end = datetime.datetime.now(datetime.timezone.utc).isoformat()
                 # sub_state_enum here is the one parsed from params, could be None
-                final_s = State(state=state, sub_state=SubStateEnum.NOTIFY if nrequest.dest.notifications is not None else None)
+                final_s = State(state=state, sub_state=SubStateEnum.NOTIFY if nrequest.dest.notifications else None)
                 nstates.append(final_s)
             nrequest.states.extend(nstates)
         elif sub_state:
