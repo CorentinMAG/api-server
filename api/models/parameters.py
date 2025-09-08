@@ -69,7 +69,7 @@ class GlobalParameters(SQLBase, SerializerMixin):
     id: Mapped[int] = mapped_column(primary_key=True)
     mode: Mapped[Mode] = mapped_column(default=Mode.ONLINE)
     updated_at: Mapped[str] = mapped_column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
-    tmp_prefix: Mapped[str | None] = mapped_column(default=".")
+    tmp_prefix: Mapped[str | None]
     final_prefix: Mapped[str | None]
     retry_delay: Mapped[int | None] = mapped_column(default=300)  # in seconds
     max_retry: Mapped[int | None] = mapped_column(default=5)
