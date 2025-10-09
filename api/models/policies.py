@@ -57,7 +57,9 @@ class DestinationPolicy(SQLBase, SerializerMixin):
         "target",
         "tmp_prefix",
         "final_prefix",
-        "notifications"
+        "notifications",
+        "path_from_filename_delimiter",
+        "path_from_filename_expression"
     )
 
     id: Mapped[int] = mapped_column(primary_key=True)
