@@ -1,14 +1,8 @@
 from __future__ import annotations
-
-from typing import cast
-
-from dtr_common.constantes import Mode, Type
+from dtr_common.constantes import Mode
 from flask import Blueprint, current_app, request
-
-from api.db import db
-from api.models import TransferPolicy
 from api.services.filters import get_params
-from api.services.policies import filter_policies
+from api.services.triggers import get_trigger, get_paginated_policies
 
 bp = Blueprint("trigger", __name__)
 
@@ -16,9 +10,11 @@ bp = Blueprint("trigger", __name__)
 @bp.route("/configuration/trigger", methods=["GET"])
 def trigger():
     """
-    Get trigger configuration - all activated periodical transfer policies.
+    Get trigger configuration as well as all active 
+    transfer policies associated
 
     Query parameters:
+    - name: str - trigger's identifier
     - page: int - Page number for pagination (default: 1)
     - page_size: int - Items per page (default: 10)
     """
@@ -30,18 +26,27 @@ def trigger():
     # Pagination parameters with validation
     page = request.args.get("page", type=int, default=1)
     page_size = request.args.get("page_size", type=int, default=10)
+    id = request.args.get("id", type=str, default="default")
 
-    # Service layer call with dependency injection
-    params = {"enabled": True, "type": Type.PERIODICAL, "next_polling_min_time": True}
-    query = filter_policies(params)
-
-    # Database pagination
-    result = db.paginate(query, page=page, per_page=page_size)
-    policies = cast(list[TransferPolicy], result.items)
-
+    if id != "default":
+        trigger = get_trigger(id)
+    paginated = get_paginated_policies(id, page, page_size)
+    policies = paginated.items
     return {
-        "policies": [p.to_dict() for p in policies],
-        "page": result.page,
-        "page_size": result.per_page,
-        "total": result.total,
+        "configuration": trigger.to_dict(only=("name", "polling_interval")) 
+                         if id != "default" 
+                         else {
+                             "name": "default", 
+                             "polling_interval": nglobal_parameters.polling_interval
+                             },
+        "pagination": {
+            "page": page,
+            "per_page": page_size,
+            "total": paginated.total,
+            "pages": paginated.pages
+        },
+        "policies": [
+            policy.to_dict(only=("id", "name", "src")) 
+            for policy in policies
+        ]
     }

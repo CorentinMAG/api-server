@@ -7,20 +7,18 @@ from sqlalchemy_serializer import SerializerMixin
 from sqlalchemy_utils import StringEncryptedType
 from sqlalchemy_utils.types.encrypted.encrypted_type import AesEngine
 
-from config import ENCRYPTION_KEY
-
-from ..db import Base as SQLBase
+from ..config import ENCRYPTION_KEY
+from .base import Base
 
 if not ENCRYPTION_KEY:
     raise ValueError("ENCRYPTION_KEY is not set in the environment.")
 
 
-class Credentials(SQLBase, SerializerMixin):
+class Credentials(Base, SerializerMixin):
     __tablename__ = "credentials"
 
     serialize_only = ("login", "password")
 
-    id: Mapped[int] = mapped_column(primary_key=True)
     login: Mapped[str]
     password: Mapped[str] = mapped_column(
         StringEncryptedType(sqlalchemy.CHAR, ENCRYPTION_KEY, AesEngine, "pkcs5"),

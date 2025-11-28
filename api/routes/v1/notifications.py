@@ -27,6 +27,6 @@ def notification():
     nrequest = get_next_request(params)
 
     if nrequest is not None:
-        return {"request": nrequest.to_dict()}
+        return {"request": nrequest.to_dict(rules=("dest.notifications", "-dest.target", "current_state.state", "current_state.failure_reason", "policy.name", "-multi_dest_uid"))}
 
     return {"request": {}}

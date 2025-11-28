@@ -1,25 +1,35 @@
 from __future__ import annotations
 
-import datetime
-
 from dtr_common.constantes import State as StateEnum, SubState as SubStateEnum
-from sqlalchemy import DateTime, ForeignKey, func
-from sqlalchemy.orm import Mapped, mapped_column
+from sqlalchemy import ForeignKey, event, Connection
+from sqlalchemy.orm import Mapped, mapped_column, relationship
 from sqlalchemy_serializer import SerializerMixin
 
-from ..db import Base as SQLBase
+from .base import Base
 
 
-class State(SQLBase, SerializerMixin):
+class State(Base, SerializerMixin):
     __tablename__ = "states"
 
     serialize_only = ("state", "created_at", "failure_reason", "sub_state")
 
-    id: Mapped[int] = mapped_column(primary_key=True)
     state: Mapped[StateEnum] = mapped_column(index=True)
-    created_at: Mapped[datetime.datetime] = mapped_column(DateTime, default=func.now())
-    request_id: Mapped[int] = mapped_column(
-        ForeignKey("transfer_requests.id", ondelete="CASCADE"), index=True
-    )
     failure_reason: Mapped[str | None]
     sub_state: Mapped[SubStateEnum | None] = mapped_column(default=None, index=True)
+
+    request_id: Mapped[int] = mapped_column(
+        ForeignKey("transfer_requests.id", ondelete="CASCADE", use_alter=True), index=True, nullable=False
+    )
+
+    # relationship
+    request: Mapped["TransferRequest"] = relationship(back_populates="states", foreign_keys=[request_id],lazy="joined")
+
+@event.listens_for(State, "after_insert")
+def update_transfer_request_current_state(mapper, connection: Connection, target: State):
+  """update TransferRequest's current_state_id when a new state is inserted"""
+  from .request import TransferRequest
+  connection.execute(
+     TransferRequest.__table__.update()
+     .where(TransferRequest.id == target.request_id)
+     .values(current_state_id = target.id)
+  )

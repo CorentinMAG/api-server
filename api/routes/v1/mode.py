@@ -35,12 +35,11 @@ def get_global_parameters():
     Get DTR global parameters.
     """
     params = get_params()
-    logger = current_app.logger
 
     if params is None:
-        logger.error("No global parameters found")
+        current_app.logger.error("No global parameters found")
         return {"error": "No global parameters"}, 404
 
-    logger.info("Retrieved global parameters successfully")
+    current_app.logger.info("Retrieved global parameters successfully")
     return params.to_dict()
 

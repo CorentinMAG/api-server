@@ -13,8 +13,6 @@ SYSTEM_VERSION = os.environ.get("DTR_VERSION", "0.0.0-dev")
 LOG_LEVEL = os.environ.get("DTR_LOG_LEVEL", "INFO")
 
 # --- Flask Environment ---
-FLASK_ENV = os.environ.get("FLASK_ENV", "production")
-TESTING = os.environ.get("FLASK_TESTING", "false").lower() == "true"
 IS_DEBUG = LOG_LEVEL == "DEBUG"
 
 # --- Database Configuration ---
@@ -28,16 +26,12 @@ DATABASE_URL = (
     f"postgresql+psycopg://{DB_USER}:{DB_PASSWORD}@{DB_HOST}:{DB_PORT}/{DB_NAME}" if DB_PASSWORD else None
 )
 
-SQLALCHEMY_ENGINE_OPTIONS = {}
-
-if TESTING:
-    DATABASE_URL = "sqlite:///:memory:"
-else:
-    SQLALCHEMY_ENGINE_OPTIONS = {
-        "pool_size": 15,
-        "max_overflow": 25,
-        "pool_timeout": 30,
-    }
+SQLALCHEMY_ENGINE_OPTIONS = {
+    "pool_size": 15,
+    "max_overflow": 25,
+    "pool_timeout": 30,
+    "echo": IS_DEBUG
+}
 
 # --- Security ---
 ENCRYPTION_KEY = os.environ.get("DTR_ENCRYPTION_KEY", "A9ZA3v0x5lcvyXqaGTWr")

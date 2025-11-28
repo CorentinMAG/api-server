@@ -3,7 +3,7 @@ from __future__ import annotations
 from functools import wraps
 from flask import current_app as app
 import time
-from ..db import db
+from api.models import db
 
 def transactional(f):
     """

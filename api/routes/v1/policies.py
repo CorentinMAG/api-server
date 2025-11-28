@@ -10,7 +10,7 @@ from dtr_common.constantes import Mode
 from dtr_common.utils import parse_params
 from flask import Blueprint, request
 
-from api.db import db
+from api.models import db
 from api.models import TransferPolicy
 from api.services.configuration import create_policies
 from api.services.filters import get_params

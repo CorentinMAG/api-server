@@ -42,7 +42,7 @@ RUN echo "[global]" > /etc/pip.conf && \
 
 COPY ./ ./
 
-RUN pip3 install -r requirements.txt && rm /etc/pip.conf
+RUN pip3 install --no-cache-dir -r requirements.txt && rm /etc/pip.conf
 RUN chmod -R +x ./scripts
 
 EXPOSE 80

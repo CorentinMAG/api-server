@@ -34,8 +34,7 @@ def get_transfer_status():
     id = uuid.UUID(parsed_params["id"])
     nrequest = get_request(id)
     if nrequest is None:
-        raise ValueError("transfer request not found: %s", id.hex)
-    last_state = nrequest.states[0]
+        raise ValueError(f"transfer request not found: {id.hex}")
     return {
         "download": {
             "download_rate_mb_s": nrequest.download_rate,
@@ -61,9 +60,9 @@ def get_transfer_status():
         },
         "transfer_status": {
             "failure_count": nrequest.nb_retry,
-            "failure_reason": last_state.failure_reason,
-            "status": "failed" if nrequest.nb_retry >= 1 and nrequest.nb_retry < nrequest.policy.parameters.max_retry else last_state.state.value,
-            "sub_status": last_state.sub_state.value if last_state.sub_state else None
+            "failure_reason": nrequest.current_state.failure_reason,
+            "status": nrequest.current_state.state.value,
+            "sub_status": nrequest.current_state.sub_state.value if nrequest.current_state.sub_state else None
         }
     }
 
@@ -89,9 +88,9 @@ def new_commanded_request():
     if not payload:
         raise ValueError("no payload provided cannot create transfer request")
 
-    schema = CommandedTransferRequestSchema(**payload)
+    srequest = CommandedTransferRequestSchema(**payload)
 
-    uuids = create_commanded_request(schema)
+    uuids = create_commanded_request(srequest)
 
     return {"transfer_id": uuids}
 

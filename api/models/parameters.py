@@ -1,43 +1,27 @@
 from __future__ import annotations
 
-from datetime import datetime
 from typing import TYPE_CHECKING
-
+import sqlalchemy
 from dtr_common.constantes import Mode
-from sqlalchemy import DateTime, ForeignKey
+from sqlalchemy import ForeignKey
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 from sqlalchemy_serializer import SerializerMixin
-
-from ..db import Base as SQLBase
+from sqlalchemy_utils import StringEncryptedType
+from sqlalchemy_utils.types.encrypted.encrypted_type import AesEngine
+from .base import Base
+from ..config import ENCRYPTION_KEY
 
 if TYPE_CHECKING:
     from .server import NotificationServer
 
-
-class PeriodicalParameters(SQLBase, SerializerMixin):
-    __tablename__ = "periodical_parameters"
-
-    serialize_only = ("polling_interval", "next_polling_min_time")
-
-    id: Mapped[int] = mapped_column(primary_key=True)
-    polling_interval: Mapped[int]
-    parameter_id: Mapped[int] = mapped_column(ForeignKey("transfer_policy_parameters.id", ondelete="CASCADE"))
-    next_polling_min_time: Mapped[str | None] = mapped_column(DateTime, default=None)
-
-
-class TransferPolicyParameters(SQLBase, SerializerMixin):
+class TransferPolicyParameters(Base, SerializerMixin):
     __tablename__ = "transfer_policy_parameters"
 
     serialize_only = (
-        "max_retry",
         "retry_delay",
-        "transfer_requests_history",
-        "only_new_data",
-        "transfer_timeout",
-        "periodical",
+        "transfer_timeout"
     )
 
-    id: Mapped[int] = mapped_column(primary_key=True)
     max_retry: Mapped[int | None]
     retry_delay: Mapped[int | None]  # in seconds
     transfer_requests_history: Mapped[int | None]
@@ -45,10 +29,8 @@ class TransferPolicyParameters(SQLBase, SerializerMixin):
     transfer_timeout: Mapped[int | None]  # in seconds
 
     policy_id: Mapped[int] = mapped_column(ForeignKey("transfer_policies.id", ondelete="CASCADE"))
-    periodical: Mapped[PeriodicalParameters] = relationship()
 
-
-class GlobalParameters(SQLBase, SerializerMixin):
+class GlobalParameters(Base, SerializerMixin):
     __tablename__ = "global_parameters"
 
     serialize_only = (
@@ -66,9 +48,7 @@ class GlobalParameters(SQLBase, SerializerMixin):
         "queue_threshold",
     )
 
-    id: Mapped[int] = mapped_column(primary_key=True)
     mode: Mapped[Mode] = mapped_column(default=Mode.ONLINE)
-    updated_at: Mapped[str] = mapped_column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
     tmp_prefix: Mapped[str | None]
     final_prefix: Mapped[str | None]
     retry_delay: Mapped[int | None] = mapped_column(default=300)  # in seconds
@@ -82,21 +62,26 @@ class GlobalParameters(SQLBase, SerializerMixin):
     queue_threshold: Mapped[int] = mapped_column(default=80)
 
 
-class TargetParameters(SQLBase, SerializerMixin):
+class TargetParameters(Base, SerializerMixin):
     __tablename__ = "target_parameters"
 
-    serialize_only = ("use_ssl", "verify")
+    serialize_only = ("use_ssl", "verify", "http_proxy", "https_proxy")
 
-    id: Mapped[int] = mapped_column(primary_key=True)
     use_ssl: Mapped[bool] = mapped_column(default=True)
     verify: Mapped[bool] = mapped_column(default=True)
-    target_id: Mapped[int] = mapped_column(ForeignKey("targets.id"))
+    http_proxy: Mapped[str | None] = mapped_column(
+        StringEncryptedType(sqlalchemy.CHAR, ENCRYPTION_KEY, AesEngine, "pkcs5"),
+        nullable=True,
+    )
+    https_proxy: Mapped[str | None] = mapped_column(
+        StringEncryptedType(sqlalchemy.CHAR, ENCRYPTION_KEY, AesEngine, "pkcs5"),
+        nullable=True,
+    )
+    target_id: Mapped[int] = mapped_column(ForeignKey("targets.id", ondelete="CASCADE"))
 
-
-class ServerParameters(SQLBase):
+class ServerParameters(Base):
     __tablename__ = "server_parameters"
 
-    id: Mapped[int] = mapped_column(primary_key=True)
     type: Mapped[str]  # discriminator column to differentiate parameter types
     dest_id: Mapped[int] = mapped_column(ForeignKey("destination_policies.id", ondelete="CASCADE"))
 

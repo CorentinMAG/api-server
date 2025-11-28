@@ -9,7 +9,7 @@ import datetime
 from dtr_common.constantes import Mode, State as StateEnum
 from flask import Blueprint, current_app, request
 
-from api.db import db
+from api.models import db
 from api.models import State
 from api.services.filters import get_params
 from api.services.requests import get_next_request
@@ -23,21 +23,27 @@ def worker():
     This endpoint ensures atomicity by using a transaction with row-level locking
     (SELECT ... FOR UPDATE) to prevent the same task from being assigned to
     multiple workers simultaneously.
+
+    Query parameters:
+    - size: int - worker's data partition size in MB
     """
-    logger = current_app.logger
     ngparams = get_params()
     if ngparams is None or ngparams.mode == Mode.OFFLINE:
-        logger.info("API in OFFLINE mode, no request assigned.")
+        current_app.logger.info("API in OFFLINE mode, no request assigned.")
         return {"request": {}}
 
-    worker_storage = request.args.get("size", type=float)
-    if worker_storage is None or worker_storage <= 0:
-        raise ValueError("Worker size not specified in query parameters or invalid")
+    size = request.args.get("size", type=int)
+    worker_id = request.args.get("id", type=str, default="default")
 
-    # The transaction is implicitly managed by Flask-SQLAlchemy per request.
-    # We perform all operations within this single request context.
-    params = {"size": worker_storage, "state": StateEnum.QUEUED}
-    next_request = get_next_request(params, db_session=db.session)
+    # a worker can only process files whose size is 
+    # <= 5% of the worker maximal capacity
+    size = int(size * (1 - (5/100)))
+
+    # we format the size in bytes
+    size = size * 1024 *1024
+
+    params = {"size": size, "state": StateEnum.QUEUED, "id": worker_id}
+    next_request = get_next_request(params)
 
     if next_request:
         # This all happens before the transaction is committed.
@@ -46,17 +52,11 @@ def worker():
         next_request.states.append(nstate)
         next_request.start = datetime.datetime.now(datetime.timezone.utc)
 
-        db.session.flush()
-
-        # The request object is still bound to the session, so we can serialize it.
-        response_data = next_request.to_dict()
-
-        # Commit the transaction to finalize the state change and release the lock.
         db.session.commit()
 
-        logger.info(f"Assigned transfer request {next_request.uid} to worker")
-        return {"request": response_data}
+        current_app.logger.info(f"Assigned transfer request {next_request.uid} to worker")
+        return {"request": next_request.to_dict(rules=("policy.src", "policy.name", "policy.parameters", "nb_retry"))}
 
     # No request was found. No need to commit anything.
-    logger.debug("No available transfer requests for worker")
+    current_app.logger.debug("No available transfer requests for worker")
     return {"request": {}}
