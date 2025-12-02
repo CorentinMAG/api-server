@@ -2,6 +2,7 @@ from typing import Generic, TypeVar, Protocol
 from ..models import Trigger, TransferPolicy
 from ..models import db
 from sqlalchemy import select
+from dtr_common.constantes import Type
 
 T = TypeVar("T")
 
@@ -22,8 +23,11 @@ def get_trigger(name: str) -> Trigger:
 def get_paginated_policies(name: str, page: int, page_size: int) -> ITriggerPaginate:
     stmt = (
         select(TransferPolicy)
-        .join(Trigger)
-        .where(TransferPolicy.enabled == True)
+        .outerjoin(Trigger)
+        .where(
+            TransferPolicy.enabled == True,
+            TransferPolicy.type == Type.PERIODICAL
+        )
     )
     if name == "default":
         stmt = stmt.where(TransferPolicy.trigger_id.is_(None))
