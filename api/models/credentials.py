@@ -10,10 +10,6 @@ from sqlalchemy_utils.types.encrypted.encrypted_type import AesEngine
 from ..config import ENCRYPTION_KEY
 from .base import Base
 
-if not ENCRYPTION_KEY:
-    raise ValueError("ENCRYPTION_KEY is not set in the environment.")
-
-
 class Credentials(Base, SerializerMixin):
     __tablename__ = "credentials"
 

@@ -2,10 +2,14 @@ from __future__ import annotations
 
 import uuid
 
-from sqlalchemy.orm import Mapped, mapped_column
+from sqlalchemy.orm import Mapped, mapped_column, relationship
 from sqlalchemy_serializer import SerializerMixin
-
+from typing import TYPE_CHECKING
 from .base import Base
+from .association import association_table
+
+if  TYPE_CHECKING:
+    from .worker import Worker
 
 
 class Queue(Base, SerializerMixin):
@@ -19,3 +23,5 @@ class Queue(Base, SerializerMixin):
     queue_timeout: Mapped[int | None] = mapped_column(default=86400)
     queue_limit: Mapped[int | None] = mapped_column(default=100)
     queue_threshold: Mapped[int | None] = mapped_column(default=80)
+
+    workers: Mapped[list[Worker]] = relationship(secondary=association_table, back_populates="queues")

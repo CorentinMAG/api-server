@@ -13,8 +13,8 @@ from dtr_common.utils import parse_params
 from flask import Blueprint, request
 
 from api.services.filters import get_params
-from api.services.requests import create_commanded_request, create_periodical_requests, update_request
-from api.services.requests import get_request
+from api.services._requests import create_commanded_request, create_periodical_requests, update_request
+from api.services._requests import get_request
 import uuid
 
 bp = Blueprint("requests", __name__)

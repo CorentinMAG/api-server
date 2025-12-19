@@ -4,9 +4,8 @@ Mode and global parameters API routes with dependency injection and error handli
 from __future__ import annotations
 
 from dtr_common.constantes import Mode
-from flask import Blueprint, current_app
-
-from api.services.filters import get_params, switch_mode
+from flask import Blueprint
+from api.utils.utils import custom_app
 
 bp = Blueprint("mode", __name__)
 
@@ -15,8 +14,9 @@ def set_offline_mode():
     """
     Set DTR to offline mode.
     """
-    switch_mode(Mode.OFFLINE)
-    return {"message": "mode OFFLINE"}
+    app = custom_app()
+    app.services.params.switch_mode(Mode.OFFLINE)
+    return "", 200
 
 
 
@@ -25,8 +25,9 @@ def set_online_mode():
     """
     Set DTR to online mode.
     """
-    switch_mode(Mode.ONLINE)
-    return {"message": "mode ONLINE"}
+    app = custom_app()
+    app.services.params.switch_mode(Mode.ONLINE)
+    return "", 200
 
 
 @bp.route("/global_params", methods=["GET"])
@@ -34,12 +35,7 @@ def get_global_parameters():
     """
     Get DTR global parameters.
     """
-    params = get_params()
-
-    if params is None:
-        current_app.logger.error("No global parameters found")
-        return {"error": "No global parameters"}, 404
-
-    current_app.logger.info("Retrieved global parameters successfully")
-    return params.to_dict()
+    app = custom_app()
+    gparams = app.services.params.get()
+    return gparams.to_dict()
 

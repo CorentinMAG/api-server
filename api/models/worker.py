@@ -1,16 +1,9 @@
 from .base import Base
-from sqlalchemy import Table, Column, ForeignKey
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 from sqlalchemy_serializer import SerializerMixin
 from .queue import Queue
+from .association import association_table
 
-# To create a Many to Many relationship
-association_table = Table(
-    "worker_queues",
-    Base.metadata,
-    Column("worker_id", ForeignKey("workers.id")),
-    Column("queue_id", ForeignKey("queues.id"))
-)
 
 class Worker(Base, SerializerMixin):
     __tablename__ = "workers"

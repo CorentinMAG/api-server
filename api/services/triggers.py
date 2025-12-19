@@ -1,36 +1,33 @@
-from typing import Generic, TypeVar, Protocol
 from ..models import Trigger, TransferPolicy
-from ..models import db
 from sqlalchemy import select
+from .base import BaseService
+from ..repositories import TriggerRepository
+from .parameters import GlobalParameterService
 from dtr_common.constantes import Type
 
-T = TypeVar("T")
+class TriggerService(BaseService[TriggerRepository]):
 
-class ITriggerPaginate(Protocol, Generic[T]):
-    page: int
-    per_page: int
-    pages: int
-    total: int
-    items: list[TransferPolicy]
+    def __init__(self, repository: TriggerRepository, parameters: GlobalParameterService) -> None:
+        super().__init__(repository)
+        self._parameters = parameters
 
-def get_trigger(name: str) -> Trigger:
-    stmt = select(Trigger).where(Trigger.name == name)
-    trigger = db.session.execute(stmt).scalar()
-    if trigger:
-        return trigger
-    raise ValueError(f"Trigger with name {name} doesn't exist")
+    def get_by_name(self, name: str) -> Trigger:
+        if name == "default":
+            gparams = self._parameters.get()
+            return Trigger(name = "default", polling_interval = gparams.polling_interval)
+        return self.repository.get_by_name(name)
 
-def get_paginated_policies(name: str, page: int, page_size: int) -> ITriggerPaginate:
-    stmt = (
-        select(TransferPolicy)
-        .outerjoin(Trigger)
-        .where(
-            TransferPolicy.enabled == True,
-            TransferPolicy.type == Type.PERIODICAL
+    def get_policies(self, name: str, page: int = 1, page_size: int = 100):
+        query = (
+            select(TransferPolicy)
+            .outerjoin(Trigger)
+            .where(
+                TransferPolicy.enabled == True,
+                TransferPolicy.type == Type.PERIODICAL
+            )
         )
-    )
-    if name == "default":
-        stmt = stmt.where(TransferPolicy.trigger_id.is_(None))
-    else:
-        stmt = stmt.where(Trigger.name == name)
-    return db.paginate(stmt, page = page, per_page=page_size)
+        if name == "default":
+            query = query.where(TransferPolicy.trigger_id.is_(None))
+        else:
+            query = query.where(Trigger.name == name)
+        return self.repository.get_policies(query, page, page_size)
