@@ -1,0 +1,131 @@
+stages:
+  - check
+  - test
+  - docker
+  - delivery
+
+variables:
+  DTR_VERSION: 2.3.3
+
+.configure_alpine: &configure_alpine
+  - echo "https://${AFORGE_USER}:${AFORGE_PASSWORD}@${AFORGE_HOST}/artifactory/${AFORGE_ALPINE_REPO}/main" > /etc/apk/repositories
+  - echo "https://${AFORGE_USER}:${AFORGE_PASSWORD}@${AFORGE_HOST}/artifactory/${AFORGE_ALPINE_REPO}/community" >> /etc/apk/repositories
+
+.configure_pip: &configure_pip
+  - echo "[global]" > /etc/pip.conf
+  - echo "index-url = https://${AFORGE_USER}:${AFORGE_PASSWORD}@${AFORGE_HOST}/artifactory/api/pypi/${AFORGE_PIP_REPO}/simple" >> /etc/pip.conf
+  - echo "extra-index-url = https://${AFORGE_USER}:${AFORGE_PASSWORD}@${AFORGE_HOST}/artifactory/api/pypi/${AFORGE_PIP_DTR}/simple" >> /etc/pip.conf
+  - echo "trusted-host = ${AFORGE_HOST}" >> /etc/pip.conf
+
+check:path:
+  stage: check
+  image: $AFORGE_HOST/$AFORGE_DOCKER_REGISTRY/python:3.10.13-alpine3.18
+  tags:
+  - dtr
+  script:
+  - |
+    if echo "$DTR_VERSION" | grep -q "rc"; then
+      echo "DTR_RELEASE_PATH=${DTR_VERSION%%-*}/${DTR_VERSION}" >> variables.env;
+    else
+      echo "DTR_RELEASE_PATH=${DTR_VERSION}" >> variables.env;
+    fi
+  artifacts:
+    reports:
+      dotenv: variables.env
+  rules:
+  - if: $CI_COMMIT_TAG
+
+test:migrations:
+  stage: test
+  image: $AFORGE_HOST/$AFORGE_DOCKER_REGISTRY/python:3.10.13-alpine3.18
+  services:
+  - name: $AFORGE_HOST/$AFORGE_DOCKER_REGISTRY/postgres:16.0-alpine3.18
+    alias: postgres
+  variables:
+    POSTGRES_DB: dtr
+    POSTGRES_PASSWORD: password
+    DATABASE_URL: postgresql+psycopg://postgres:password@postgres:5432/dtr
+  tags:
+  - dtr
+  before_script:
+  - *configure_alpine
+  - *configure_pip
+  - apk --no-check-certificate update
+  - apk --no-check-certificate add curl
+  - cat $AFORGE_CA_BUNDLE > /etc/ssl/certs/ca-certificates.crt
+  - pip install -r requirements.txt
+  - export DATABASE_URL=$DATABASE_URL
+  - export DTR_ENCRYPTION_KEY=azeaze
+  script:
+  - alembic revision --autogenerate -m "generate migration in gitlab pipeline"
+  - for file in $(ls alembic/versions/*.py); do sed -i '1s/^/import sqlalchemy_utils\n/' $file;done
+  - alembic upgrade head
+  - mkdir db
+  - alembic upgrade head --sql > db/dtr-${CI_COMMIT_TAG}.sql
+  artifacts:
+    paths:
+    - db/
+  rules:
+  - if: $CI_COMMIT_TAG
+  allow_failure: true
+
+build:docker:
+  image: 
+    name: ${AFORGE_HOST}/${AFORGE_DOCKER_GCR_REPO}/kaniko-project/executor:v1.9.1-debug
+    entrypoint: [""]
+  stage: docker
+  tags:
+    - dtr
+  before_script:
+    - echo "{\"auths\":{\"${AFORGE_HOST}\":{\"auth\":\"$(printf "%s:%s" "${AFORGE_USER}" "${AFORGE_PASSWORD}" | base64 | tr -d '\n')\"}}}" > /kaniko/.docker/config.json
+  script:
+    - >
+      /kaniko/executor
+      --build-arg=AFORGE_HOST
+      --build-arg=AFORGE_USER
+      --build-arg=AFORGE_PASSWORD
+      --build-arg=AFORGE_PIP_REPO
+      --build-arg=AFORGE_PIP_DTR
+      --build-arg=AFORGE_ALPINE_REPO
+      --build-arg DOCKER_TAG=${CI_COMMIT_TAG}
+      --context "${CI_PROJECT_DIR}"
+      --registry-certificate ${AFORGE_HOST}=${AFORGE_CA_BUNDLE}
+      --dockerfile "${CI_PROJECT_DIR}/Dockerfile"
+      --destination "${AFORGE_HOST}/${AFORGE_DOCKER_REPO_DTR}/${CI_PROJECT_NAME}:latest"
+      --destination "${AFORGE_HOST}/${AFORGE_DOCKER_REPO_DTR}/${CI_PROJECT_NAME}:${CI_COMMIT_TAG}"
+  rules:
+  - if: $CI_COMMIT_TAG
+
+delivery:docker:
+  stage: delivery
+  tags:
+  - dtr-dind
+  before_script:
+  - *configure_alpine
+  - apk --no-check-certificate update
+  - apk --no-check-certificate add curl
+  - cat $AFORGE_CA_BUNDLE > /etc/ssl/certs/ca-certificates.crt
+  - echo $AFORGE_PASSWORD | docker login $AFORGE_HOST --username $AFORGE_USER --password-stdin
+  script:
+  - docker pull $AFORGE_HOST/$AFORGE_DOCKER_REPO_DTR/${CI_PROJECT_NAME}:${CI_COMMIT_TAG}
+  - docker save $AFORGE_HOST/$AFORGE_DOCKER_REPO_DTR/${CI_PROJECT_NAME}:${CI_COMMIT_TAG} > ${CI_PROJECT_NAME}-${CI_COMMIT_TAG}.tar
+  - curl -u${AFORGE_POLEOS_USER}:${AFORGE_POLEOS_PASSWORD} -T ${CI_PROJECT_NAME}-${CI_COMMIT_TAG}.tar https://$AFORGE_HOST/artifactory/${AFORGE_POLEOS_GENERIC}/dtr/${DTR_RELEASE_PATH}/images/${CI_PROJECT_NAME}-${CI_COMMIT_TAG}.tar
+  rules:
+  - if: $CI_COMMIT_TAG
+
+delivery:sql:
+  stage: delivery
+  image: $AFORGE_HOST/$AFORGE_DOCKER_REGISTRY/alpine:3.18
+  tags:
+  - dtr
+  before_script:
+  - *configure_alpine
+  - apk --no-check-certificate update
+  - apk --no-check-certificate add curl
+  - cat $AFORGE_CA_BUNDLE > /etc/ssl/certs/ca-certificates.crt
+  dependencies:
+  - test:migrations
+  script:
+  - curl -u$AFORGE_POLEOS_USER:$AFORGE_POLEOS_PASSWORD -T db/dtr-${CI_COMMIT_TAG}.sql https://$AFORGE_HOST/artifactory/$AFORGE_POLEOS_GENERIC/dtr/${DTR_RELEASE_PATH}/data/dtr-${CI_COMMIT_TAG}.sql
+  rules:
+  - if: $CI_COMMIT_TAG

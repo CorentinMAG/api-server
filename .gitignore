@@ -1,0 +1,12 @@
+__pycache__
+main.py
+app.log
+*.tar.gz
+__pycache__
+.mypy_cache
+.pytest_cache/
+.ruff_cache
+datadir
+.coverage
+htmlcov/
+dtr.db

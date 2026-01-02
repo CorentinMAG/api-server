@@ -1,0 +1,33 @@
+from .base import BaseService
+from api.models import Trigger
+from api.repositories import TriggerRepository
+from api.dtr_common.schema import TriggerCreate, TriggerUpdate
+
+
+class TriggerService(BaseService[TriggerRepository]):
+
+    def __init__(self):
+        super().__init__()
+        self.parameters = BaseService._get_or_create_repository(
+            "GlobalParameterRepository"
+        )
+
+    def get_by_name(self, name: str | None) -> Trigger:
+        if name:
+            return self.repository.get_by_name(name)
+        else:
+            parameters = self.parameters.get()
+            return Trigger(polling_interval=parameters.polling_interval, name="default")
+
+    def get_by_id(self, id: int) -> Trigger:
+        return self.repository.get_by_id(id)
+
+    def create(self, schema: TriggerCreate) -> Trigger:
+        pass
+
+    def update(self, id: int, schema: TriggerUpdate) -> Trigger:
+        pass
+
+    def delete(self, id: int):
+        trigger = self.get_by_id(id)
+        self.repository.delete(trigger)
