@@ -23,7 +23,7 @@ class State(BaseModel, SerializerMixin):
 
 
 @event.listens_for(State, "after_insert")
-def update_transfer_request_current_state(
+def update_transfer_request_current_state_on_insert(
     mapper: any, connection: Connection, target: State
 ):
     """
@@ -35,4 +35,30 @@ def update_transfer_request_current_state(
         TransferRequest.__table__.update()
         .where(TransferRequest.id == target.request_id)
         .values(current_state_id=target.id)
+    )
+
+
+@event.listens_for(State, "after_delete")
+def update_transfer_request_current_state_on_delete(
+    mapper: any, connection: Connection, target: State
+):
+    """
+    Automatically update the parent TransferRequest's current_state when a State is deleted
+    """
+    from .request import TransferRequest
+    from sqlalchemy import select, desc
+
+    # Find the latest state for the request, if any
+    latest_state_id = connection.execute(
+        select(State.id)
+        .where(State.request_id == target.request_id)
+        .order_by(desc(State.created_at))
+        .limit(1)
+    ).scalar()
+
+    # Update the TransferRequest's current_state_id
+    connection.execute(
+        TransferRequest.__table__.update()
+        .where(TransferRequest.id == target.request_id)
+        .values(current_state_id=latest_state_id)
     )

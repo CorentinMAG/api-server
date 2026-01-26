@@ -3,7 +3,7 @@ from api.models import GlobalParameters
 from .base import BaseRepository
 
 
-class GlobalParameterRepository(BaseRepository[GlobalParameters]):
+class GlobalParametersRepository(BaseRepository[GlobalParameters]):
 
     def get(self) -> GlobalParameters | None:
         query = select(GlobalParameters).limit(1)

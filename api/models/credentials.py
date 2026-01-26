@@ -28,10 +28,10 @@ class Credentials(BaseModel, SerializerMixin):
 
     # one to one relationship
     target_id: Mapped[int | None] = mapped_column(
-        ForeignKey("targets.id"), unique=True, index=True
+        ForeignKey("targets.id", ondelete="CASCADE"), unique=True, index=True
     )
     server_id: Mapped[int | None] = mapped_column(
-        ForeignKey("notification_servers.id"),
+        ForeignKey("notification_servers.id", ondelete="CASCADE"),
         unique=True,
         index=True,
     )

@@ -27,7 +27,7 @@ class TransferPolicyService(BaseService[TransferPolicyRepository]):
         super().__init__()
         self.target_repository = self._get_or_create_repository("TargetRepository")
         self.parameters_repository = self._get_or_create_repository(
-            "GlobalParameterRepository"
+            "GlobalParametersRepository"
         )
         self.server_repository = self._get_or_create_repository(
             "NotificationServerRepository"

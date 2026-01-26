@@ -54,4 +54,6 @@ class Notification(BaseModel, SerializerMixin):
     parameters: Mapped[list[NotificationParameter]] = relationship(
         cascade="all, delete-orphan", lazy="selectin"
     )
-    server: Mapped[NotificationServer] = relationship()
+    server: Mapped[NotificationServer] = relationship(
+        back_populates="notifications", lazy="joined"
+    )

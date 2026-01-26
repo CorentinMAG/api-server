@@ -1,5 +1,5 @@
 from .base import BaseService
-from api.repositories import GlobalParameterRepository
+from api.repositories import GlobalParametersRepository
 from api.models import GlobalParameters
 from api.dtr_common.constantes import Mode
 from api.dtr_common.schema import (
@@ -8,7 +8,7 @@ from api.dtr_common.schema import (
 )
 
 
-class GlobalParameterService(BaseService[GlobalParameterRepository]):
+class GlobalParametersService(BaseService[GlobalParametersRepository]):
 
     def get(self) -> GlobalParameters | None:
         return self.repository.get()

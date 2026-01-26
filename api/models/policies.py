@@ -61,14 +61,12 @@ class DestinationPolicy(BaseModel, SerializerMixin):
     path_from_filename_expression: Mapped[list[str] | None] = mapped_column(JSON)
 
     dest_id: Mapped[int] = mapped_column(ForeignKey("targets.id", ondelete="CASCADE"))
-    policy_id: Mapped[int] = mapped_column(
-        ForeignKey("transfer_policies.id", ondelete="CASCADE")
+    policy_id: Mapped[int | None] = mapped_column(
+        ForeignKey("transfer_policies.id", ondelete="RESTRICT")
     )
 
     target: Mapped[Target] = relationship(lazy="joined")
-    notifications: Mapped[list[Notification]] = relationship(
-        cascade="all, delete-orphan"
-    )
+    notifications: Mapped[list[Notification]] = relationship(passive_deletes=True)
 
 
 class TransferPolicy(BaseModel, SerializerMixin):
@@ -90,11 +88,15 @@ class TransferPolicy(BaseModel, SerializerMixin):
     enabled: Mapped[bool] = mapped_column(default=True)
     type: Mapped[Type]
 
-    src_id: Mapped[int] = mapped_column(
-        ForeignKey("source_policies.id", ondelete="CASCADE"), unique=True
+    src_id: Mapped[int | None] = mapped_column(
+        ForeignKey("source_policies.id", ondelete="RESTRICT"), unique=True
     )
-    queue_id: Mapped[int] = mapped_column(ForeignKey("queues.id"))
-    trigger_id: Mapped[int | None] = mapped_column(ForeignKey("triggers.id"))
+    queue_id: Mapped[int | None] = mapped_column(
+        ForeignKey("queues.id", ondelete="RESTRICT")
+    )
+    trigger_id: Mapped[int | None] = mapped_column(
+        ForeignKey("triggers.id", ondelete="RESTRICT")
+    )
 
     src: Mapped[SourcePolicy] = relationship(
         lazy="joined",

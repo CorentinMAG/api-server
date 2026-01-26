@@ -22,9 +22,7 @@ class Target(BaseModel, SerializerMixin):
     protocol: Mapped[Protocol]
     port: Mapped[int]
     host: Mapped[str]
-    credentials: Mapped[Credentials] = relationship(
-        lazy="joined", cascade="all, delete-orphan"
-    )
+    credentials: Mapped[Credentials] = relationship(lazy="joined", passive_deletes=True)
     parameters: Mapped[TargetParameters] = relationship(
-        lazy="joined", cascade="all, delete-orphan"
+        lazy="joined", passive_deletes=True
     )

@@ -9,6 +9,7 @@ from .base import BaseModel
 
 if TYPE_CHECKING:
     from .credentials import Credentials
+    from .notifications import Notification
 
 
 class NotificationServer(BaseModel, SerializerMixin):
@@ -21,6 +22,7 @@ class NotificationServer(BaseModel, SerializerMixin):
     host: Mapped[str]
     port: Mapped[int]
     timeout: Mapped[int] = mapped_column(default=40)
-    credentials: Mapped[Credentials] = relationship(
-        cascade="all, delete-orphan", lazy="joined"
+    credentials: Mapped[Credentials] = relationship(passive_deletes=True, lazy="joined")
+    notifications: Mapped[list[Notification]] = relationship(
+        back_populates="server", passive_deletes=True
     )

@@ -77,9 +77,3 @@ class TargetParameters(BaseModel, SerializerMixin):
     target_id: Mapped[int] = mapped_column(
         ForeignKey("targets.id", ondelete="CASCADE"), unique=True, index=True
     )
-
-    def to_dict(self) -> dict[str, bool]:
-        return {
-            "use_ssl": self.use_ssl,
-            "verify": self.verify,
-        }
