@@ -1,4 +1,4 @@
-FROM aforge-frdr.biz.nstd.fr.airbusds.corp/gw_registry-1_docker_io_4dev/python:3.10.13-alpine3.18
+FROM aforge-frdr.biz.nstd.fr.airbusds.corp/gw_registry-1_docker_io_4dev/python:3.10.13-alpine3.18 AS builder
 
 ARG AFORGE_HOST \
     AFORGE_PASSWORD \
@@ -7,6 +7,24 @@ ARG AFORGE_HOST \
 	AFORGE_ALPINE_REPO \
     DOCKER_TAG \
     AFORGE_PIP_DTR
+
+WORKDIR /builder
+
+ENV PIP_CONFIG_FILE=/etc/pip.conf
+
+RUN echo "[global]" > /etc/pip.conf && \
+	echo "index-url = https://${AFORGE_USER}:${AFORGE_PASSWORD}@${AFORGE_HOST}/artifactory/api/pypi/${AFORGE_PIP_REPO}/simple" >> /etc/pip.conf && \
+    echo "extra-index-url = https://${AFORGE_USER}:${AFORGE_PASSWORD}@${AFORGE_HOST}/artifactory/api/pypi/${AFORGE_PIP_DTR}/simple" >> /etc/pip.conf && \ 
+	echo "cert = ${CA_BUNDLE_PATH}" >> /etc/pip.conf
+
+COPY requirements.txt .
+
+RUN pip3 install --no-cache-dir -r requirements.txt \
+    && rm /etc/pip.conf
+
+COPY ./ ./app
+
+FROM aforge-frdr.biz.nstd.fr.airbusds.corp/gw_registry-1_docker_io_4dev/python:3.10.13-alpine3.18
 
 ENV DTR_DB_NAME=dtr \
     DTR_DB_USER=** \
@@ -18,33 +36,16 @@ ENV DTR_DB_NAME=dtr \
     DTR_DB_CREATE=false \
     DTR_LOG_LEVEL=INFO
 
-WORKDIR /opt/api
-
-ENV PIP_CONFIG_FILE=/etc/pip.conf
-
-RUN echo "https://${AFORGE_USER}:${AFORGE_PASSWORD}@$AFORGE_HOST/artifactory/${AFORGE_ALPINE_REPO}/main" > /etc/apk/repositories && \
-    echo "https://${AFORGE_USER}:${AFORGE_PASSWORD}@$AFORGE_HOST/artifactory/${AFORGE_ALPINE_REPO}/community" >> /etc/apk/repositories
-
-RUN apk --no-check-certificate update && \
-    apk --no-check-certificate add \
-    postgresql-dev \
-    gcc \
-    python3-dev \
-    musl-dev \
-    curl \
-    netcat-openbsd && \
-    rm /etc/apk/repositories
-
-RUN echo "[global]" > /etc/pip.conf && \
-	echo "index-url = https://${AFORGE_USER}:${AFORGE_PASSWORD}@${AFORGE_HOST}/artifactory/api/pypi/${AFORGE_PIP_REPO}/simple" >> /etc/pip.conf && \
-    echo "extra-index-url = https://${AFORGE_USER}:${AFORGE_PASSWORD}@${AFORGE_HOST}/artifactory/api/pypi/${AFORGE_PIP_DTR}/simple" >> /etc/pip.conf && \ 
-	echo "trusted-host = ${AFORGE_HOST}" >> /etc/pip.conf
-
-COPY ./ ./
-
-RUN pip3 install --no-cache-dir -r requirements.txt && rm /etc/pip.conf
-RUN chmod -R +x ./scripts
+RUN addgroup -S dtrgroup \
+    && adduser -S dtruser -G dtrgroup
+WORKDIR /app
+RUN chown dtruser:dtrgroup /app
+COPY --from=builder /usr/local/lib/python3.10/site-packages /usr/local/lib/python3.10/site-packages
+COPY --from=builder /usr/local/bin /usr/local/bin
+COPY --chown=dtruser:dtrgroup --from=builder /builder/app/ /app
+USER dtruser
+RUN chmod +x ./scripts/docker-entrypoint.sh
 
 EXPOSE 80
 
-ENTRYPOINT ["/opt/api/scripts/docker-entrypoint.sh"]
+ENTRYPOINT ["/app/scripts/docker-entrypoint.sh"]

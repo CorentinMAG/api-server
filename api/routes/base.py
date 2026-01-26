@@ -57,10 +57,12 @@ class BaseAPI(MethodView, ABC, Generic[T]):
 
     @classmethod
     def register(
-        cls, name: str, url_prefix: str | None, routes: list[str]
+        cls,
+        name: str,
+        url_prefix: str | None,
+        route: str,
+        defaults: dict[str, any] | None = None,
     ) -> Blueprint:
         bp = Blueprint(name, __name__, url_prefix=url_prefix)
         view = cls.as_view(name)
-        for route in routes:
-            bp.add_url_rule(route, view_func=view)
-        return bp
+        bp.add_url_rule(route, view_func=view, defaults=defaults)

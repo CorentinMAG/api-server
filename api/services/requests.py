@@ -1,10 +1,11 @@
-# from __future__ import annotations
+from __future__ import annotations
+from .base import BaseService
+from api.repositories import TransferRequestRepository
 
-# import datetime
-# import uuid
-# from typing import Optional, TypedDict, cast
-# from urllib.parse import urlparse
-# import logging
+
+class TransferRequestService(BaseService[TransferRequestRepository]):
+    pass
+
 
 # from dtr_common.constantes import State as StateEnum, SubState as SubStateEnum, Type
 # from dtr_common.schema import CommandedTransferRequestSchema, TriggerTransferRequestSchema, PeriodicalTransferRequestSchema

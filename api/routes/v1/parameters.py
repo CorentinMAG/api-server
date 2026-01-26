@@ -35,4 +35,4 @@ class GlobalParameterAPI(BaseAPI[GlobalParameterService]):
         return params.to_dict()
 
 
-bp = GlobalParameterAPI.register("parameters", url_prefix="parameters", routes=["/"])
+bp = GlobalParameterAPI.register("parameters", url_prefix="parameters", route="/")

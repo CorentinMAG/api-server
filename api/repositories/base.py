@@ -37,7 +37,6 @@ class BaseRepository(Generic[ModelType], ABC):
 
     def get_by_id(self, id: int) -> ModelType:
         obj = self.session.get(self.model, id)
-        print(obj)
         if not obj:
             raise NotFoundException(f"{self.model.__name__} with id {id} not found")
         return obj

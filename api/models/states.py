@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 from api.dtr_common.constantes import State as StateEnum, SubState as SubStateEnum
-from sqlalchemy import ForeignKey
+from sqlalchemy import ForeignKey, event, Connection
 from sqlalchemy.orm import Mapped, mapped_column
 from sqlalchemy_serializer import SerializerMixin
 
@@ -19,4 +19,20 @@ class State(BaseModel, SerializerMixin):
 
     request_id: Mapped[int] = mapped_column(
         ForeignKey("transfer_requests.id", ondelete="CASCADE"), index=True
+    )
+
+
+@event.listens_for(State, "after_insert")
+def update_transfer_request_current_state(
+    mapper: any, connection: Connection, target: State
+):
+    """
+    Automatically update the parent TransferRequest's current_state when a new State is inserted
+    """
+    from .request import TransferRequest
+
+    connection.execute(
+        TransferRequest.__table__.update()
+        .where(TransferRequest.id == target.request_id)
+        .values(current_state_id=target.id)
     )

@@ -34,7 +34,7 @@ class TriggerAPI(BaseAPI[TriggerService]):
         return trigger.to_dict()
 
 
-TriggerAPI.register("triggers", url_prefix="triggers", routes=["/", "/<int:id>"])
+TriggerAPI.register("triggers", url_prefix="triggers", route="/", defaults={"id": None})
 
 
 @check_offline_mode()

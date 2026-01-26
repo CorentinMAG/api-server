@@ -23,10 +23,11 @@ class TriggerService(BaseService[TriggerRepository]):
         return self.repository.get_by_id(id)
 
     def create(self, schema: TriggerCreate) -> Trigger:
-        pass
+        return self.repository.create(schema)
 
     def update(self, id: int, schema: TriggerUpdate) -> Trigger:
-        pass
+        trigger = self.get_by_id(id)
+        return self.repository.update(id, schema.model_dump())
 
     def delete(self, id: int):
         trigger = self.get_by_id(id)

@@ -5,6 +5,7 @@ from .trigger import TriggerService
 from .worker import WorkerService
 from .queue import QueueService
 from .servers import NotificationServerService
+from .requests import TransferRequestService
 
 
 DTR_SERVICES = {
@@ -16,4 +17,5 @@ DTR_SERVICES = {
     "TriggerService": TriggerService,
     "QueueService": QueueService,
     "NotificationServerService": NotificationServerService,
+    "TransferRequestService": TransferRequestService,
 }

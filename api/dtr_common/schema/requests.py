@@ -23,6 +23,14 @@ class CommandedTransferRequestSchema(StrictBaseModel):
     timestamp: datetime.datetime | None = None
 
 
+class TransferRequestCreate(StrictBaseModel):
+    filename: str
+
+
+class TransferRequestUpdate(StrictBaseModel):
+    pass
+
+
 class TransferRequestSchema(StrictBaseModel):
     id: int
     filename: str

@@ -40,5 +40,5 @@ class NotificationServerAPI(BaseAPI[NotificationServerService]):
 
 
 bp = NotificationServerAPI.register(
-    "servers", url_prefix="servers", routes=["/", "/<int:id>"]
+    "servers", url_prefix="servers", route="/", defaults={"id": None}
 )

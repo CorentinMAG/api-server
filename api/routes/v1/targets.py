@@ -39,4 +39,6 @@ class TargetAPI(BaseAPI[TargetService]):
         return target.to_dict()
 
 
-bp = TargetAPI.register("targets", url_prefix="targets", routes=["/<int:id>", "/"])
+bp = TargetAPI.register(
+    "targets", url_prefix="targets", routes="/", defaults={"id": None}
+)

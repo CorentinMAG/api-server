@@ -37,4 +37,4 @@ class QueueAPI(BaseAPI[QueueService]):
         return queue.to_dict()
 
 
-bp = QueueAPI.register("queues", url_prefix="queues", routes=["/<int:id>", "/"])
+bp = QueueAPI.register("queues", url_prefix="queues", route="/", defaults={"id": None})

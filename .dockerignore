@@ -1,3 +1,14 @@
-__pycache__
+**/__pycache__/
 .ruff_cache
 .mypy_cache
+.gitignore
+.gitlab-ci.yml
+.pre-commit-config.yaml
+alembic.ini
+alembic/
+tests/
+dtr.db
+*.ps1
+pyproject.toml
+pytest.ini
+requirements-dev.txt

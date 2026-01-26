@@ -40,5 +40,5 @@ class TransferPolicyAPI(BaseAPI[TransferPolicyService]):
 
 
 bp = TransferPolicyAPI.register(
-    "policies", url_prefix="policies", routes=["/", "/<int:id>"]
+    "policies", url_prefix="policies", route="/", defaults={"id": None}
 )
