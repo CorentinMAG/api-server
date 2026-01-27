@@ -35,7 +35,14 @@ class WorkerAPI(BaseAPI[WorkerService]):
         self.service.commit()
 
 
-WorkerAPI.register("workers", url_prefix="workers", route="/", defaults={"id": None})
+WorkerAPI.register(
+    "workers",
+    url_prefix="workers",
+    rules=[
+        {"route": "/", "defaults": {"id": None}, "methods": ["GET", "POST"]},
+        {"route": "/<int:id>", "methods": ["GET", "PUT", "DELETE"]},
+    ],
+)
 
 
 # @bp.route("/configuration/worker", methods=["GET"])

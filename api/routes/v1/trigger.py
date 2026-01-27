@@ -34,7 +34,14 @@ class TriggerAPI(BaseAPI[TriggerService]):
         return trigger.to_dict()
 
 
-TriggerAPI.register("triggers", url_prefix="triggers", route="/", defaults={"id": None})
+bp = TriggerAPI.register(
+    "triggers",
+    url_prefix="triggers",
+    rules=[
+        {"route": "/", "defaults": {"id": None}, "methods": ["GET", "POST"]},
+        {"route": "/<int:id>", "methods": ["GET", "PUT", "DELETE"]},
+    ],
+)
 
 
 @check_offline_mode()

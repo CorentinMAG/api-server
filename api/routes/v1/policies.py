@@ -40,5 +40,10 @@ class TransferPolicyAPI(BaseAPI[TransferPolicyService]):
 
 
 bp = TransferPolicyAPI.register(
-    "policies", url_prefix="policies", route="/", defaults={"id": None}
+    "policies",
+    url_prefix="policies",
+    rules=[
+        {"route": "/", "defaults": {"id": None}, "methods": ["GET", "POST"]},
+        {"route": "/<int:id>", "methods": ["GET", "PUT", "DELETE"]},
+    ],
 )

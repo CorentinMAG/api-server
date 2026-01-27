@@ -40,5 +40,10 @@ class TargetAPI(BaseAPI[TargetService]):
 
 
 bp = TargetAPI.register(
-    "targets", url_prefix="targets", routes="/", defaults={"id": None}
+    "targets",
+    url_prefix="targets",
+    rules=[
+        {"route": "/", "defaults": {"id": None}, "methods": ["GET", "POST"]},
+        {"route": "/<int:id>", "methods": ["GET", "PUT", "DELETE"]},
+    ],
 )

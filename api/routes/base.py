@@ -1,11 +1,17 @@
 from flask.views import MethodView
-from typing import Generic, TypeVar
+from typing import Generic, TypeVar, TypedDict
 from api.services.base import BaseService
 from api.services import DTR_SERVICES
 from flask import Blueprint
 from abc import ABC, abstractmethod
 
 T = TypeVar("T")
+
+
+class RouteRule(TypedDict):
+    route: str
+    methods: list[str]
+    defaults: dict[str, any] | None
 
 
 class BaseAPI(MethodView, ABC, Generic[T]):
@@ -57,12 +63,15 @@ class BaseAPI(MethodView, ABC, Generic[T]):
 
     @classmethod
     def register(
-        cls,
-        name: str,
-        url_prefix: str | None,
-        route: str,
-        defaults: dict[str, any] | None = None,
+        cls, name: str, url_prefix: str | None, rules: list[RouteRule]
     ) -> Blueprint:
         bp = Blueprint(name, __name__, url_prefix=url_prefix)
         view = cls.as_view(name)
-        bp.add_url_rule(route, view_func=view, defaults=defaults)
+
+        for route in rules:
+            bp.add_url_rule(
+                route["route"],
+                view_func=view,
+                methods=route.get("methods", ["GET", "POST", "PUT", "DELETE"]),
+                defaults=route.get("defaults"),
+            )

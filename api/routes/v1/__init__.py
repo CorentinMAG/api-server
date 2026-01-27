@@ -24,7 +24,6 @@ v1 = Blueprint("api_v1", __name__)
 v1_no_check = Blueprint("no_check", __name__)
 v1_check = Blueprint("check", __name__)
 v1_check.before_request(check_offline_mode_v2)
-v1_check.before_request(check_server_configured)
 
 no_check_bps = [
     # configure.bp

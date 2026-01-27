@@ -1,4 +1,4 @@
-from flask import current_app
+from flask import current_app, request
 from functools import wraps
 from api.app import DTRApp
 from typing import cast
@@ -28,7 +28,7 @@ def check_offline_mode_v2(
     params = service.get()
     if params:
         is_offline = params.mode
-        if is_offline == Mode.OFFLINE:
+        if is_offline == Mode.OFFLINE and request.method == "GET":
             if offline_response:
                 return offline_response, status_code
             return {
@@ -36,6 +36,7 @@ def check_offline_mode_v2(
                 "message": "API is currently offline",
                 "error": "Service temporarily unavailable",
             }, status_code
+    return {"message": "DTR is not configured yet"}, 500
 
 
 def check_offline_mode(offline_response: dict | None = None, status_code: int = 404):
