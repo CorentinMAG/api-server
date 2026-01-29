@@ -1,15 +1,11 @@
 from sqlalchemy.orm import joinedload
-from flask_sqlalchemy import SQLAlchemy
 from sqlalchemy import select
 from .base import BaseRepository
-from ..models import NotificationServer
-from ..errors import NotFoundError
+from api.models import NotificationServer
+from api.exception import NotFoundException
 
 class NotificationServerRepository(BaseRepository[NotificationServer]):
-    """repository for target operations"""
-
-    def __init__(self, db: SQLAlchemy):
-        super().__init__(NotificationServer, db)
+    """repository for notification servers"""
 
     def get_by_name(self, name: str) -> NotificationServer:
         query = (
@@ -21,16 +17,26 @@ class NotificationServerRepository(BaseRepository[NotificationServer]):
         )
         obj = self.session.scalar(query)
         if not obj:
-            raise NotFoundError(f"NotificationServer with name {name} not found")
+            raise NotFoundException(f"NotificationServer with name {name} not found")
         return obj
     
-    def get_all_with_relations(self, skip: int = 0, limit: int = 0) -> list[NotificationServer]:
+    def get_by_type(self, server_type: str, skip: int = 0, limit: int = 100) -> list[NotificationServer]:
+        query = (
+            select(NotificationServer)
+            .where(NotificationServer.type == server_type)
+            .offset(skip)
+            .limit(limit)
+        )
+        return list(self.session.scalars(query).unique().all())
+    
+    def get_with_relations(self, skip: int = 0, limit: int = 100, filters: dict[str, any] | None = None) -> list[NotificationServer]:
         query = (
             select(NotificationServer)
             .options(
                 joinedload(NotificationServer.credentials),
             )
-            .offset(skip)
-            .limit(limit)
         )
+        if filters:
+            query = self._filter(query, filters)
+        query = query.offset(skip).limit(limit)
         return list(self.session.scalars(query).unique().all())

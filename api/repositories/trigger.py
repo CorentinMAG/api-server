@@ -1,9 +1,9 @@
 from .base import BaseRepository
-from ..models import Trigger, TransferPolicy
-from ..errors import NotFoundError
+from api.models import Trigger, TransferPolicy
+from api.exception import NotFoundException
 from sqlalchemy import select, func, Select
+from sqlalchemy.orm import selectinload
 from typing import NamedTuple
-from flask_sqlalchemy import SQLAlchemy
 
 class ITriggerPaginate(NamedTuple):
     page: int
@@ -13,8 +13,6 @@ class ITriggerPaginate(NamedTuple):
     items: list[TransferPolicy]
 
 class TriggerRepository(BaseRepository[Trigger]):
-    def __init__(self, db: SQLAlchemy):
-        super().__init__(Trigger, db)
 
     def get_by_name(self, name: str) -> Trigger:
         query = (
@@ -23,21 +21,23 @@ class TriggerRepository(BaseRepository[Trigger]):
         )
         obj = self.session.scalar(query)
         if not obj:
-            raise NotFoundError(f"Trigger with name {name} not found")
+            raise NotFoundException(f"Trigger with name {name} not found")
+        return obj
+    
+    def get_by_id(self, id: int) -> Trigger:
+        query = (
+            select(Trigger)
+            .where(Trigger.id == id)
+            .options(selectinload(Trigger.policies))
+        )
+        obj = self.session.scalar(query)
+        if not obj:
+            raise NotFoundException(f"Trigger with id {id} not found")
         return obj
 
-    def get_policies(self, query: Select, page: int = 1, page_size: int = 100) -> ITriggerPaginate:
-        total = self.session.scalar(select(func.count()).select_from(query.subquery()))
-        pages = 1 if total < page_size else total // page_size  
-        items: list[TransferPolicy] = self.session.scalars(
-            query
-            .offset((page - 1) * page_size)
-            .limit(page_size)
-        ).all()
-        return ITriggerPaginate(
-            page=page, 
-            per_page=page_size, 
-            pages=pages, 
-            total = total, 
-            items = items
-        )
+    def get_with_relations(self, skip: int = 0, limit: int = 100, filters: dict[str, any] | None = None) -> list[Trigger]:
+        query = select(Trigger)
+        if filters:
+            self._filter(query, filters)
+        query = query.offset(skip).limit(limit)
+        return list(self.session.scalars(query).unique().all())

@@ -4,16 +4,17 @@ import os
 
 class Config:
     """Base configuration"""
-    API_VERSION = os.environ.get("DTR_API_VERSION", "0.0.0-dev")
+
+    API_VERSION = os.environ.get("DTR_API_SERVER_VERSION")
     SYSTEM_NAME = "DTR"
-    SYSTEM_VERSION = os.environ.get("DTR_VERSION", "0.0.0-dev")
+    SYSTEM_VERSION = os.environ.get("DTR_VERSION")
 
     LOG_LEVEL = os.environ.get("DTR_LOG_LEVEL", "INFO")
 
     DEBUG = False
     TESTING = False
 
-    # Databse configuration
+    # Database configuration
     DB_USER = os.environ.get("DTR_DB_USER", "dtruser")
     DB_PASSWORD = os.environ.get("DTR_DB_PASSWORD")
     DB_NAME = os.environ.get("DTR_DB_NAME", "dtr")
@@ -21,7 +22,9 @@ class Config:
     DB_PORT = int(os.environ.get("DTR_DB_PORT", 5432))
     CREATE_DB = os.environ.get("DTR_DB_CREATE", "false").lower() == "true"
     DATABASE_URL = (
-        f"postgresql+psycopg://{DB_USER}:{DB_PASSWORD}@{DB_HOST}:{DB_PORT}/{DB_NAME}" if DB_PASSWORD else None
+        f"postgresql+psycopg://{DB_USER}:{DB_PASSWORD}@{DB_HOST}:{DB_PORT}/{DB_NAME}" 
+        if DB_PASSWORD 
+        else None
     )
 
     SQLALCHEMY_ENGINE_OPTIONS = {
@@ -31,10 +34,11 @@ class Config:
         "echo": False
     }
 
-    ENCRYPTION_KEY = os.environ.get("DTR_ENCRYPTION_KEY", "A9ZA3v0x5lcvyXqaGTWr")
+    ENCRYPTION_KEY = os.environ.get("DTR_ENCRYPTION_KEY")
 
 class DevelopmentConfig(Config):
-    """Developmenet configuration"""
+    """Development configuration"""
+    
     DEBUG = True
     TESTING = False
     SQLALCHEMY_ENGINE_OPTIONS = {
@@ -43,6 +47,7 @@ class DevelopmentConfig(Config):
         "pool_timeout": 30,
         "echo": True
     }
+    DATABASE_URL = "sqlite+pysqlite:///dtr.db"
 
 class ProductionConfig(Config):
     """Production configuration"""
@@ -54,20 +59,30 @@ class TestConfiguration(Config):
     TESTING = True
     DEBUG = False
 
-config_by_name = {
-    "DEV": DevelopmentConfig,
-    "TEST": TestConfiguration,
-    "PROD": ProductionConfig,
-    "DEFAULT": DevelopmentConfig
+    API_VERSION="api-test"
+    SYSTEM_VERSION="api-test"
+    DTR_DB_PASSWORD="azerty"
+
+    SQLALCHEMY_ENGINE_OPTIONS = {
+        "pool_size": 15,
+        "max_overflow": 25,
+        "pool_timeout": 30,
+        "echo": True
+    }
+    DATABASE_URL = "sqlite+pysqlite:///dtr.db"
+
+CONFIG = {
+    "development": DevelopmentConfig,
+    "testing": TestConfiguration,
+    "production": ProductionConfig,
+    "default": DevelopmentConfig
 }
 
 ENCRYPTION_KEY = Config.ENCRYPTION_KEY
 
-def get_config(name: str | None = None) -> Config:
-    """get configuration class by name"""
-    if name is None:
-        name = os.environ.get("DTR_ENVIRONMENT", "DEV").upper()
-    
-    # raise an error if the environement doesn't exist
-    # prevent the application from booting
-    return config_by_name[name]
+def create_config(env: str | None = None) -> Config:
+    """get configuration based on environment variable"""
+    if env is None:
+        env = os.environ.get("DTR_ENV", "default")
+    config_class = CONFIG.get(env.lower(), CONFIG["default"])
+    return config_class

@@ -1,33 +1,34 @@
-from ..models import Trigger, TransferPolicy
-from sqlalchemy import select
 from .base import BaseService
-from ..repositories import TriggerRepository
-from .parameters import GlobalParameterService
-from dtr_common.constantes import Type
+from api.models import Trigger
+from api.repositories import TriggerRepository
+from dtr_common.schema import TriggerCreate, TriggerUpdate
+
 
 class TriggerService(BaseService[TriggerRepository]):
 
-    def __init__(self, repository: TriggerRepository, parameters: GlobalParameterService) -> None:
-        super().__init__(repository)
-        self._parameters = parameters
-
-    def get_by_name(self, name: str) -> Trigger:
-        if name == "default":
-            gparams = self._parameters.get()
-            return Trigger(name = "default", polling_interval = gparams.polling_interval)
-        return self.repository.get_by_name(name)
-
-    def get_policies(self, name: str, page: int = 1, page_size: int = 100):
-        query = (
-            select(TransferPolicy)
-            .outerjoin(Trigger)
-            .where(
-                TransferPolicy.enabled == True,
-                TransferPolicy.type == Type.PERIODICAL
-            )
+    def __init__(self):
+        super().__init__()
+        self.parameters = BaseService._get_or_create_repository(
+            "GlobalParametersRepository"
         )
-        if name == "default":
-            query = query.where(TransferPolicy.trigger_id.is_(None))
+
+    def get_by_name(self, name: str | None) -> Trigger:
+        if name:
+            return self.repository.get_by_name(name)
         else:
-            query = query.where(Trigger.name == name)
-        return self.repository.get_policies(query, page, page_size)
+            parameters = self.parameters.get()
+            return Trigger(polling_interval=parameters.polling_interval, name="default")
+
+    def get_by_id(self, id: int) -> Trigger:
+        return self.repository.get_by_id(id)
+
+    def create(self, schema: TriggerCreate) -> Trigger:
+        return self.repository.create(schema)
+
+    def update(self, id: int, schema: TriggerUpdate) -> Trigger:
+        trigger = self.get_by_id(id)
+        return self.repository.update(id, schema.model_dump())
+
+    def delete(self, id: int):
+        trigger = self.get_by_id(id)
+        self.repository.delete(trigger)

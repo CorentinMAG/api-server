@@ -1,22 +1,21 @@
 from __future__ import annotations
 from flask import request
-from api.utils.utils import custom_app
-from .app import DTRFlask
+from api.utils import custom_app
 from pydantic import ValidationError
 from sqlalchemy.exc import SQLAlchemyError
 from werkzeug.exceptions import HTTPException, NotFound
-from .errors import AppGlobalParametersError
-from urllib.parse import urlparse
+from .exception import AppException
+from typing import TYPE_CHECKING
 
-def register_handlers(app: DTRFlask) -> None:
-    register_error_handlers(app)
+if TYPE_CHECKING:
+    from api.app import DTRApp
 
-def register_error_handlers(app: DTRFlask) -> None:
+def register_error_handlers(app: DTRApp) -> None:
     app.register_error_handler(HTTPException, handle_http_exception)
     app.register_error_handler(NotFound, handle_not_found_error)
     app.register_error_handler(SQLAlchemyError, handle_sql_exception)
-    app.register_error_handler(AppGlobalParametersError, handle_global_parameters_error)
     app.register_error_handler(ValidationError, handle_validation_error)
+    app.register_error_handler(AppException, handle_app_exception)
     app.register_error_handler(Exception, handle_exception)
 
 
@@ -38,17 +37,10 @@ def handle_validation_error(e: ValidationError):
     custom_app().logger.error("Validation error occurred: %s", e.errors())
     return e.json(), 500
 
-def handle_global_parameters_error(e: AppGlobalParametersError):
-    custom_app().logger.warning(e.message)
-    path = urlparse(request.url).path
-
-    if path.endswith("trigger"):
-        return {"configuration": {}, "pagination": {"page": 1, "per_page": 0, "total": 0, "pages": 1}, "policies": []}, 404
-    elif path.endswith("worker") or path.endswith("notifications"):
-        return {"request": {}}
-    return "", 404
+def handle_app_exception(e: AppException):
+    return {"error": e.message}, e.status_code
 
 def handle_exception(e: Exception):
     error_name = e.__class__.__name__
-    custom_app().logger.error("Unhandled exception occurred (%s): %s", error_name, str(e), exc_info=True)
+    custom_app().logger.error("Unhandled exception occurred (%s): %s", error_name, str(e))
     return {"error": str(e)}, 500

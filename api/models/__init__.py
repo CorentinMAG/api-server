@@ -1,16 +1,13 @@
 from __future__ import annotations
 
 from .credentials import Credentials
+from .notifications import Notification, NotificationParameter, KafkaParameters
 from .parameters import (
     GlobalParameters,
-    KafkaTopicParameters,
-    ServerParameters,
     TargetParameters,
-    TransferPolicyParameters,
+    TransferPolicyParameters
 )
-from flask_sqlalchemy import SQLAlchemy
-from .base import Base
-from .policies import DestinationPolicy, SourcePolicy, TransferPolicy
+from .policies import SourcePolicy, DestinationPolicy, TransferPolicy
 from .queue import Queue
 from .request import TransferRequest
 from .server import NotificationServer
@@ -19,24 +16,13 @@ from .target import Target
 from .trigger import Trigger
 from .worker import Worker
 
-__all__ = [
-    "NotificationServer",
-    "Queue",
-    "Target",
-    "Credentials",
-    "TransferPolicy",
-    "SourcePolicy",
-    "DestinationPolicy",
-    "GlobalParameters",
-    "TransferPolicyParameters",
-    "KafkaTopicParameters",
-    "PeriodicalParameters",
-    "TransferRequest",
-    "State",
-    "ServerParameters",
-    "TargetParameters",
-    "Trigger",
-    "Worker"
-]
-
-db = SQLAlchemy(model_class=Base)
+DTR_MODELS = {
+    "NotificationServer": NotificationServer,
+    "Trigger": Trigger,
+    "Worker": Worker,
+    "Target": Target,
+    "GlobalParameters": GlobalParameters,
+    "TransferPolicy": TransferPolicy,
+    "TransferRequest": TransferRequest,
+    "Queue": Queue
+}

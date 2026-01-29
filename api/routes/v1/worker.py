@@ -1,41 +1,91 @@
 from __future__ import annotations
-from flask import Blueprint, request
+from flask import request
 
-from api.utils.utils import check_gparams_before_request, custom_app
-
-bp = Blueprint("worker", __name__)
-
-@bp.before_request
-def handler():
-    check_gparams_before_request()
-
-@bp.route("/configuration/worker", methods=["GET"])
-def worker():
-    """
-    Get next available transfer request for a worker to process
-
-    Args:
-      None explicitly. Query parameters are taken from `request.args`:
-        size (int, optional): worker size
-        id   (str, optional): worker identifier or default
-    Returns:
-      flask.Response: A JSON response containing:
-        request (dict): JSON representation of the TransferRequest object
-    """
-    app = custom_app()
-
-    size = request.args.get("size", type=int, default=1_000_000)
-    worker_id = request.args.get("id", type=str, default="default")
+from api.routes import BaseAPI
+from api.services import WorkerService
+from dtr_common.schema import WorkerCreate, WorkerUpdate
 
 
-    worker = app.services.workers.get_by_name(worker_id)
-    nrequest = app.services.requests.get_next_worker_request(size, worker = worker)
+class WorkerAPI(BaseAPI[WorkerService]):
 
-    if nrequest:
-        nrequest = app.services.requests.start_processing(nrequest.id)
-        app.logger.info(f"Assigned transfer request {nrequest.uid} to worker")
-        return {"request": nrequest.to_dict(rules=("policy.src", "policy.name", "policy.parameters", "nb_retry"))}
+    def get(self, id: int | None = None):
+        if id is None:
+            paginated = self.service.paginate()
+            items = [worker.to_dict() for worker in paginated.items]
+            return {"pagination": paginated.pagination.model_dump(), "items": items}
+        worker = self.service.get_by_id(id)
+        return worker.to_dict()
 
-    # No request was found. No need to commit anything.
-    app.logger.debug("No available transfer requests for worker %s", worker_id)
-    return {"request": {}}
+    def put(self, id: int):
+        data = request.json
+        schema = WorkerUpdate(**data)
+        worker = self.service.update(id, schema)
+        self.service.commit()
+        return worker.to_dict()
+
+    def post(self):
+        data = request.json
+        schema = WorkerCreate(**data)
+        worker = self.service.create(schema)
+        self.service.commit()
+        return worker.to_dict()
+
+    def delete(self, id: int):
+        self.service.delete(id)
+        self.service.commit()
+
+
+bp = WorkerAPI.register(
+    "workers",
+    url_prefix="workers",
+    rules=[
+        {"route": "/", "defaults": {"id": None}, "methods": ["GET", "POST"]},
+        {"route": "/<int:id>", "methods": ["GET", "PUT", "DELETE"]},
+    ],
+)
+
+
+# @bp.route("/configuration/worker", methods=["GET"])
+# def worker():
+#     """
+#     Get next available transfer request for worker processing.
+#     This endpoint ensures atomicity by using a transaction with row-level locking
+#     (SELECT ... FOR UPDATE) to prevent the same task from being assigned to
+#     multiple workers simultaneously.
+#     """
+#     logger = current_app.logger
+#     ngparams = get_params()
+#     if ngparams is None or ngparams.mode == Mode.OFFLINE:
+#         logger.info("API in OFFLINE mode, no request assigned.")
+#         return {"request": {}}
+
+#     worker_storage = request.args.get("size", type=float)
+#     if worker_storage is None or worker_storage <= 0:
+#         raise ValueError("Worker size not specified in query parameters or invalid")
+
+#     # The transaction is implicitly managed by Flask-SQLAlchemy per request.
+#     # We perform all operations within this single request context.
+#     params = {"size": worker_storage, "state": StateEnum.QUEUED}
+#     next_request = get_next_request(params, db_session=db.session)
+
+#     if next_request:
+#         # This all happens before the transaction is committed.
+#         # The row remains locked until the commit.
+#         nstate = State(state=StateEnum.IN_PROGRESS)
+#         next_request.states.append(nstate)
+#         next_request.start = datetime.datetime.now(datetime.timezone.utc)
+
+#         db.session.flush()
+
+#         # The request object is still bound to the session, so we can serialize it.
+#         response_data = next_request.to_dict()
+
+#         # Commit the transaction to finalize the state change and release the lock.
+#         db.session.commit()
+
+#         logger.info(f"Assigned transfer request {next_request.uid} to worker")
+#         return {"request": response_data}
+
+#     # No request was found. No need to commit anything.
+#     logger.debug("No available transfer requests for worker")
+#     return {"request": {}}

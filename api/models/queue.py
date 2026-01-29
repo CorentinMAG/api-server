@@ -8,7 +8,7 @@ from typing import TYPE_CHECKING
 from .base import Base
 from .association import association_table
 
-if  TYPE_CHECKING:
+if TYPE_CHECKING:
     from .worker import Worker
 
 
@@ -17,7 +17,7 @@ class Queue(Base, SerializerMixin):
 
     serialize_only = ("name", "uid", "priority", "queue_timeout", "queue_limit", "queue_threshold")
 
-    name: Mapped[str] = mapped_column(unique=True)
+    name: Mapped[str] = mapped_column(unique=True, index=True)
     uid: Mapped[uuid.UUID] = mapped_column(default=uuid.uuid4, unique=True)
     priority: Mapped[int] = mapped_column(index=True)
     queue_timeout: Mapped[int | None] = mapped_column(default=86400)

@@ -10,20 +10,17 @@ from sqlalchemy_serializer import SerializerMixin
 from .base import Base
 
 if TYPE_CHECKING:
-    from .parameters import ServerParameters, TransferPolicyParameters
+    from .parameters import TransferPolicyParameters
     from .queue import Queue
     from .request import TransferRequest
     from .target import Target
     from .trigger import Trigger
+    from .notifications import Notification
 
 
 class SourcePolicy(Base, SerializerMixin):
     __tablename__ = "source_policies"
 
-    # Include nested target to expose protocol/host/... in API serialization,
-    # but avoid potentially sensitive credential secrets.
-    # Credentials.password is already a SecretStr which serializes to "********";
-    # if additional masking is needed, adapt serialize_rules.
     serialize_only = (
         "purge",
         "path",
@@ -37,7 +34,8 @@ class SourcePolicy(Base, SerializerMixin):
     bucket: Mapped[str | None]
     pattern: Mapped[str]
 
-    src_id: Mapped[int | None] = mapped_column(ForeignKey("targets.id", ondelete="CASCADE"))
+    # cannot delete a target if it is associated to at least 1 source policy
+    src_id: Mapped[int | None] = mapped_column(ForeignKey("targets.id", ondelete="RESTRICT"))
     target: Mapped[Target] = relationship(lazy="joined")
 
 
@@ -50,41 +48,56 @@ class DestinationPolicy(Base, SerializerMixin):
         "target",
         "tmp_prefix",
         "final_prefix",
+        "notifications",
         "path_from_filename_delimiter",
         "path_from_filename_expression"
     )
 
     path: Mapped[str | None]
     bucket: Mapped[str | None]
-
-    dest_id: Mapped[int | None] = mapped_column(ForeignKey("targets.id", ondelete="CASCADE"))
-    policy_id: Mapped[int] = mapped_column(ForeignKey("transfer_policies.id", ondelete="CASCADE"))
-
-    target: Mapped[Target | None] = relationship(lazy="joined")
     tmp_prefix: Mapped[str | None]
     final_prefix: Mapped[str | None]
     path_from_filename_delimiter: Mapped[str | None]
     path_from_filename_expression: Mapped[list[str] | None] = mapped_column(JSON)
-    notifications: Mapped[list[ServerParameters]] = relationship()
+
+    # can't delete target if it is associated to at least 1 dest policy
+    dest_id: Mapped[int | None] = mapped_column(ForeignKey("targets.id", ondelete="RESTRICT"))
+    # can't delete policy if it is associated to at least 1 dest policy
+    policy_id: Mapped[int | None] = mapped_column(ForeignKey("transfer_policies.id", ondelete="RESTRICT"))
+
+    target: Mapped[Target | None] = relationship(lazy="joined")
+    # if we delete a destpolicy, the database handles Notification deletion
+    notifications: Mapped[list[Notification]] = relationship(passive_deletes=True)
 
 
 class TransferPolicy(Base, SerializerMixin):
     __tablename__ = "transfer_policies"
 
+    serialize_only = (
+        "id",
+        "created_at",
+        "name",
+        "enabled",
+        "type",
+        "src",
+        "dests",
+        "parameters",
+        "queue"
+    )
 
-    name: Mapped[str] = mapped_column(unique=True)
+    name: Mapped[str] = mapped_column(unique=True, index=True)
     enabled: Mapped[bool] = mapped_column(default=True)
     type: Mapped[Type]
 
     # foreign keys
-    src_id: Mapped[int | None] = mapped_column(ForeignKey("source_policies.id", ondelete="CASCADE"))
-    queue_id: Mapped[int | None] = mapped_column(ForeignKey("queues.id", ondelete="CASCADE"))
-    trigger_id: Mapped[int | None] = mapped_column(ForeignKey("triggers.id"))
+    src_id: Mapped[int | None] = mapped_column(ForeignKey("source_policies.id", ondelete="RESTRICT"))
+    queue_id: Mapped[int | None] = mapped_column(ForeignKey("queues.id", ondelete="RESTRICT"))
+    trigger_id: Mapped[int | None] = mapped_column(ForeignKey("triggers.id", ondelete="RESTRICT"))
 
     # relations
-    src: Mapped[SourcePolicy] = relationship(lazy="joined")
-    dests: Mapped[list[DestinationPolicy]] = relationship()
-    parameters: Mapped[TransferPolicyParameters] = relationship()
-    queue: Mapped[Queue] = relationship()
+    src: Mapped[SourcePolicy] = relationship(lazy="joined", passive_deletes=True)
+    dests: Mapped[list[DestinationPolicy]] = relationship(passive_deletes=True)
+    parameters: Mapped[TransferPolicyParameters] = relationship(lazy="joined", passive_deletes=True)
+    queue: Mapped[Queue] = relationship(lazy="joined")
     transfers: Mapped[list[TransferRequest]] = relationship(back_populates="policy")
-    trigger: Mapped[Trigger] = relationship(foreign_keys=[trigger_id], post_update=True)
+    trigger: Mapped[Trigger] = relationship(foreign_keys=[trigger_id])

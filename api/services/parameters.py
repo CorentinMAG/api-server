@@ -1,18 +1,30 @@
 from .base import BaseService
-from ..repositories import GlobalParametersRepository
-from ..models import GlobalParameters
+from api.repositories import GlobalParametersRepository
+from api.models import GlobalParameters
 from dtr_common.constantes import Mode
+from dtr_common.schema import (
+    GlobalParametersCreate,
+    GlobalParametersUpdate,
+)
 
-class GlobalParameterService(BaseService[GlobalParametersRepository]):
-
-    def __init__(self, repository: GlobalParametersRepository) -> None:
-        super().__init__(repository)
-
+class GlobalParametersService(BaseService[GlobalParametersRepository]):
 
     def get(self) -> GlobalParameters | None:
-        return self.repository.get_params()
+        return self.repository.get()
 
-    def switch_mode(self, mode: Mode) -> None:
-        params = self.repository.get_params()
-        self.repository.update(params, {"mode": mode})
-        self.repository.session.commit()
+    def delete(self) -> None:
+        params = self.get()
+        if params:
+            self.repository.delete(params)
+
+    def create(self, schema: GlobalParametersCreate) -> GlobalParameters:
+        params = GlobalParameters(**schema.model_dump())
+        return self.repository.create(params)
+
+    def update(self, schema: GlobalParametersUpdate) -> GlobalParameters:
+        return self.repository.update(schema.model_dump(exclude_none=True))
+
+    def switch(self, mode: Mode) -> GlobalParameters | None:
+        parameters = self.repository.get()
+        if parameters:
+            return self.repository.update({"mode": mode})

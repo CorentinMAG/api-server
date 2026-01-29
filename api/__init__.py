@@ -1,38 +1,35 @@
 from __future__ import annotations
-from .handlers import register_handlers
-from .config import get_config, Config
-from flask import g
-from .app import DTRFlask
-import uuid
+from api.app import DTRApp
+from api.config import create_config, Config
+from sqlalchemy_utils import create_database, database_exists
 
-def create_app(config: Config | None = None) -> DTRFlask:
+def create_app(config: Config | None = None) -> DTRApp:
     """create and configure the flask application"""
-    app = DTRFlask(__name__)
+    app = DTRApp(__name__)
 
     if config:
         app.settings = config
     else:
-        app.settings = get_config()
+        app.settings = create_config()
+    app.initialize()
 
-    from api.routes import v1
+    if app.settings.CREATE_DB:
+        if not database_exists(app.settings.DATABASE_URL):
+            create_database(app.settings.DATABASE_URL)
+        from api.models.base import Base
+        import api.models
 
-    # Initialize extensions
-    app.init_logger()
-    app.init_database()
-    register_handlers(app)
-    app.register_blueprint(v1, url_prefix="/dtr/v1")
-
+        Base.metadata.create_all(app.engine)
+    
+    @app.route("/", methods=["GET"])
+    def index():
+        return {"message": "DTR api-server entrypoint"}
+    
     @app.route("/healthz", methods=["GET"])
     def healthz():
-        """health check endpoint"""
-        return {
-            "status": "healthy"
-            }, 200
+        return {"status": "healthy"}
     
-    @app.before_request
-    def assign_request_id():
-        # g is a special object that is unique
-        # for each request
-        g.request_id = str(uuid.uuid4())
-
+    from api.routes import v1
+    app.register_blueprint(v1, url_prefix="/api/v1")
     return app
+

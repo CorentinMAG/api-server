@@ -18,9 +18,12 @@ class Target(Base, SerializerMixin):
 
     serialize_only = ("name", "protocol", "port", "host", "credentials", "parameters")
 
-    name: Mapped[str] = mapped_column(unique=True)
+    name: Mapped[str] = mapped_column(unique=True, index=True)
     protocol: Mapped[Protocol]
     port: Mapped[int]
     host: Mapped[str]
-    credentials: Mapped[Credentials] = relationship(lazy="joined")
-    parameters: Mapped[TargetParameters] = relationship(lazy="joined")
+
+    # with passive_deletes = True, when deleting a Target object, 
+    # credentials and parameters object are not loaded (they are deleted by the database because they have ondelete=CASCADE)
+    credentials: Mapped[Credentials] = relationship(lazy="joined", passive_deletes=True)
+    parameters: Mapped[TargetParameters] = relationship(lazy="joined", passive_deletes=True)

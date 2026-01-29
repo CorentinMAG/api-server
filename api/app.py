@@ -1,22 +1,20 @@
-from flask import Flask
-from .config import Config
-from .services import ServiceContainer
-from api.models import db
-import logging
-from sqlalchemy_utils import create_database, database_exists
-from dtr_common.logs.logger import create_logger
+from flask import Flask, g
+from api.config import Config
+from sqlalchemy import Engine, create_engine
+from sqlalchemy.orm import sessionmaker, Session, scoped_session
 
-class DTRFlask(Flask):
+class DTRApp(Flask):
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
         self._settings: Config | None = None
-        self._services = None
-        self._repositories = None
-        self._logger: logging.Logger | None = None
+        self._engine: Engine | None = None
+        self._session_factory: scoped_session | None = None
 
     @property
-    def settings(self) -> Config | None:
+    def settings(self) -> Config:
+        if self._settings is None:
+            raise RuntimeError("settings not initialized")
         return self._settings
     
     @settings.setter
@@ -24,46 +22,48 @@ class DTRFlask(Flask):
         self._settings = value
 
     @property
-    def services(self) -> ServiceContainer:
-        """lazy load service container"""
-        if self._services is None:
-            self._services = ServiceContainer()
-        return self._services
+    def engine(self) -> Engine:
+        if self._engine is None:
+            raise RuntimeError("Database engine not initialized")
+        return self._engine
     
     @property
-    def logger(self) -> logging.Logger:
-        if self._logger is None:
-            raise ValueError("you must call init_logger before")
-        return self._logger
+    def session(self) -> Session:
+        """get current database session for this request context"""
+        if "db_session" not in g:
+            if self._session_factory is None:
+                raise RuntimeError("Database session factory is not initialized")
+            g.db_session = self._session_factory()
+        return g.db_session
     
-    def init_logger(self) -> None:
-        if self._settings is not None:
-            self._logger = create_logger(
-                "API",
-                self._settings.LOG_LEVEL,
-                self._settings.API_VERSION,
-                self._settings.SYSTEM_NAME,
-                self._settings.SYSTEM_VERSION,
-                "raw" if self._settings.DEBUG else "json"
-            )
-    
-    def init_database(self) -> None:
-        if self.settings is None:
-            raise NotImplementedError("you must set settings before initialize database")
-        if not self.settings.DATABASE_URL:
-            raise ValueError("DATABASE_URL is not set, make to define the DTR_DB_PASSWORD variable")
+    def initialize(self) -> None:
+        """initialize the application components"""
+        self._initialize_error_handlers()
+        self._initialize_database()
+        self._initialize_appcontext()
 
-        config = {
-            "SQLALCHEMY_DATABASE_URI": self.settings.DATABASE_URL,
-            "SQLALCHEMY_ENGINE_OPTIONS": self.settings.SQLALCHEMY_ENGINE_OPTIONS
-        }
-        self.config.update(config)
-        db.init_app(self)
-        if self.settings.CREATE_DB:
-            with self.app_context():
-                if not database_exists(db.engine.url):
-                    create_database(db.engine.url)
-                    self.logger.info("New database %s created", self.settings.DB_NAME)
-                else:
-                    db.create_all()
-                    self.logger.debug("Database tables have been created")
+    def _setup_session(self) -> None:
+        """Ensure session is set up for each request"""
+        if "db_session" not in g:
+            g.db_session = self._session_factory()
+    
+    def _close_session(self, exception=None) -> None:
+        """close session at the end of each request"""
+        session = g.pop("db_session", None)
+        if session is not None:
+            session.close()
+
+    def _initialize_error_handlers(self) -> None:
+        from api.handlers import register_error_handlers
+        register_error_handlers(self)
+
+    def _initialize_database(self) -> None:
+        self._engine = create_engine(
+            self.settings.DATABASE_URL, 
+            **self.settings.SQLALCHEMY_ENGINE_OPTIONS
+        )
+        self._session_factory = sessionmaker(autocommit=False, autoflush=False, bind=self._engine)
+
+    def _initialize_appcontext(self) -> None:
+        self.teardown_appcontext(self._close_session)
+        self.before_request(self._setup_session)

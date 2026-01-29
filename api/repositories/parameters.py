@@ -1,13 +1,36 @@
-from ..models import GlobalParameters
+from api.models import GlobalParameters
 from .base import BaseRepository
 from sqlalchemy import select
-from flask_sqlalchemy import SQLAlchemy
 
 class GlobalParametersRepository(BaseRepository[GlobalParameters]):
-    def __init__(self, db: SQLAlchemy):
-        super().__init__(GlobalParameters, db)
 
-    def get_params(self) -> GlobalParameters | None:
+    def get(self) -> GlobalParameters | None:
         query = select(GlobalParameters).limit(1)
-        obj = self.session.scalar(query)
-        return obj
+        return self.session.scalar(query)
+    
+    def update(self, data: dict[str, any]) -> GlobalParameters | None:
+        params = self.get()
+        if params:
+            updated_params = super().update(params, data)
+            return updated_params
+
+    def get_with_relations(
+            self,
+            skip: int = 0,
+            limit: int = 100,
+            filters: dict[str, any] | None = None
+    ) -> list[GlobalParameters]:
+        params = self.get()
+        return [params] if params else []
+    
+    def create(self, parameters: GlobalParameters) -> GlobalParameters:
+        """
+        we only have 1 globalParameters.
+        We delete existing one
+        """
+        params = self.get()
+        if params:
+            self.session.delete(params)
+        self.session.add(parameters)
+        self.session.flush()
+        return parameters

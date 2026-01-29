@@ -1,15 +1,11 @@
 from sqlalchemy.orm import selectinload
-from flask_sqlalchemy import SQLAlchemy
 from sqlalchemy import select
 from .base import BaseRepository
-from ..models import Queue
-from ..errors import NotFoundError
+from api.models import Queue
+from api.exception import NotFoundException
 
 class QueueRepository(BaseRepository[Queue]):
-    """repository for target operations"""
-
-    def __init__(self, db: SQLAlchemy):
-        super().__init__(Queue, db)
+    """repository for queue operations"""
 
     def get_by_name(self, name: str) -> Queue:
         query = (
@@ -21,10 +17,10 @@ class QueueRepository(BaseRepository[Queue]):
         )
         obj = self.session.scalar(query)
         if not obj:
-            raise NotFoundError(f"Target with name {name} not found")
+            raise NotFoundException(f"Target with name {name} not found")
         return obj
     
-    def get_all_with_relations(self, skip: int = 0, limit: int = 100) -> list[Queue]:
+    def get_with_relations(self, skip: int = 0, limit: int = 100, filters: dict[str, any] | None = None) -> list[Queue]:
         query = (
             select(Queue)
             .options(
@@ -33,17 +29,6 @@ class QueueRepository(BaseRepository[Queue]):
             .offset(skip)
             .limit(limit)
         )
+        if filters:
+            query = self._filter(query, filters)
         return list(self.session.scalars(query).unique().all())
-    
-    def get_by_priority(self, skip: int = 0, limit: int = 100) -> list[Queue]:
-        """get queues ordered by priority"""
-        query = (
-            select(Queue)
-            .order_by(Queue.priority.asc())
-            .options(
-                selectinload(Queue.workers)
-            )
-            .offset(skip)
-            .limit(limit)
-        )
-        return list(self.session.scalars(query).all())

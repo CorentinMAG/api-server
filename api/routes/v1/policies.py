@@ -1,72 +1,49 @@
-"""
-Transfer policies API routes with dependency injection.
-"""
-
 from __future__ import annotations
-
-from typing import cast
-
-from dtr_common.constantes import Mode
-from dtr_common.utils import parse_params
-from flask import Blueprint, request
-
-from api.models import db
-from api.models import TransferPolicy
-from api.services.configuration import create_policies
-from api.services.filters import get_params
-from api.services.policies import filter_policies, update_policy
-
-bp = Blueprint("policies", __name__)
+from flask import request
+from dtr_common.schema import TransferPolicyCreate, TransferPolicyUpdate
+from api.routes import BaseAPI
+from api.services import TransferPolicyService
 
 
-@bp.route("/policies", methods=["GET"])
-def policies():
-    """
-    list all transfer policies.
-    output can be filtered by using query params:
-    - id: int
-    - ids: str
-    - type: periodical / commanded
-    - dataType: file / folder
-    - enabled: true / false
-    - queues: name1,name2,...
-    - src
-    - dest
-    """
+class TransferPolicyAPI(BaseAPI[TransferPolicyService]):
 
-    ngparams = get_params()
+    def get(self, id: int | None = None):
 
-    if ngparams is None or ngparams.mode == Mode.OFFLINE:
-        return {"policies": [], "page": 0, "page_size": 0, "total": -1}
+        if id is None:
+            paginated = self.service.paginate(request.args)
+            items = [policy.to_dict() for policy in paginated.items]
+            return {
+                "pagination": paginated.pagination.model_dump(),
+                "items": items,
+            }
+        policy = self.service.get_with_relations(id)
+        return policy.to_dict()
 
-    page = request.args.get("page", type=int, default=1)
-    page_size = request.args.get("page_size", type=int, default=10)
+    def post(self):
+        data = request.json
+        schema = TransferPolicyCreate(**data)
+        policy = self.service.create(schema)
+        self.service.commit()
+        return policy.to_dict()
 
-    parsed_params = parse_params(request.args.to_dict())
+    def put(self, id: int):
+        data = request.json
+        schema = TransferPolicyUpdate(**data)
+        policy = self.service.update(id, schema)
+        self.service.commit()
+        return policy.to_dict()
 
-    query = filter_policies(parsed_params)
-    result = db.paginate(query, page=page, per_page=page_size)
-    policies = cast(list[TransferPolicy], result.items)
-    return {
-        "policies": [p.to_dict() for p in policies],
-        "page": page,
-        "page_size": page_size,
-        "total": result.total,
-    }, 200
+    def delete(self, id: int):
+        self.service.delete(id)
+        self.service.commit()
+        return "", 200
 
 
-@bp.route("/policies", methods=["POST"])
-def post_policies():
-    payload = request.json
-    policies = payload["policies"]
-    create_policies(policies)
-
-    return "", 201
-
-
-@bp.route("/policies/<int:id>", methods=["PUT"])
-def put_policy(id: int):
-    payload = request.json
-
-    update_policy(id, payload)
-    return "", 204
+bp = TransferPolicyAPI.register(
+    "policies",
+    url_prefix="policies",
+    rules=[
+        {"route": "/", "defaults": {"id": None}, "methods": ["GET", "POST"]},
+        {"route": "/<int:id>", "methods": ["GET", "PUT", "DELETE"]},
+    ],
+)

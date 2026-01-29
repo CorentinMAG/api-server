@@ -9,6 +9,7 @@ from .base import Base
 
 if TYPE_CHECKING:
     from .credentials import Credentials
+    from .notifications import Notification
 
 
 class NotificationServer(Base, SerializerMixin):
@@ -16,9 +17,10 @@ class NotificationServer(Base, SerializerMixin):
 
     serialize_only = ("name", "type", "host", "port", "credentials", "timeout")
 
-    name: Mapped[str] = mapped_column(unique=True)
+    name: Mapped[str] = mapped_column(unique=True, index=True)
     type: Mapped[str]
     host: Mapped[str]
     port: Mapped[int]
-    credentials: Mapped[Credentials] = relationship(lazy="joined")
     timeout: Mapped[int] = mapped_column(default=40)
+    credentials: Mapped[Credentials] = relationship(lazy="joined", passive_deletes=True)
+    notifications: Mapped[list[Notification]] = relationship(back_populates="server", passive_deletes=True)

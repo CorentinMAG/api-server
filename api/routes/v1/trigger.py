@@ -1,51 +1,66 @@
 from __future__ import annotations
-from flask import Blueprint, request
-from api.utils.utils import custom_app 
-from api.utils.utils import check_gparams_before_request
+from flask import request
+from api.routes import BaseAPI
+from api.services import TriggerService
+from dtr_common.schema import TriggerCreate, TriggerUpdate
 
-bp = Blueprint("trigger", __name__)
 
-@bp.before_request
-def handler():
-    check_gparams_before_request()
+class TriggerAPI(BaseAPI[TriggerService]):
 
-@bp.route("/configuration/trigger", methods=["GET"])
-def trigger():
-    """
-    Get trigger configuration and its associated transfer policies
-    transfer policies list are paginated
+    def get(self, id: int | None = None):
+        if id is None:
+            paginated = self.service.paginate(request.args)
+            items = [trigger.to_dict() for trigger in paginated.items]
+            return {"pagination": paginated.pagination.model_dump(), "items": items}
+        trigger = self.service.get_by_id(id)
+        return trigger.to_dict()
 
-    Args:
-      None explicitly. Query parameters are taken from `request.args`:
-        id (str, optional): trigger's identifier or default
-        page (int): page number
-        page_size (int): items per page
-    Returns:
-      flask.Response: A JSON response containing:
-        configuration (dict): JSON representation of the trigger object
-        pagination (dict): pagination parameters
-        policies (list):  JSON representation of all transfer policies managed by the trigger
-    """
+    def delete(self, id: int):
+        self.service.delete(id)
+        self.service.commit()
 
-    app = custom_app()
+    def put(self, id: int):
+        data = request.json
+        schema = TriggerUpdate(**data)
+        trigger = self.service.update(id, schema)
+        self.service.commit()
+        return trigger.to_dict()
 
-    # Pagination parameters with validation
-    page = request.args.get("page", type=int, default=1)
-    page_size = request.args.get("page_size", type=int, default=10)
-    id = request.args.get("id", type=str, default="default")
+    def post(self):
+        data = request.json
+        schema = TriggerCreate(**data)
+        trigger = self.service.create(schema)
+        self.service.commit()
+        return trigger.to_dict()
 
-    trigger = app.services.triggers.get_by_name(id)
-    paginated = app.services.triggers.get_policies(id, page, page_size)
-    return {
-        "configuration": trigger.to_dict(only=("name", "polling_interval")),
-        "pagination": {
-            "page": page,
-            "per_page": page_size,
-            "total": paginated.total,
-            "pages": paginated.pages
-        },
-        "policies": [
-            policy.to_dict(only=("id", "name", "src"))
-            for policy in paginated.items
-        ]
-    }
+
+bp = TriggerAPI.register(
+    "triggers",
+    url_prefix="triggers",
+    rules=[
+        {"route": "/", "defaults": {"id": None}, "methods": ["GET", "POST"]},
+        {"route": "/<int:id>", "methods": ["GET", "PUT", "DELETE"]},
+    ],
+)
+
+
+# @check_offline_mode()
+# @bp.route("/configuration/trigger", methods=["GET"])
+# def trigger():
+#     """
+#     Get trigger configuration - all activated periodical transfer policies.
+
+#     Query parameters:
+#     - id: str - Trigger identifier
+#     - page: int - Page number for pagination (default: 1)
+#     - page_size: int - Items per page (default: 10)
+#     """
+#     trigger_id = request.args.get("id", type=str, default=None)
+#     page = request.args.get("page", type=int, default=1)
+#     page_size = request.args.get("page_size", type=int, default=10)
+
+#     app = custom_app()
+
+#     trigger = app.services.triggers.get_by_name(trigger_id)
+
+#     return {"configuration": trigger.to_dict(), "pagination": {}, "policies": []}

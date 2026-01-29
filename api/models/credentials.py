@@ -15,10 +15,14 @@ class Credentials(Base, SerializerMixin):
 
     serialize_only = ("login", "password")
 
-    login: Mapped[str]
+    login: Mapped[str] = mapped_column(index=True)
     password: Mapped[str] = mapped_column(
         StringEncryptedType(sqlalchemy.CHAR, ENCRYPTION_KEY, AesEngine, "pkcs5"),
         nullable=False,
     )
-    target_id: Mapped[int | None] = mapped_column(ForeignKey("targets.id", ondelete="CASCADE"))
-    server_id: Mapped[int | None] = mapped_column(ForeignKey("notification_servers.id", ondelete="CASCADE"))
+
+    # one to one relationship
+    # ondelete=CASCADE means that database handle Credentials deletion
+    # when the associated Target or NotificationServer object is deleted
+    target_id: Mapped[int | None] = mapped_column(ForeignKey("targets.id", ondelete="CASCADE"), unique=True, index=True)
+    server_id: Mapped[int | None] = mapped_column(ForeignKey("notification_servers.id", ondelete="CASCADE"), unique=True, index=True)

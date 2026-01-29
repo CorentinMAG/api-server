@@ -22,17 +22,30 @@ class TransferRequest(Base, SerializerMixin):
         "filename",
         "size",
         "uid",
+        "follow_from_task",
+        "states",
+        "policy",
+        "created_at",
+        "nb_retry",
+        "next_retry_min_time",
+        "start",
+        "end",
+        "download_rate",
+        "download_time",
+        "upload_rate",
+        "upload_time",
         "multi_dest_uid",
         "dest",
         "src_relative_path"
     )
 
-    uid: Mapped[uuid.UUID] = mapped_column(default=uuid.uuid4, unique=True, nullable=False, index=True)
+    filename: Mapped[str] = mapped_column(index=True)
+    size: Mapped[int | None] = mapped_column(BigInteger, default=None, index=True)  # in Bytes
+    uid: Mapped[uuid.UUID] = mapped_column(default=uuid.uuid4, unique=True, index=True)
 
     # This uid is the same for all transfer requests created when multi destinations is involved
     multi_dest_uid: Mapped[uuid.UUID | None] = mapped_column(index=True)
-    filename: Mapped[str] = mapped_column(nullable=False, index=True)
-    size: Mapped[int | None] = mapped_column(BigInteger, default=None, index=True)  # in Bytes
+
     follows_from_task: Mapped[uuid.UUID | None] = mapped_column(default=None)
     src_relative_path: Mapped[str | None]
 
@@ -55,9 +68,9 @@ class TransferRequest(Base, SerializerMixin):
     
     # relationships
     policy: Mapped[TransferPolicy] = relationship(back_populates="transfers")
-    dest: Mapped[DestinationPolicy] = relationship(foreign_keys=[dest_id])
-    states: Mapped[list[State]] = relationship(order_by="State.id.desc()", cascade="all, delete-orphan", foreign_keys="State.request_id")
-    current_state: Mapped[State | None] = relationship(foreign_keys=[current_state_id], viewonly=True, post_update=True)
+    dest: Mapped[DestinationPolicy] = relationship(foreign_keys=[dest_id], lazy="joined")
+    states: Mapped[list[State]] = relationship(order_by="State.id.desc()", foreign_keys="State.request_id", passive_deletes=True)
+    current_state: Mapped[State | None] = relationship(foreign_keys=[current_state_id], lazy="joined")
 
     @property
     def avg_data_rate(self) -> float:
