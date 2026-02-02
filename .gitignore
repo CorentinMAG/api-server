@@ -10,3 +10,8 @@ datadir
 .coverage
 htmlcov/
 dtr.db
+*.pyc
+.coverage
+dist/
+build/
+*.egg-info/

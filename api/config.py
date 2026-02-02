@@ -59,6 +59,7 @@ class TestingConfiguration(Config):
 
     DEBUG = False
     TESTING = True
+    DATABASE_URL = "sqlite:///dtr.db"
 
 
 class ProductionConfiguration(Config):
