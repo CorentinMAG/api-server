@@ -1,6 +1,6 @@
 from api.models import Worker
 from .base import BaseService
-from api.repositories import WorkerRepository
+from api.repositories import WorkerRepository, QueueRepository
 from api.dtr_common.schema import WorkerCreate, WorkerUpdate
 from api.models import Worker
 
@@ -9,7 +9,7 @@ class WorkerService(BaseService[WorkerRepository]):
 
     def __init__(self):
         super().__init__()
-        self.queue_repository = self._get_or_create_repository("QueueRepository")
+        self.queue_repository = self._get_or_create_repository(QueueRepository)
 
     def get_by_name(self, name: str) -> Worker:
         return self.repository.get_by_name(name)
@@ -19,6 +19,7 @@ class WorkerService(BaseService[WorkerRepository]):
 
     def create(self, schema: WorkerCreate) -> Worker:
         worker = Worker(name=schema.name)
+        self.repository.create(worker)
 
     def update(self, id: int, schema: WorkerUpdate) -> Worker:
         worker = self.get_by_id(id)

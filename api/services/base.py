@@ -1,12 +1,13 @@
 from api.repositories import DTR_REPOSITORIES, BaseRepository
-from typing import TypeVar, Generic
+from typing import TypeVar, Generic, cast
 
 
-RepositoryType = TypeVar("RepositoryType")
+RepositoryType = TypeVar("RepositoryType", bound=BaseRepository)
+T = TypeVar("T", bound=BaseRepository)
 
 
 class BaseService(Generic[RepositoryType]):
-    _repository_instances: dict[str, BaseRepository] = {}
+    _repository_instances: dict[type[BaseRepository], BaseRepository] = {}
 
     def __init_subclass__(cls, **kwargs):
         super().__init_subclass__(**kwargs)
@@ -19,7 +20,11 @@ class BaseService(Generic[RepositoryType]):
     def __init__(self):
         repo_name = getattr(self.__class__, "_repository_name", None)
         if repo_name:
-            self._repository = self._get_or_create_repository(repo_name)
+            repo_class = self._resolve_repository_class(repo_name)
+            if repo_class:
+                self._repository = self._get_or_create_repository(repo_class)
+            else:
+                self._repository = None
         else:
             self._repository = None
 
@@ -34,13 +39,10 @@ class BaseService(Generic[RepositoryType]):
             self._repository.session.commit()
 
     @classmethod
-    def _get_or_create_repository(cls, repo_name: str) -> RepositoryType:
-        if repo_name not in cls._repository_instances:
-            repo_class = cls._resolve_repository_class(repo_name)
-            if not repo_class:
-                raise ValueError(f"Repository class '{repo_name}' not found.")
-            cls._repository_instances[repo_name] = repo_class()
-        return cls._repository_instances[repo_name]
+    def _get_or_create_repository(cls, repo_class: type[T]) -> T:
+        if repo_class not in cls._repository_instances:
+            cls._repository_instances[repo_class] = repo_class()
+        return cast(T, cls._repository_instances[repo_class])
 
     @staticmethod
     def _resolve_repository_class(repo_name: str) -> RepositoryType | None:

@@ -1,4 +1,4 @@
-from api.repositories import TransferPolicyRepository
+from api.repositories import TransferPolicyRepository, TargetRepository, GlobalParametersRepository, NotificationServerRepository, QueueRepository
 from api.models import (
     TransferPolicy,
     SourcePolicy,
@@ -25,14 +25,14 @@ class TransferPolicyService(BaseService[TransferPolicyRepository]):
 
     def __init__(self):
         super().__init__()
-        self.target_repository = self._get_or_create_repository("TargetRepository")
+        self.target_repository = self._get_or_create_repository(TargetRepository)
         self.parameters_repository = self._get_or_create_repository(
-            "GlobalParametersRepository"
+            GlobalParametersRepository
         )
         self.server_repository = self._get_or_create_repository(
-            "NotificationServerRepository"
+            NotificationServerRepository
         )
-        self.queue_repository = self._get_or_create_repository("QueueRepository")
+        self.queue_repository = self._get_or_create_repository(QueueRepository)
 
     def get_by_name(self, name: str) -> TransferPolicy:
         return self.repository.get_by_name(name)
