@@ -16,7 +16,6 @@ class TargetAPI(BaseAPI[TargetService]):
             # return paginated records
             paginated = self.service.paginate(request.args)
             items = [target.to_dict() for target in paginated.items]
-
             return {
                 "pagination": paginated.pagination.model_dump(),
                 "items": items,

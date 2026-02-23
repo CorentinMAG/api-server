@@ -36,6 +36,7 @@ def check_offline_mode_v2(
                 "message": "API is currently offline",
                 "error": "Service temporarily unavailable",
             }, status_code
+        return
     return {"message": "DTR is not configured yet"}, 500
 
 

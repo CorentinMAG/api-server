@@ -6,18 +6,7 @@ from api.exception import NotFoundException
 from abc import ABC, abstractmethod
 from api.models import DTR_MODELS
 from werkzeug.datastructures import ImmutableMultiDict
-from pydantic import BaseModel, ConfigDict
-T = TypeVar("T")
-
-class PaginationItem(BaseModel):
-    page: int
-    page_size: int
-    total: int
-
-class Pagination(BaseModel, Generic[T]):
-    model_config = ConfigDict(arbitrary_types_allowed=True)
-    pagination: PaginationItem
-    items: list[T]
+from dtr_common.schema.pagination import Pagination, PaginationItem
 
 ModelType = TypeVar("ModelType")
 
@@ -39,7 +28,7 @@ class BaseRepository(Generic[ModelType], ABC):
         super().__init_subclass__(**kwargs)
         repository_name = cls.__name__
         if repository_name.endswith("Repository"):
-            cls._model_name = repository_name[:10]
+            cls._model_name = repository_name[:-10]
         else:
             cls._model_name = None
 
@@ -109,7 +98,6 @@ class BaseRepository(Generic[ModelType], ABC):
     def count(self, filters: dict[str, any] | None = None) -> int:
         """count records with optional filters"""
         query = select(func.count()).select_from(self._model)
-
         if filters:
             query = self._filter(query, filters)
         return self.session.scalar(query) or 0
@@ -132,7 +120,11 @@ class BaseRepository(Generic[ModelType], ABC):
         items = self.get_with_relations(skip = skip, limit = page_size, filters = _args)
         total = self.count(filters=args.to_dict())
         return Pagination(
-            pagination=PaginationItem(page = page, page_size=page_size, total = total, items = items)
+            pagination=PaginationItem(
+                        page = page, 
+                        page_size=page_size, 
+                        total = total
+                    ), items = items
         )
 
     

@@ -4,11 +4,21 @@ import os
 
 os.environ["DTR_ENV"] = "TESTING"
 
-@pytest.fixture(scope="session")
+@pytest.fixture()
 def app():
     app = create_app()
     return app
 
-@pytest.fixture(scope="function")
+@pytest.fixture
+def client(app):
+    """Create a test client for the app"""
+    return app.test_client()
+
+@pytest.fixture()
 def session(app):
-    return app.session
+    session = app.session
+
+    yield session
+
+    session.rollback()
+    session.close()

@@ -3,7 +3,7 @@
 export DTR_ENV=development
 export DTR_API_VERSION=3.0.0-dev
 export DTR_VERSION=3.0.0-dev
-export DTR_LOG_LEVEL=INFO
+export DTR_LOG_LEVEL=DEBUG
 
 export DTR_DB_USER=postgres;
 export DTR_DB_PASSWORD=postgres;
