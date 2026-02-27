@@ -19,4 +19,4 @@ class Trigger(Base, SerializerMixin):
     polling_interval: Mapped[int] = mapped_column(comment="in seconds")
 
     # relations
-    policies: Mapped[list[TransferPolicy]] = relationship()
+    policies: Mapped[list[TransferPolicy]] = relationship(back_populates="trigger")

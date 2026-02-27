@@ -100,4 +100,4 @@ class TransferPolicy(Base, SerializerMixin):
     parameters: Mapped[TransferPolicyParameters] = relationship(lazy="joined", passive_deletes=True)
     queue: Mapped[Queue] = relationship(lazy="joined")
     transfers: Mapped[list[TransferRequest]] = relationship(back_populates="policy")
-    trigger: Mapped[Trigger] = relationship(foreign_keys=[trigger_id])
+    trigger: Mapped[Trigger] = relationship(back_populates="policies")
