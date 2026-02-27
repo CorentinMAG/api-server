@@ -7,6 +7,7 @@ from abc import ABC, abstractmethod
 from api.models import DTR_MODELS
 from werkzeug.datastructures import ImmutableMultiDict
 from dtr_common.schema.pagination import Pagination, PaginationItem
+from api.exception import MalformatedInputException
 
 ModelType = TypeVar("ModelType")
 
@@ -114,8 +115,12 @@ class BaseRepository(Generic[ModelType], ABC):
 
     def paginate(self, args: ImmutableMultiDict) -> Pagination[ModelType]:
         _args = args.to_dict()
-        page = int(_args.pop("page", 1))
-        page_size = int(_args.pop("page_size", 10))
+
+        try:
+            page = int(_args.pop("page", 1))
+            page_size = int(_args.pop("page_size", 10))
+        except ValueError as e:
+            raise MalformatedInputException("pagination parameters page or page_size are not integer") from e
         skip = (page - 1) * page_size
         items = self.get_with_relations(skip = skip, limit = page_size, filters = _args)
         total = self.count(filters=args.to_dict())
