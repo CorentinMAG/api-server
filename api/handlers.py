@@ -2,7 +2,7 @@ from __future__ import annotations
 from flask import request
 from api.utils import custom_app
 from pydantic import ValidationError
-from sqlalchemy.exc import SQLAlchemyError
+from sqlalchemy.exc import SQLAlchemyError, IntegrityError
 from werkzeug.exceptions import HTTPException, NotFound
 from .exception import AppException
 from typing import TYPE_CHECKING
@@ -30,12 +30,17 @@ def handle_not_found_error(e: NotFound):
 
 def handle_sql_exception(e: SQLAlchemyError):
     error_name = e.__class__.__name__
-    custom_app().logger.error("Database error occurred (%s): %s", error_name, str(e))
-    return {"error": str(e)}, 500
+    if isinstance(e, IntegrityError):
+        custom_app().logger.error("database integrity error ! %s", str(e))
+        code = 409
+    else:
+        custom_app().logger.error("Database error occurred (%s): %s", error_name, str(e))
+        code = 500
+    return {"error": str(e)}, code
 
 def handle_validation_error(e: ValidationError):
     custom_app().logger.error("Validation error occurred: %s", e.errors())
-    return e.json(), 500
+    return e.json(), 422
 
 def handle_app_exception(e: AppException):
     return {"error": e.message}, e.status_code
