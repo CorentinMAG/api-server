@@ -74,5 +74,6 @@ class BaseAPI(MethodView, ABC, Generic[T]):
                 view_func=view,
                 methods=route.get("methods", ["GET", "POST", "PUT", "DELETE"]),
                 defaults=route.get("defaults", {}),
+                strict_slashes=False
             )
         return bp
