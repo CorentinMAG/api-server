@@ -12,6 +12,10 @@ class AppException(Exception):
     @property
     def status_code(self) -> int:
         return self._status_code
+    
+class MalformatedInputException(AppException):
+    def __init__(self, message: str = "malformatted input"):
+        super().__init__(message, status_code=422)
 
 class NotFoundException(AppException):
     def __init__(self, message: str = "Resource not found"):
