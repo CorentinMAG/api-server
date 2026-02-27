@@ -9,7 +9,7 @@ class TargetAPI(BaseAPI[TargetService]):
     def delete(self, id: int):
         self.service.delete(id)
         self.service.commit()
-        return "", 200
+        return "", 204
 
     def get(self, id: int | None = None):
         if id is None:
@@ -21,28 +21,29 @@ class TargetAPI(BaseAPI[TargetService]):
                 "items": items,
             }
         target = self.service.get_by_id(id)
-        return target.to_dict()
+        return target.to_dict(), 200
 
     def post(self):
         data = request.json
         schema = TargetCreate(**data)
         target = self.service.create(schema)
         self.service.commit()
-        return target.to_dict()
+        return target.to_dict(), 201
 
     def put(self, id: int):
         data = request.json
         schema = TargetUpdate(**data)
         target = self.service.update(id, schema)
         self.service.commit()
-        return target.to_dict()
+        return target.to_dict(), 200
 
 
 bp = TargetAPI.register(
     "targets",
     url_prefix="targets",
     rules=[
-        {"route": "/", "defaults": {"id": None}, "methods": ["GET", "POST"]},
+        {"route": "/", "methods": ["POST"]},
+        {"route": "/", "defaults": {"id": None}, "methods": ["GET"]},
         {"route": "/<int:id>", "methods": ["GET", "PUT", "DELETE"]},
     ],
 )
