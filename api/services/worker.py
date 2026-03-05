@@ -1,15 +1,14 @@
 from api.models import Worker
 from .base import BaseService
-from api.repositories import WorkerRepository, QueueRepository
+from api.repositories import WorkerRepository
 from api.dtr_common.schema import WorkerCreate, WorkerUpdate
 from api.models import Worker
+from api.services import QueueService
 
 
 class WorkerService(BaseService[WorkerRepository]):
 
-    def __init__(self):
-        super().__init__()
-        self.queue_repository = self._get_or_create_repository(QueueRepository)
+    queue: QueueService
 
     def get_by_name(self, name: str) -> Worker:
         return self.repository.get_by_name(name)

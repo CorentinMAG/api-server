@@ -25,7 +25,7 @@ class TransferRequestAPI(BaseAPI[TransferRequestService]):
 
 
 bp = TransferRequestAPI.register(
-    "requests", url_prefix="requests", route="/", defaults={"id": None}
+    "requests", url_prefix="requests", rules=[{"route": "/", "defaults": {"id": None}, "methods": ["GET", "POST"]}, {"route": "/<int:id>", "methods": ["GET", "PUT", "DELETE"]}]
 )
 
 
