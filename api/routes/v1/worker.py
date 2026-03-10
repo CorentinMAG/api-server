@@ -4,9 +4,12 @@ from flask import request
 from api.routes import BaseAPI
 from api.services import WorkerService
 from dtr_common.schema import WorkerCreate, WorkerUpdate
+from api.utils import check_offline_mode
 
 
 class WorkerAPI(BaseAPI[WorkerService]):
+
+    decorators = [check_offline_mode()]
 
     def get(self, id: int | None = None):
         if id is None:
@@ -39,7 +42,8 @@ bp = WorkerAPI.register(
     "workers",
     url_prefix="workers",
     rules=[
-        {"route": "/", "defaults": {"id": None}, "methods": ["GET", "POST"]},
+        {"route": "/", "methods": ["POST"]},
+        {"route": "/", "defaults": {"id": None}, "methods": ["GET"]},
         {"route": "/<int:id>", "methods": ["GET", "PUT", "DELETE"]},
     ],
 )

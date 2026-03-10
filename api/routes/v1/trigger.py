@@ -3,9 +3,12 @@ from flask import request
 from api.routes import BaseAPI
 from api.services import TriggerService
 from dtr_common.schema import TriggerCreate, TriggerUpdate
+from api.utils import check_offline_mode
 
 
 class TriggerAPI(BaseAPI[TriggerService]):
+
+    decorators = [check_offline_mode()]
 
     def get(self, id: int | None = None):
         if id is None:
@@ -38,7 +41,8 @@ bp = TriggerAPI.register(
     "triggers",
     url_prefix="triggers",
     rules=[
-        {"route": "/", "defaults": {"id": None}, "methods": ["GET", "POST"]},
+        {"route": "/", "methods": ["POST"]},
+        {"route": "/", "defaults": {"id": None}, "methods": ["GET"]},
         {"route": "/<int:id>", "methods": ["GET", "PUT", "DELETE"]},
     ],
 )

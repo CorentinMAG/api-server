@@ -1,9 +1,10 @@
-from flask.views import MethodView
+from flask.views import MethodView, View
 from typing import Generic, TypeVar, TypedDict
 from api.services.base import BaseService
 from api.services import DTR_SERVICES
 from flask import Blueprint
 from abc import ABC, abstractmethod
+from typing import get_type_hints
 
 T = TypeVar("T")
 
@@ -15,8 +16,6 @@ class RouteRule(TypedDict):
 
 
 class BaseAPI(MethodView, ABC, Generic[T]):
-    _service_instances: dict[str, BaseService] = {}
-    service_name: str | None
     init_every_request = False
 
     def __init_subclass__(cls, **kwargs):
@@ -26,7 +25,21 @@ class BaseAPI(MethodView, ABC, Generic[T]):
 
     def __init__(self):
         service_name = getattr(self.__class__, "_service_name")
-        self._service = self._get_or_create_service(service_name)
+        self._service = BaseService._get_or_create_service(
+            self._resolve_service_class(service_name) 
+            if service_name else 
+            None
+        )
+
+        try:
+            hints = get_type_hints(self.__class__)
+        except Exception:
+            hints = self.__class__.__annotations__
+
+        for attr_name, attr_type in hints.items():
+            if (isinstance(attr_type, type) and issubclass(attr_type, BaseService) and attr_type is not BaseService):
+                setattr(self, attr_name, BaseService._get_or_create_service(attr_type))
+
 
     @property
     def service(self) -> T:
@@ -47,15 +60,6 @@ class BaseAPI(MethodView, ABC, Generic[T]):
     @abstractmethod
     def delete(self, id: int):
         pass
-
-    @classmethod
-    def _get_or_create_service(cls, service_name: str) -> T:
-        if service_name not in cls._service_instances:
-            service_class = cls._resolve_service_class(service_name)
-            if not service_class:
-                raise ValueError(f"Service with name {service_name} not found")
-            cls._service_instances[service_name] = service_class()
-        return cls._service_instances[service_name]
 
     @staticmethod
     def _resolve_service_class(service_name: str) -> T | None:

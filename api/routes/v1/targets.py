@@ -2,9 +2,12 @@ from flask import request
 from dtr_common.schema import TargetCreate, TargetUpdate
 from api.routes import BaseAPI
 from api.services import TargetService
+from api.utils import check_offline_mode
 
 
 class TargetAPI(BaseAPI[TargetService]):
+
+    decorators = [check_offline_mode()]
 
     def delete(self, id: int):
         self.service.delete(id)

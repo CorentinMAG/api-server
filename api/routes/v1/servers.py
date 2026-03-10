@@ -2,9 +2,12 @@ from flask import request
 from dtr_common.schema import ServerCreate, ServerUpdate
 from api.routes import BaseAPI
 from api.services import NotificationServerService
+from api.utils import check_offline_mode
 
 
 class NotificationServerAPI(BaseAPI[NotificationServerService]):
+
+    decorators = [check_offline_mode()]
 
     def get(self, id: int | None = None):
         if id is None:
@@ -43,7 +46,8 @@ bp = NotificationServerAPI.register(
     "servers",
     url_prefix="servers",
     rules=[
-        {"route": "/", "defaults": {"id": None}, "methods": ["GET", "POST"]},
+        {"route": "/", "methods": ["POST"]},
+        {"route": "/", "defaults": {"id": None}, "methods": ["GET"]},
         {"route": "/<int:id>", "methods": ["GET", "PUT", "DELETE"]},
     ],
 )

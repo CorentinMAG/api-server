@@ -3,9 +3,12 @@ from flask import request
 from dtr_common.schema import TransferPolicyCreate, TransferPolicyUpdate
 from api.routes import BaseAPI
 from api.services import TransferPolicyService
+from api.utils import check_offline_mode
 
 
 class TransferPolicyAPI(BaseAPI[TransferPolicyService]):
+
+    decorators = [check_offline_mode()]
 
     def get(self, id: int | None = None):
 
@@ -43,7 +46,8 @@ bp = TransferPolicyAPI.register(
     "policies",
     url_prefix="policies",
     rules=[
-        {"route": "/", "defaults": {"id": None}, "methods": ["GET", "POST"]},
+        {"route": "/", "methods": ["POST"]},
+        {"route": "/", "defaults": {"id": None}, "methods": ["GET"]},
         {"route": "/<int:id>", "methods": ["GET", "PUT", "DELETE"]},
     ],
 )

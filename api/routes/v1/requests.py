@@ -3,9 +3,13 @@ from __future__ import annotations
 from flask import request
 from api.routes import BaseAPI
 from api.services import TransferRequestService
+from dtr_common.schema import TransferRequestCreate, TransferRequestUpdate
+from api.utils import check_offline_mode
 
 
 class TransferRequestAPI(BaseAPI[TransferRequestService]):
+
+    decorators = [check_offline_mode()]
 
     def get(self, id: int | None = None):
         pass
@@ -17,12 +21,11 @@ class TransferRequestAPI(BaseAPI[TransferRequestService]):
         pass
 
     def post(self):
-        # data = request.json
-        # schema = TransferRequestCreate(**data)
-        # request = self.service.create(schema)
-        # self.service.commit()
-        # return request.to_dict()
-        pass
+        data = request.json
+        schema = TransferRequestCreate(**data)
+        request = self.service.create(schema)
+        self.service.commit()
+        return request.to_dict()
 
 
 bp = TransferRequestAPI.register(
