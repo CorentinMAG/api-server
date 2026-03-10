@@ -1,9 +1,10 @@
 from __future__ import annotations
 
-from api.dtr_common.constantes import State as StateEnum, SubState as SubStateEnum
-from sqlalchemy import ForeignKey, event, Connection
+from sqlalchemy import Connection, ForeignKey, event
 from sqlalchemy.orm import Mapped, mapped_column
 from sqlalchemy_serializer import SerializerMixin
+
+from api.dtr_common.constantes import State as StateEnum, SubState as SubStateEnum
 
 from .base import BaseModel
 
@@ -23,9 +24,7 @@ class State(BaseModel, SerializerMixin):
 
 
 @event.listens_for(State, "after_insert")
-def update_transfer_request_current_state_on_insert(
-    mapper: any, connection: Connection, target: State
-):
+def update_transfer_request_current_state_on_insert(mapper: any, connection: Connection, target: State):
     """
     Automatically update the parent TransferRequest's current_state when a new State is inserted
     """
@@ -39,14 +38,13 @@ def update_transfer_request_current_state_on_insert(
 
 
 @event.listens_for(State, "after_delete")
-def update_transfer_request_current_state_on_delete(
-    mapper: any, connection: Connection, target: State
-):
+def update_transfer_request_current_state_on_delete(mapper: any, connection: Connection, target: State):
     """
     Automatically update the parent TransferRequest's current_state when a State is deleted
     """
+    from sqlalchemy import desc, select
+
     from .request import TransferRequest
-    from sqlalchemy import select, desc
 
     # Find the latest state for the request, if any
     latest_state_id = connection.execute(

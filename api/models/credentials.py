@@ -8,8 +8,8 @@ from sqlalchemy_utils import StringEncryptedType
 from sqlalchemy_utils.types.encrypted.encrypted_type import AesEngine
 
 from api.config import ENCRYPTION_KEY
-from .base import BaseModel
 
+from .base import BaseModel
 
 if not ENCRYPTION_KEY:
     raise ValueError("ENCRYPTION_KEY is not set in the environment.")

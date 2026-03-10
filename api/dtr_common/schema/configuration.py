@@ -1,11 +1,13 @@
 from __future__ import annotations
+
 from pydantic import model_validator
+
 from .base import StrictBaseModel
 from .parameters import GlobalParametersCreate
-from .server import ServerCreate
-from .queue import QueueCreate
-from .target import TargetCreate
 from .policies import TransferPolicyCreate
+from .queue import QueueCreate
+from .server import ServerCreate
+from .target import TargetCreate
 from .trigger import TriggerCreate
 
 
@@ -27,15 +29,11 @@ class ConfigurationSchema(StrictBaseModel):
             dest_targets = list(map(lambda d: d.target, policy.dests))
 
             if src_target not in targets_name:
-                raise ValueError(
-                    f"Incorrect src target name in policy {policy.name}: {src_target}"
-                )
+                raise ValueError(f"Incorrect src target name in policy {policy.name}: {src_target}")
 
             for dst_target in dest_targets:
                 if dst_target not in targets_name:
-                    raise ValueError(
-                        f"Incorrect dest target name in policy {policy.name}: {dst_target}"
-                    )
+                    raise ValueError(f"Incorrect dest target name in policy {policy.name}: {dst_target}")
         return self
 
     @model_validator(mode="after")
@@ -108,6 +106,4 @@ class ConfigurationSchema(StrictBaseModel):
         for policy in self.transfer_policies:
             trigger_name = policy.trigger
             if trigger_name is not None and trigger_name not in trigger_names:
-                raise ValueError(
-                    f"Policy {policy.name} is linked to the unknown trigger {trigger_name}"
-                )
+                raise ValueError(f"Policy {policy.name} is linked to the unknown trigger {trigger_name}")

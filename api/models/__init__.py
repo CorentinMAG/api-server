@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 from .credentials import Credentials
+from .notifications import KafkaParameters, Notification
 from .parameters import (
     GlobalParameters,
     TargetParameters,
@@ -12,9 +13,8 @@ from .request import TransferRequest
 from .server import NotificationServer
 from .states import State
 from .target import Target
-from .worker import Worker
 from .trigger import Trigger
-from .notifications import KafkaParameters, Notification
+from .worker import Worker
 
 __all__ = [
     "NotificationServer",

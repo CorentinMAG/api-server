@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 from ..constantes import Type
 from .base import StrictBaseModel
 

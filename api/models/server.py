@@ -4,7 +4,9 @@ from typing import TYPE_CHECKING
 
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 from sqlalchemy_serializer import SerializerMixin
+
 from api.dtr_common.constantes import ServerType
+
 from .base import BaseModel
 
 if TYPE_CHECKING:
@@ -23,6 +25,4 @@ class NotificationServer(BaseModel, SerializerMixin):
     port: Mapped[int]
     timeout: Mapped[int] = mapped_column(default=40)
     credentials: Mapped[Credentials] = relationship(passive_deletes=True, lazy="joined")
-    notifications: Mapped[list[Notification]] = relationship(
-        back_populates="server", passive_deletes=True
-    )
+    notifications: Mapped[list[Notification]] = relationship(back_populates="server", passive_deletes=True)

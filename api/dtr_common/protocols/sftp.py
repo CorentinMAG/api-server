@@ -1,18 +1,22 @@
-from pathlib import Path
-from .base import BaseProtocol, IFetch
-from paramiko import SSHClient, AutoAddPolicy
+from __future__ import annotations
+
 import re
+import time
+from pathlib import Path
+
 from dtr_common.exceptions.errors import (
-    ListError,
     ConnectionError,
-    UploadError,
     DownloadError,
+    ListError,
     PurgeError,
     RenameError,
+    UploadError,
 )
 from dtr_common.utils import task
+from paramiko import AutoAddPolicy, SSHClient
+
 from ..utils import convert_datetime_regex
-import time
+from .base import BaseProtocol, IFetch
 
 
 class SFTPProtocol(BaseProtocol):
@@ -56,16 +60,13 @@ class SFTPProtocol(BaseProtocol):
         stats = [self.client.stat(f) for f in files]
 
         files = [
-            {
-                "filename": f.split("/")[-1], 
-                "size": s.st_size / 1e6, 
-                "modified_at": s.st_mtime
-            } for f,s in zip(files, stats)
+            {"filename": f.split("/")[-1], "size": s.st_size / 1e6, "modified_at": s.st_mtime}
+            for f, s in zip(files, stats)
         ]
         return files
 
     def _progress(self, transferred: int, size: float) -> None:
-        percent = round(( transferred / size ) * 100) if size else 100
+        percent = round((transferred / size) * 100) if size else 100
         if percent % 10 == 0 and self._last_percent != percent:
             self.logger.info("progress file: %d%%", percent)
             self._last_percent = percent
@@ -73,7 +74,7 @@ class SFTPProtocol(BaseProtocol):
     def _transfer(self, mode: str, src: str, dest: str, size: float) -> None:
         total_size_bytes = size * 1e6  # Convert size from MB to bytes
         self._last_percent = -1
-        
+
         if mode == "upload":
             self.client.put(src, dest, callback=self._progress)
         elif mode == "download":

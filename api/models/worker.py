@@ -1,9 +1,11 @@
-from .base import BaseModel
+from __future__ import annotations
+
+from sqlalchemy import Column, ForeignKey, Table
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 from sqlalchemy_serializer import SerializerMixin
-from sqlalchemy import Table, ForeignKey, Column
-from .queue import Queue
 
+from .base import BaseModel
+from .queue import Queue
 
 association_table = Table(
     "worker_queues",

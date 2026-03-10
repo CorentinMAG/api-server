@@ -1,9 +1,13 @@
-from api.models import Target, Credentials, TargetParameters
-from .base import BaseService
-from api.repositories import TargetRepository
-from api.dtr_common.schema.target import TargetCreate, TargetUpdate
-from api.dtr_common.schema.pagination import Pagination
+from __future__ import annotations
+
 from werkzeug.datastructures import ImmutableMultiDict
+
+from api.dtr_common.schema.pagination import Pagination
+from api.dtr_common.schema.target import TargetCreate, TargetUpdate
+from api.models import Credentials, Target, TargetParameters
+from api.repositories import TargetRepository
+
+from .base import BaseService
 
 
 class TargetService(BaseService[TargetRepository]):
@@ -24,9 +28,7 @@ class TargetService(BaseService[TargetRepository]):
         target = Target(**data.model_dump(exclude={"credentials", "parameters"}))
 
         if data.credentials:
-            credentials = Credentials(
-                **data.credentials.model_dump(context={"include_secrets": True})
-            )
+            credentials = Credentials(**data.credentials.model_dump(context={"include_secrets": True}))
             target.credentials = credentials
         target.parameters = TargetParameters(**data.parameters.model_dump())
         return self.repository.create(target)

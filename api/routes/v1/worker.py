@@ -1,12 +1,15 @@
 from __future__ import annotations
+
 from flask import request
 
+from api.dtr_common.schema import WorkerCreate, WorkerUpdate
 from api.routes import BaseAPI
 from api.services import WorkerService
-from api.dtr_common.schema import WorkerCreate, WorkerUpdate
+from api.utils import check_offline_mode
 
 
 class WorkerAPI(BaseAPI[WorkerService]):
+    decorators = [check_offline_mode]
 
     def get(self, id: int | None = None):
         if id is None:

@@ -1,13 +1,18 @@
-from .base import BaseProtocol, IFetch
-import boto3
-import re
-from dtr_common.exceptions.errors import ListError, ConnectionError, UploadError, DownloadError, PurgeError
-from ..utils import convert_datetime_regex
-from dtr_common.utils import task, choose_chunk_size
-from pathlib import Path
-import time
-from boto3.s3.transfer import TransferConfig, S3Transfer
+from __future__ import annotations
+
 import logging
+import re
+import time
+from pathlib import Path
+
+import boto3
+from boto3.s3.transfer import S3Transfer, TransferConfig
+from dtr_common.exceptions.errors import ConnectionError, DownloadError, ListError, PurgeError, UploadError
+from dtr_common.utils import choose_chunk_size, task
+
+from ..utils import convert_datetime_regex
+from .base import BaseProtocol, IFetch
+
 
 class ProgressPercentage:
     def __init__(self, logger: logging.Logger, mode: str, filename: str, size: float):
@@ -30,7 +35,6 @@ class ProgressPercentage:
                 self._logger.info("downloading file: %d%%", percent)
             elif self._mode == "rb":
                 self._logger.info("uploading file: %d%%", percent)
-
 
 
 class S3Protocol(BaseProtocol):
@@ -75,7 +79,7 @@ class S3Protocol(BaseProtocol):
                 map(
                     lambda m: {
                         "filename": m["Key"].split("/")[-1],
-                        "size": m["Size"] / 1e6, # in MB
+                        "size": m["Size"] / 1e6,  # in MB
                         "modified_at": m["LastModified"].timestamp(),
                     },
                     files,
@@ -88,11 +92,11 @@ class S3Protocol(BaseProtocol):
         progress = ProgressPercentage(self.logger, mode, src, size)
         chunk_size, _ = choose_chunk_size(size)
         config = TransferConfig(
-            max_concurrency=5, 
+            max_concurrency=5,
             use_threads=True,
-            multipart_threshold=5*1024*1024, # Force multipart for anything over 5 MB
-            multipart_chunksize=chunk_size
-            )
+            multipart_threshold=5 * 1024 * 1024,  # Force multipart for anything over 5 MB
+            multipart_chunksize=chunk_size,
+        )
         transfer = S3Transfer(self.client, config)
 
         if mode == "upload":

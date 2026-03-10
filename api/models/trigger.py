@@ -1,7 +1,10 @@
+from __future__ import annotations
+
 from sqlalchemy.orm import Mapped, mapped_column, relationship
+from sqlalchemy_serializer import SerializerMixin
+
 from .base import BaseModel
 from .policies import TransferPolicy
-from sqlalchemy_serializer import SerializerMixin
 
 
 class Trigger(BaseModel, SerializerMixin):

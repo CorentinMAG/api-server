@@ -1,21 +1,25 @@
-from .base import BaseProtocol, IFetch
-from ..ftp.ftps import MYFTPS
-from ..ftp.ftp_util import generate_tls_context
-import re
-import os
-from dtr_common.exceptions.errors import (
-    ListError,
-    ConnectionError,
-    UploadError,
-    DownloadError,
-    PurgeError,
-    RenameError,
-)
-from ..utils import convert_datetime_regex, task
+from __future__ import annotations
+
 import datetime
+import os
+import re
+import time
 from ftplib import FTP
 from pathlib import Path
-import time
+
+from dtr_common.exceptions.errors import (
+    ConnectionError,
+    DownloadError,
+    ListError,
+    PurgeError,
+    RenameError,
+    UploadError,
+)
+
+from ..ftp.ftp_util import generate_tls_context
+from ..ftp.ftps import MYFTPS
+from ..utils import convert_datetime_regex, task
+from .base import BaseProtocol, IFetch
 
 
 class FTPSProtocol(BaseProtocol):
@@ -116,6 +120,7 @@ class FTPSProtocol(BaseProtocol):
 
         if mode == "wb":  # Download
             with open(dest, mode) as f:
+
                 def handle_chunk(chunk: int):
                     nonlocal downloaded_size
                     nonlocal last_percent
@@ -128,9 +133,11 @@ class FTPSProtocol(BaseProtocol):
                     if percent % 10 == 0 and last_percent != percent:
                         self.logger.debug("downloading file %d%%", percent)
                         last_percent = percent
+
                 self.client.retrbinary(f"RETR {src}", handle_chunk)
         elif mode == "rb":  # Upload
             with open(src, mode) as f:
+
                 def handle_chunk(chunk: int) -> None:
                     nonlocal downloaded_size
                     nonlocal last_percent
@@ -139,7 +146,8 @@ class FTPSProtocol(BaseProtocol):
                     if percent % 10 == 0 and last_percent != percent:
                         self.logger.info("uploading file: %d%%", percent)
                         last_percent = percent
-                self.client.storbinary(f"STOR {dest}", f, callback = handle_chunk)
+
+                self.client.storbinary(f"STOR {dest}", f, callback=handle_chunk)
 
     @task(error=DownloadError)
     def download(self, filename: str, dest: str, size: float | None = None) -> tuple[float, float, float]:

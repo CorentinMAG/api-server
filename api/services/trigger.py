@@ -1,12 +1,14 @@
-from .base import BaseService
+from __future__ import annotations
+
+from api.dtr_common.schema import TriggerCreate, TriggerUpdate
 from api.models import Trigger
 from api.repositories import TriggerRepository
-from api.dtr_common.schema import TriggerCreate, TriggerUpdate
 from api.services import GlobalParametersService
+
+from .base import BaseService
 
 
 class TriggerService(BaseService[TriggerRepository]):
-
     parameters: GlobalParametersService
 
     def get_by_name(self, name: str | None) -> Trigger:

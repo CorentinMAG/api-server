@@ -1,5 +1,7 @@
-from .base import StrictBaseModel
+from __future__ import annotations
+
 from ..constantes import Protocol
+from .base import StrictBaseModel
 from .credentials import CredentialsSchema
 
 

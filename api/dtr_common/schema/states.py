@@ -1,6 +1,9 @@
-from .base import StrictBaseModel
+from __future__ import annotations
+
 import datetime
+
 from ..constantes import State as StateEnum, SubState
+from .base import StrictBaseModel
 
 
 class StateSchema(StrictBaseModel):

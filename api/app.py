@@ -1,7 +1,11 @@
-from flask import Flask, g
+from __future__ import annotations
+
 from logging import getLogger
-from sqlalchemy import create_engine, Engine
-from sqlalchemy.orm import sessionmaker, Session, scoped_session
+
+from flask import Flask, g
+from sqlalchemy import Engine, create_engine
+from sqlalchemy.orm import Session, scoped_session, sessionmaker
+
 from api.config import Config
 
 logger = getLogger(__name__)
@@ -53,13 +57,9 @@ class DTRApp(Flask):
         if not self.settings:
             logger.error("Cannot initialize database without settings.")
             return
-        self._engine = create_engine(
-            self.settings.DATABASE_URL, **self.settings.SQLALCHEMY_ENGINE_OPTIONS
-        )
+        self._engine = create_engine(self.settings.DATABASE_URL, **self.settings.SQLALCHEMY_ENGINE_OPTIONS)
 
-        self._session_factory = sessionmaker(
-            autocommit=False, autoflush=False, bind=self._engine
-        )
+        self._session_factory = sessionmaker(autocommit=False, autoflush=False, bind=self._engine)
 
         self.teardown_appcontext(self._close_session)
         self.before_request(self._setup_session)

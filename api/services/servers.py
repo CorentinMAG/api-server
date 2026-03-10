@@ -1,13 +1,16 @@
-from api.repositories import NotificationServerRepository
-from .base import BaseService
-from api.models import NotificationServer, Credentials
-from api.dtr_common.schema.server import ServerUpdate, ServerCreate
-from api.dtr_common.schema.pagination import Pagination
+from __future__ import annotations
+
 from werkzeug.datastructures import ImmutableMultiDict
+
+from api.dtr_common.schema.pagination import Pagination
+from api.dtr_common.schema.server import ServerCreate, ServerUpdate
+from api.models import Credentials, NotificationServer
+from api.repositories import NotificationServerRepository
+
+from .base import BaseService
 
 
 class NotificationServerService(BaseService[NotificationServerRepository]):
-
     def get_by_name(self, name: str) -> NotificationServer:
         return self.repository.get_by_name(name)
 
@@ -28,9 +31,7 @@ class NotificationServerService(BaseService[NotificationServerRepository]):
         server = NotificationServer(**schema.model_dump(exclude={"credentials"}))
 
         if schema.credentials:
-            credentials = Credentials(
-                **schema.credentials.model_dump(context={"include_secrets": True})
-            )
+            credentials = Credentials(**schema.credentials.model_dump(context={"include_secrets": True}))
             server.credentials = credentials
         return self.repository.create(server)
 

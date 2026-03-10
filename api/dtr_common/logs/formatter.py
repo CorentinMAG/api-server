@@ -1,5 +1,8 @@
-import logging
+from __future__ import annotations
+
 import json
+import logging
+
 
 class JsonFormatter(logging.Formatter):
     default_msec_format = None

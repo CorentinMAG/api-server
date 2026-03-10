@@ -1,8 +1,12 @@
-from pydantic import UUID4
+from __future__ import annotations
+
 import datetime
-from .policies import TransferPolicySchema, DestinationPolicySchema
-from .states import StateSchema
+
+from pydantic import UUID4
+
 from .base import StrictBaseModel
+from .policies import DestinationPolicySchema, TransferPolicySchema
+from .states import StateSchema
 
 
 class PeriodicalTransferRequestSchema(StrictBaseModel):

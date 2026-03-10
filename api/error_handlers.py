@@ -1,8 +1,10 @@
 from __future__ import annotations
-from flask import Flask, request, current_app
+
+from flask import Flask, current_app, request
 from pydantic import ValidationError
 from sqlalchemy.exc import SQLAlchemyError
 from werkzeug.exceptions import HTTPException, NotFound
+
 from .exceptions import AppException
 
 
@@ -43,7 +45,5 @@ def handle_app_exceptions(e: AppException):
 
 def handle_exception(e: Exception):
     error_name = e.__class__.__name__
-    current_app.logger.error(
-        "Unhandled exception occurred (%s): %s", error_name, str(e)
-    )
+    current_app.logger.error("Unhandled exception occurred (%s): %s", error_name, str(e))
     return {"error": str(e)}, 500

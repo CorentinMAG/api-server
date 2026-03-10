@@ -1,6 +1,8 @@
 from __future__ import annotations
-from .base import BaseService
+
 from api.repositories import TransferRequestRepository
+
+from .base import BaseService
 
 
 class TransferRequestService(BaseService[TransferRequestRepository]):

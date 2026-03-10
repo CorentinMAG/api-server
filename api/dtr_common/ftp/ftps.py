@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 import ssl
 from ftplib import FTP, FTP_TLS
 from socket import socket

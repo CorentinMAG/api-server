@@ -1,14 +1,18 @@
-from typing import TypeVar, Generic
-from sqlalchemy.orm import Session
-from sqlalchemy import select, func, text, Select
-from api.exceptions import NotFoundException
-from flask import g
-from api.models import DTR_MODELS
-from werkzeug.datastructures import ImmutableMultiDict
-from api.dtr_common.schema.pagination import Pagination, PaginationItem
-from abc import ABC, abstractmethod
+from __future__ import annotations
 
-ModelType = TypeVar("ModelType")
+from abc import ABC, abstractmethod
+from typing import Generic, TypeVar
+
+from flask import g
+from sqlalchemy import Select, func, select, text
+from sqlalchemy.orm import Session
+from werkzeug.datastructures import ImmutableMultiDict
+
+from api.dtr_common.schema.pagination import Pagination, PaginationItem
+from api.exceptions import NotFoundException
+from api.models import DTR_MODELS, Base
+
+ModelType = TypeVar("ModelType", bound=Base)
 
 
 class BaseRepository(Generic[ModelType], ABC):

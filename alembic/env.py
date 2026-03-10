@@ -3,12 +3,12 @@ from __future__ import annotations
 import os
 from logging.config import fileConfig
 
+from api.db import Base
 from sqlalchemy import create_engine
 from sqlalchemy.orm import Session
 from sqlalchemy_utils import create_database, database_exists
 
 from alembic import context
-from api.db import Base
 
 target_metadata = Base.metadata
 

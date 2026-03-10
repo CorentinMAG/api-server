@@ -1,14 +1,16 @@
 from __future__ import annotations
+
 from abc import ABC, abstractmethod
 from logging import Logger
 from pathlib import Path
 from typing import TypedDict
 from uuid import UUID
 
+
 class IFetch(TypedDict):
     filename: str
-    size: float      # in Mo
-    modified_at: int # timestamp
+    size: float  # in Mo
+    modified_at: int  # timestamp
 
 
 class BaseProtocol(ABC):
@@ -31,11 +33,11 @@ class BaseProtocol(ABC):
 
     def __exit__(self, exc_type, exc_val, exc_tb) -> None:
         self.disconnect()
-    
+
     @property
     def job_uuid(self) -> UUID | None:
         return self._job_uuid
-    
+
     @job_uuid.setter
     def job_uuid(self, uuid: UUID) -> None:
         self._job_uuid = uuid

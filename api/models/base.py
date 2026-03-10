@@ -1,8 +1,10 @@
-from sqlalchemy.orm import DeclarativeBase, Mapped, mapped_column
-from sqlalchemy import func
+from __future__ import annotations
+
 from datetime import datetime
-from sqlalchemy import event
+
+from sqlalchemy import event, func
 from sqlalchemy.engine import Engine
+from sqlalchemy.orm import DeclarativeBase, Mapped, mapped_column
 
 
 @event.listens_for(Engine, "connect")
@@ -35,7 +37,7 @@ class BaseModel(Base):
                     relation.update(value)
 
     def __str__(self):
-        return f"{self.__class__.__name__}: {", ".join([f"{c.key}:{getattr(self, c.key)}" for c in self.__class__.__mapper__.column_attrs])}"
+        return f"{self.__class__.__name__}: {', '.join([f'{c.key}:{getattr(self, c.key)}' for c in self.__class__.__mapper__.column_attrs])}"
 
     def __repr__(self):
         return self.__str__()

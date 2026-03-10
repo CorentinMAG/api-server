@@ -1,8 +1,11 @@
 from __future__ import annotations
+
+from logging import getLogger
+
+from sqlalchemy_utils import create_database, database_exists
+
 from api.app import DTRApp
 from api.config import Config, create_config
-from sqlalchemy_utils import create_database, database_exists
-from logging import getLogger
 
 logger = getLogger(__name__)
 
@@ -23,8 +26,8 @@ def create_app(config: Config | None = None) -> DTRApp:
             logger.info("Creating database...")
             create_database(app.settings.DATABASE_URL)
             logger.info("Database created successfully.")
-        from api.models.base import Base
         import api.models
+        from api.models.base import Base
 
         Base.metadata.create_all(app.engine)
 

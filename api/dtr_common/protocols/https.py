@@ -1,13 +1,25 @@
-from pathlib import Path
-from .base import BaseProtocol, IFetch
-from dtr_common.utils import task
-from ..utils import convert_datetime_regex
-from dtr_common.exceptions.errors import ListError, UploadError, DownloadError, PurgeError, RenameError, ConnectionError
+from __future__ import annotations
+
 import datetime
-import requests
 import time
+from pathlib import Path
+
+import requests
+from dtr_common.exceptions.errors import (
+    ConnectionError,
+    DownloadError,
+    ListError,
+    PurgeError,
+    RenameError,
+    UploadError,
+)
+from dtr_common.utils import task
 from requests.adapters import HTTPAdapter
 from urllib3.util import Retry
+
+from ..utils import convert_datetime_regex
+from .base import BaseProtocol, IFetch
+
 
 class HTTPProtocol(BaseProtocol):
     def __init__(self, *args, **kwargs) -> None:
@@ -21,7 +33,7 @@ class HTTPProtocol(BaseProtocol):
         # Default chunk size for streaming (8MB)
         self.chunk_size = self.parameters.get("chunk_size", 8 * 1024 * 1024)
 
-    @task(error = ConnectionError)
+    @task(error=ConnectionError)
     def connect(self) -> None:
         self.client = requests.Session()
 
@@ -98,7 +110,7 @@ class HTTPProtocol(BaseProtocol):
 
         start = time.time()
         with open(filepath, "rb") as f:
-            self.client.post(url, files = {"file": f})
+            self.client.post(url, files={"file": f})
         end = time.time()
         delta = end - start
         rate = round(size / delta, 2) if delta > 0 else 0

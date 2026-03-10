@@ -1,4 +1,5 @@
 from __future__ import annotations
+
 import os
 
 
@@ -24,9 +25,7 @@ class Config:
     DB_PORT = int(os.environ.get("DTR_DB_PORT", 5432))
     CREATE_DB = os.environ.get("DTR_DB_CREATE", "false").lower() == "true"
     DATABASE_URL = (
-        f"postgresql+psycopg://{DB_USER}:{DB_PASSWORD}@{DB_HOST}:{DB_PORT}/{DB_NAME}"
-        if DB_PASSWORD
-        else None
+        f"postgresql+psycopg://{DB_USER}:{DB_PASSWORD}@{DB_HOST}:{DB_PORT}/{DB_NAME}" if DB_PASSWORD else None
     )
 
     SQLALCHEMY_ENGINE_OPTIONS = {

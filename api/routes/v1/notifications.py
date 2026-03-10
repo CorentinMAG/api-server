@@ -4,9 +4,9 @@ Notifications API routes with dependency injection and error handling.
 
 from __future__ import annotations
 
-from api.dtr_common.constantes import Mode, SubState
 from flask import Blueprint, current_app
 
+from api.dtr_common.constantes import Mode, SubState
 from api.services.filters import get_params
 from api.services.requests import get_next_request
 

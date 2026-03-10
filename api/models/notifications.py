@@ -1,20 +1,20 @@
-from .base import BaseModel
-from .server import NotificationServer
+from __future__ import annotations
+
 from sqlalchemy import ForeignKey
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 from sqlalchemy_serializer import SerializerMixin
 
+from .base import BaseModel
+from .server import NotificationServer
+
 
 class NotificationParameter(BaseModel, SerializerMixin):
-
     serialize_only = ()
 
     __tablename__ = "notification_parameters"
 
     type: Mapped[str]
-    notification_id: Mapped[int] = mapped_column(
-        ForeignKey("notifications.id", ondelete="CASCADE")
-    )
+    notification_id: Mapped[int] = mapped_column(ForeignKey("notifications.id", ondelete="CASCADE"))
 
     __mapper_args__ = {
         "polymorphic_identity": "notification_parameters",
@@ -29,9 +29,7 @@ class KafkaParameters(NotificationParameter, SerializerMixin):
 
     serialize_only = ("topic", "replicas", "partitions")
 
-    id: Mapped[int] = mapped_column(
-        ForeignKey("notification_parameters.id"), primary_key=True
-    )
+    id: Mapped[int] = mapped_column(ForeignKey("notification_parameters.id"), primary_key=True)
 
     topic: Mapped[str]
     replicas: Mapped[int] = mapped_column(default=1)
@@ -39,21 +37,14 @@ class KafkaParameters(NotificationParameter, SerializerMixin):
 
 
 class Notification(BaseModel, SerializerMixin):
-
     __tablename__ = "notifications"
 
     serialize_only = ("server", "parameters")
 
-    server_id: Mapped[int] = mapped_column(
-        ForeignKey("notification_servers.id", ondelete="CASCADE")
-    )
-    dest_id: Mapped[int] = mapped_column(
-        ForeignKey("destination_policies.id", ondelete="CASCADE")
-    )
+    server_id: Mapped[int] = mapped_column(ForeignKey("notification_servers.id", ondelete="CASCADE"))
+    dest_id: Mapped[int] = mapped_column(ForeignKey("destination_policies.id", ondelete="CASCADE"))
 
     parameters: Mapped[list[NotificationParameter]] = relationship(
         cascade="all, delete-orphan", lazy="selectin"
     )
-    server: Mapped[NotificationServer] = relationship(
-        back_populates="notifications", lazy="joined"
-    )
+    server: Mapped[NotificationServer] = relationship(back_populates="notifications", lazy="joined")

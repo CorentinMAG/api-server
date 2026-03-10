@@ -1,16 +1,20 @@
-from .base import BaseRepository
-from api.models import TransferRequest, State, TransferPolicy
-from sqlalchemy import select, or_
+from __future__ import annotations
+
+import datetime
+from typing import Literal
+from uuid import UUID
+
+from sqlalchemy import or_, select
 from sqlalchemy.orm import selectinload
+
 from api.dtr_common.constantes import (
     State as StateEnum,
     SubState as SubStateEnum,
 )
-from uuid import UUID
 from api.exceptions import NotFoundException
-import datetime
-from typing import Literal
+from api.models import State, TransferPolicy, TransferRequest
 
+from .base import BaseRepository
 
 SortingOptions = Literal["ASC", "DESC"]
 
@@ -18,9 +22,7 @@ SortingOptions = Literal["ASC", "DESC"]
 class TransferRequestRepository(BaseRepository[TransferRequest]):
     """repository fro TransferRequest"""
 
-    def get_by_state(
-        self, state: StateEnum, skip: int = 0, limit: int = 100
-    ) -> list[TransferRequest]:
+    def get_by_state(self, state: StateEnum, skip: int = 0, limit: int = 100) -> list[TransferRequest]:
         query = (
             select(TransferRequest)
             .join(State, TransferRequest.current_state_id == State.id)
@@ -78,22 +80,13 @@ class TransferRequestRepository(BaseRepository[TransferRequest]):
             query = query.where(TransferPolicy.queue.in_(queues))
 
         query = query.order_by(
-            (
-                TransferPolicy.priority.asc()
-                if priority == "ASC"
-                else TransferPolicy.priority.desc()
-            ),
-            (
-                TransferRequest.created_at.asc()
-                if created_at == "ASC"
-                else TransferRequest.created_at.desc()
-            ),
+            (TransferPolicy.priority.asc() if priority == "ASC" else TransferPolicy.priority.desc()),
+            (TransferRequest.created_at.asc() if created_at == "ASC" else TransferRequest.created_at.desc()),
         )
 
         query = query.where(
             or_(
-                TransferRequest.next_retry_min_time
-                <= datetime.datetime.now(datetime.timezone.utc),
+                TransferRequest.next_retry_min_time <= datetime.datetime.now(datetime.timezone.utc),
                 TransferRequest.next_retry_min_time.is_(None),
             )
         )

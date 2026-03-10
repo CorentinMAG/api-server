@@ -1,28 +1,31 @@
-from api.repositories import TransferPolicyRepository
-from api.models import (
-    TransferPolicy,
-    SourcePolicy,
-    DestinationPolicy,
-    TransferPolicyParameters,
-    KafkaParameters,
-    Notification,
-    Queue,
-)
-from .base import BaseService
+from __future__ import annotations
+
+from werkzeug.datastructures import ImmutableMultiDict
+
 from api.dtr_common.schema import (
-    TransferPolicyCreate,
-    SourcePolicyCreate,
     DestinationPolicyCreate,
-    TransferPolicyParametersCreate,
+    Pagination,
     ServerParametersCreate,
+    SourcePolicyCreate,
+    TransferPolicyCreate,
+    TransferPolicyParametersCreate,
     TransferPolicyUpdate,
 )
-from werkzeug.datastructures import ImmutableMultiDict
-from api.dtr_common.schema import Pagination
-from api.services import TargetService, GlobalParametersService, NotificationServerService, QueueService
+from api.models import (
+    DestinationPolicy,
+    Notification,
+    Queue,
+    SourcePolicy,
+    TransferPolicy,
+    TransferPolicyParameters,
+)
+from api.repositories import TransferPolicyRepository
+from api.services import GlobalParametersService, NotificationServerService, QueueService, TargetService
+
+from .base import BaseService
+
 
 class TransferPolicyService(BaseService[TransferPolicyRepository]):
-
     target: TargetService
     parameters: GlobalParametersService
     server: NotificationServerService
@@ -61,9 +64,7 @@ class TransferPolicyService(BaseService[TransferPolicyRepository]):
             policy.dests = dests_policy
         return self.repository.update(
             policy,
-            schema.model_dump(
-                exclude_none=True, exclude={"src.target", "queue", "dests"}
-            ),
+            schema.model_dump(exclude_none=True, exclude={"src.target", "queue", "dests"}),
         )
 
     def delete(self, id: int) -> None:
@@ -85,9 +86,7 @@ class TransferPolicyService(BaseService[TransferPolicyRepository]):
         return self.repository.create(policy)
 
     def get_enabled(self, skip: int = 0, limit: int = 100) -> list[TransferPolicy]:
-        return self.repository.get_all(
-            filters={"enabled": True}, skip=skip, limit=limit
-        )
+        return self.repository.get_all(filters={"enabled": True}, skip=skip, limit=limit)
 
     def _build_src_policy(self, src: SourcePolicyCreate) -> SourcePolicy:
         target_name = src.target

@@ -1,17 +1,20 @@
-from .base import BaseRepository
-from api.models import (
-    TransferPolicy,
-    DestinationPolicy,
-    DestinationPolicy,
-)
-from sqlalchemy.orm import joinedload, selectinload
-from sqlalchemy import select
-from api.exceptions import NotFoundException
+from __future__ import annotations
+
 from typing import overload
+
+from sqlalchemy import select
+from sqlalchemy.orm import joinedload, selectinload
+
+from api.exceptions import NotFoundException
+from api.models import (
+    DestinationPolicy,
+    TransferPolicy,
+)
+
+from .base import BaseRepository
 
 
 class TransferPolicyRepository(BaseRepository[TransferPolicy]):
-
     def get_by_name(self, name: str) -> TransferPolicy:
         """get transfer policy by name"""
 
@@ -43,9 +46,7 @@ class TransferPolicyRepository(BaseRepository[TransferPolicy]):
 
         query = select(TransferPolicy).options(
             selectinload(TransferPolicy.dests).joinedload(DestinationPolicy.target),
-            selectinload(TransferPolicy.dests).selectinload(
-                DestinationPolicy.notifications
-            ),
+            selectinload(TransferPolicy.dests).selectinload(DestinationPolicy.notifications),
             joinedload(TransferPolicy.parameters),
             joinedload(TransferPolicy.queue),
         )
@@ -62,10 +63,7 @@ class TransferPolicyRepository(BaseRepository[TransferPolicy]):
             query = query.offset(skip).limit(limit)
             return list(self.session.scalars(query).unique().all())
 
-    def get(
-        self, skip: int, limit: int, filters: dict[str, any] | None
-    ) -> list[TransferPolicy]:
-
+    def get(self, skip: int, limit: int, filters: dict[str, any] | None) -> list[TransferPolicy]:
         query = select(TransferPolicy)
         if filters:
             self.filters(query, filters)

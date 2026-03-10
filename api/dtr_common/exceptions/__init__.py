@@ -1,9 +1,11 @@
+from __future__ import annotations
+
 from .errors import (
-    ListError,
     ConnectionError,
     DownloadError,
-    UploadError,
+    ListError,
     PurgeError,
     RenameError,
-    RetryError
+    RetryError,
+    UploadError,
 )

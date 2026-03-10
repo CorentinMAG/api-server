@@ -1,14 +1,18 @@
 from __future__ import annotations
+
 from flask import request
+
 from api.dtr_common.schema import TransferPolicyCreate, TransferPolicyUpdate
 from api.routes import BaseAPI
 from api.services import TransferPolicyService
+from api.utils import check_offline_mode
 
 
 class TransferPolicyAPI(BaseAPI[TransferPolicyService]):
 
-    def get(self, id: int | None = None):
+    decorators = [check_offline_mode]
 
+    def get(self, id: int | None = None):
         if id is None:
             paginated = self.service.paginate(request.args)
             items = [policy.to_dict() for policy in paginated.items]

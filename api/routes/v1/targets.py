@@ -1,10 +1,22 @@
+from __future__ import annotations
+
 from flask import request
+
 from api.dtr_common.schema import TargetCreate, TargetUpdate
 from api.routes import BaseAPI
 from api.services import TargetService
+from api.utils import check_offline_mode
 
 
 class TargetAPI(BaseAPI[TargetService]):
+
+    decorators = [check_offline_mode]
+    prefix = "targets"
+
+    custom_routes = {"get_info": ("/info", ["GET"])}
+
+    def get_info(self):
+        return {"hello": "world"}
 
     def delete(self, id: int):
         self.service.delete(id)

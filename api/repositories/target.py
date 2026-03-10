@@ -1,8 +1,12 @@
-from .base import BaseRepository
-from sqlalchemy.orm import joinedload
+from __future__ import annotations
+
 from sqlalchemy import select
-from api.models import Target
+from sqlalchemy.orm import joinedload
+
 from api.exceptions import NotFoundException
+from api.models import Target
+
+from .base import BaseRepository
 
 
 class TargetRepository(BaseRepository[Target]):
@@ -24,9 +28,7 @@ class TargetRepository(BaseRepository[Target]):
     def get_with_relations(
         self, skip: int = 0, limit: int = 100, filters: dict[str, any] | None = None
     ) -> list[Target]:
-        query = select(Target).options(
-            joinedload(Target.credentials), joinedload(Target.parameters)
-        )
+        query = select(Target).options(joinedload(Target.credentials), joinedload(Target.parameters))
         if filters:
             self.filters(query, filters)
         query = query.offset(skip).limit(limit)

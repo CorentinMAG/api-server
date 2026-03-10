@@ -1,11 +1,15 @@
 from __future__ import annotations
 
 from flask import request
+
 from api.routes import BaseAPI
 from api.services import TransferRequestService
+from api.utils import check_offline_mode
 
 
 class TransferRequestAPI(BaseAPI[TransferRequestService]):
+
+    decorators = [check_offline_mode]
 
     def get(self, id: int | None = None):
         pass
@@ -25,7 +29,13 @@ class TransferRequestAPI(BaseAPI[TransferRequestService]):
 
 
 bp = TransferRequestAPI.register(
-    "requests", url_prefix="requests", rules=[{"route": "/", "defaults": {"id": None}, "methods": ["GET", "POST"]}, {"route": "/<int:id>", "methods": ["GET", "PUT", "DELETE"]}]
+    "requests",
+    url_prefix="requests",
+    rules=[
+        {"route": "/", "methods": ["POST"]},
+        {"route": "/", "defaults": {"id": None}, "methods": ["GET"]},
+        {"route": "/<int:id>", "methods": ["GET", "PUT", "DELETE"]},
+    ],
 )
 
 

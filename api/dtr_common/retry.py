@@ -1,8 +1,11 @@
-import requests
-from typing import Literal, cast
-import socket
+from __future__ import annotations
+
 import logging
 import time
+from typing import Literal, cast
+
+import requests
+
 from .exceptions.errors import RetryError
 
 
@@ -39,10 +42,10 @@ def retry_database_operation(
         RetryError: If all retries are exhausted
     """
     from sqlalchemy.exc import (
-        OperationalError,
-        DisconnectionError,
-        TimeoutError,
         DatabaseError,
+        DisconnectionError,
+        OperationalError,
+        TimeoutError,
     )
 
     for attempt in range(total):
@@ -50,12 +53,8 @@ def retry_database_operation(
             return operation_func(*args, **kwargs)
         except (OperationalError, DisconnectionError, TimeoutError, DatabaseError) as e:
             if attempt == total - 1:  # Last attempt
-                logger.error(
-                    f"Database operation failed after {total} attempts: {str(e)}"
-                )
-                raise RetryError(
-                    f"Database operation failed after {total} attempts: {str(e)}"
-                )
+                logger.error(f"Database operation failed after {total} attempts: {str(e)}")
+                raise RetryError(f"Database operation failed after {total} attempts: {str(e)}")
 
             # Calculate delay with exponential backoff
             delay = min(initial_delay * (backoff_factor**attempt), max_delay)
@@ -106,6 +105,4 @@ def retry_request(
             time.sleep(delay)
             continue
     logger.error(f"unable to get a response ({method}, {url}) after {total} attempts")
-    raise RetryError(
-        f"unable to get a response ({method}, {url}) after {total} attempts"
-    )
+    raise RetryError(f"unable to get a response ({method}, {url}) after {total} attempts")

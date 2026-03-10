@@ -1,5 +1,5 @@
 [project]
-name= = "api-server"
+name= "api-server"
 version = "2.4.1"
 description = "A high-performance API server."
 dependencies = [
@@ -8,6 +8,7 @@ dependencies = [
     "sqlalchemy==2.0.45",
     "sqlalchemy-serializer==1.4.1"
 ]
+requires-python = ">=3.10"
 [build-system]
 requires = ["setuptools"]
 build-backend = "setuptools.build_meta"
@@ -18,8 +19,11 @@ indent-width = 4
 target-version = "py310"
 
 [tool.ruff.lint]
-select = ["E", "F", "W", "I"]
+select = ["E", "F", "I"]
 ignore = ["E501"]
+
+[tool.ruff.lint.pydocstyle]
+convention = "google"
 
 [tool.ruff.lint.isort]
 required-imports = ["from __future__ import annotations"]

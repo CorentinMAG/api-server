@@ -1,22 +1,22 @@
-from .base import BaseService
-from api.repositories import QueueRepository
-from api.models import Queue
-from api.dtr_common.schema import QueueCreate, QueueUpdate
+from __future__ import annotations
+
 from werkzeug.datastructures import ImmutableMultiDict
-from api.dtr_common.schema import Pagination
+
+from api.dtr_common.schema import Pagination, QueueCreate, QueueUpdate
+from api.models import Queue
+from api.repositories import QueueRepository
+
+from .base import BaseService
 
 
 class QueueService(BaseService[QueueRepository]):
-
     def get_by_name(self, name: str) -> Queue:
         return self.repository.get_by_name(name)
 
     def get_by_id(self, id: int) -> Queue:
         return self.repository.get_by_id(id)
 
-    def get(
-        self, skip: int = 0, limit: int = 100, filters: dict[str, any] | None = None
-    ) -> list[Queue]:
+    def get(self, skip: int = 0, limit: int = 100, filters: dict[str, any] | None = None) -> list[Queue]:
         return self.repository.get_all(skip, limit, filters)
 
     def count(self, filters: dict[str, any] | None = None) -> int:

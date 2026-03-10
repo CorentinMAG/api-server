@@ -1,6 +1,8 @@
+from __future__ import annotations
+
+from ..constantes import ServerType
 from .base import StrictBaseModel
 from .credentials import CredentialsSchema
-from ..constantes import ServerType
 
 
 class ServerCreate(StrictBaseModel):

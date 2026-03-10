@@ -1,5 +1,7 @@
 from __future__ import annotations
+
 from flask import request
+
 from api.dtr_common.schema import (
     GlobalParametersCreate,
     GlobalParametersUpdate,
@@ -35,6 +37,4 @@ class GlobalParameterAPI(BaseAPI[GlobalParameterService]):
         return params.to_dict()
 
 
-bp = GlobalParameterAPI.register(
-    "parameters", url_prefix="parameters", rules=[{"route": "/"}]
-)
+bp = GlobalParameterAPI.register("parameters", url_prefix="parameters", rules=[{"route": "/"}])

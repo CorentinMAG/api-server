@@ -1,10 +1,16 @@
+from __future__ import annotations
+
 from flask import request
+
 from api.dtr_common.schema import ServerCreate, ServerUpdate
 from api.routes import BaseAPI
 from api.services import NotificationServerService
+from api.utils import check_offline_mode
 
 
 class NotificationServerAPI(BaseAPI[NotificationServerService]):
+
+    decorators = [check_offline_mode]
 
     def get(self, id: int | None = None):
         if id is None:

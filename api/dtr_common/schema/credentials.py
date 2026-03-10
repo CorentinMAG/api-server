@@ -1,4 +1,7 @@
+from __future__ import annotations
+
 from pydantic import SecretStr, field_serializer
+
 from .base import StrictBaseModel
 
 

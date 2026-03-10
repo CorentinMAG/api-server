@@ -1,6 +1,9 @@
+from __future__ import annotations
+
 import logging
 
 from dtr_common.logs import formatter as fmt
+
 
 def create_logger(
     name: str, level: str, component_version: str, ssystem: str, ssystem_version: str, format: str = "json"

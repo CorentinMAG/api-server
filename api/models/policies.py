@@ -2,20 +2,21 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING
 
-from api.dtr_common.constantes import Type
 from sqlalchemy import JSON, ForeignKey
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 from sqlalchemy_serializer import SerializerMixin
 
+from api.dtr_common.constantes import Type
+
 from .base import BaseModel
 
 if TYPE_CHECKING:
+    from .notifications import Notification
     from .parameters import TransferPolicyParameters
     from .queue import Queue
     from .request import TransferRequest
     from .target import Target
     from .trigger import Trigger
-    from .notifications import Notification
 
 
 class SourcePolicy(BaseModel, SerializerMixin):
@@ -61,9 +62,7 @@ class DestinationPolicy(BaseModel, SerializerMixin):
     path_from_filename_expression: Mapped[list[str] | None] = mapped_column(JSON)
 
     dest_id: Mapped[int] = mapped_column(ForeignKey("targets.id", ondelete="CASCADE"))
-    policy_id: Mapped[int | None] = mapped_column(
-        ForeignKey("transfer_policies.id", ondelete="RESTRICT")
-    )
+    policy_id: Mapped[int | None] = mapped_column(ForeignKey("transfer_policies.id", ondelete="RESTRICT"))
 
     target: Mapped[Target] = relationship(lazy="joined")
     notifications: Mapped[list[Notification]] = relationship(passive_deletes=True)
@@ -91,12 +90,8 @@ class TransferPolicy(BaseModel, SerializerMixin):
     src_id: Mapped[int | None] = mapped_column(
         ForeignKey("source_policies.id", ondelete="RESTRICT"), unique=True
     )
-    queue_id: Mapped[int | None] = mapped_column(
-        ForeignKey("queues.id", ondelete="RESTRICT")
-    )
-    trigger_id: Mapped[int | None] = mapped_column(
-        ForeignKey("triggers.id", ondelete="RESTRICT")
-    )
+    queue_id: Mapped[int | None] = mapped_column(ForeignKey("queues.id", ondelete="RESTRICT"))
+    trigger_id: Mapped[int | None] = mapped_column(ForeignKey("triggers.id", ondelete="RESTRICT"))
 
     src: Mapped[SourcePolicy] = relationship(
         lazy="joined",
@@ -105,9 +100,7 @@ class TransferPolicy(BaseModel, SerializerMixin):
         uselist=False,
         single_parent=True,
     )
-    dests: Mapped[list[DestinationPolicy]] = relationship(
-        passive_deletes=True, cascade="all, delete-orphan"
-    )
+    dests: Mapped[list[DestinationPolicy]] = relationship(passive_deletes=True, cascade="all, delete-orphan")
     parameters: Mapped[TransferPolicyParameters] = relationship(
         lazy="joined",
         passive_deletes=True,

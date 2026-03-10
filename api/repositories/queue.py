@@ -1,11 +1,14 @@
-from api.models import Queue
-from .base import BaseRepository
-from api.exceptions import NotFoundException
+from __future__ import annotations
+
 from sqlalchemy import select
+
+from api.exceptions import NotFoundException
+from api.models import Queue
+
+from .base import BaseRepository
 
 
 class QueueRepository(BaseRepository[Queue]):
-
     def get_by_name(self, name: str) -> Queue:
         query = select(Queue).where(Queue.name == name)
 

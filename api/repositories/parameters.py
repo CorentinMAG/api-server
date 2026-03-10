@@ -1,10 +1,13 @@
+from __future__ import annotations
+
 from sqlalchemy import select
+
 from api.models import GlobalParameters
+
 from .base import BaseRepository
 
 
 class GlobalParametersRepository(BaseRepository[GlobalParameters]):
-
     def get(self) -> GlobalParameters | None:
         query = select(GlobalParameters).limit(1)
         return self.session.execute(query).scalar()

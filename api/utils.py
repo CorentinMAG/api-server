@@ -1,30 +1,36 @@
-from flask import current_app, request
-from functools import wraps
-from api.app import DTRApp
+from __future__ import annotations
 from typing import cast
+
+from flask import current_app, request
+
+from api.app import DTRApp
 from api.dtr_common.constantes import Mode
+from typing import Callable
+from functools import wraps
 
 
 def custom_app() -> DTRApp:
     return cast(DTRApp, current_app)
 
 
-def check_server_configured():
-    """check if server is configure or not"""
-    from api.routes import BaseAPI
+def check_offline_mode(f: Callable) -> Callable:
+    @wraps(f)
+    def wrapper(*args, **kwargs):
+        response = check_offline_mode_v2()
+        if response:
+            return response
+        return f(*args, **kwargs)
 
-    service = BaseAPI._get_or_create_service("GlobalParameterService")
-    parameters = service.get()
-    if not parameters:
-        return {"message": "DTR is not configured yet"}, 500
+    return wrapper
 
 
 def check_offline_mode_v2(
     offline_response: dict[str, any] | None = None, status_code: int = 404
 ):
-    from api.routes import BaseAPI
+    from api.services.base import BaseService
+    from api.services.parameters import GlobalParametersService
 
-    service = BaseAPI._get_or_create_service("GlobalParameterService")
+    service = BaseService._get_or_create_service(GlobalParametersService)
     params = service.get()
     if params:
         is_offline = params.mode
@@ -36,26 +42,6 @@ def check_offline_mode_v2(
                 "message": "API is currently offline",
                 "error": "Service temporarily unavailable",
             }, status_code
+        else:
+            return None
     return {"message": "DTR is not configured yet"}, 500
-
-
-def check_offline_mode(offline_response: dict | None = None, status_code: int = 404):
-    """Decorator to check if the server is in offline mode."""
-    from api.routes import BaseAPI
-
-    def decorator(f):
-        @wraps(f)
-        def wrapper(*args, **kwargs):
-            service = BaseAPI._get_or_create_service("GlobalParameterService")
-            params = service.get()
-            if params:
-                is_offline = params.mode
-                if is_offline == Mode.OFFLINE:
-                    if offline_response:
-                        return offline_response, status_code
-                    return {
-                        "status": "offline",
-                        "message": "API is currently offline",
-                        "error": "Service temporarily unavailable",
-                    }, status_code
-            return f(*args, **kwargs)

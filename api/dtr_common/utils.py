@@ -1,13 +1,14 @@
 from __future__ import annotations
-from copy import deepcopy
-from typing import cast, Callable, TYPE_CHECKING
+
 import datetime
+import functools
 import math
 import re
 import shutil
-from pathlib import Path
-import functools
 import uuid
+from copy import deepcopy
+from pathlib import Path
+from typing import TYPE_CHECKING, Callable, cast
 
 if TYPE_CHECKING:
     from .protocols import BaseProtocol
@@ -22,9 +23,9 @@ def choose_chunk_size(size: float) -> tuple[int, int]:
       maxmimum part size: 5GB
       maximum number of parts 10 000
     """
-    min_chunk = 5 * 1024 * 1024 # 5 MB
+    min_chunk = 5 * 1024 * 1024  # 5 MB
     max_parts = 10_000
-    max_chunk =  min_chunk * 1024 # 5 GB
+    max_chunk = min_chunk * 1024  # 5 GB
 
     # min_chunk size to stay under max_parts parts
     min_chunk = max(min_chunk, math.ceil(size / max_parts))
@@ -35,7 +36,7 @@ def choose_chunk_size(size: float) -> tuple[int, int]:
     while num_parts > 1_000 and chunk_size < max_chunk:
         chunk_size *= 2
         num_parts = math.ceil(size / chunk_size)
-    
+
     # cap chunk size to stay under max_chunk_size
     chunk_size = min(chunk_size, max_chunk)
 
@@ -81,6 +82,7 @@ def parse_storage_value(size: str) -> int:
         value = int(re.sub(r"[a-zA-Z]", "", size))
     return round(value * 1e3)
 
+
 def merge(d1: dict, d2: dict):
     """merge 2 dictionnaries"""
     result = {}
@@ -107,6 +109,7 @@ def clean_directory(dir_path: Path) -> None:
         else:
             x.unlink()
 
+
 def task(error: type[Exception] | None = None):
     def decorator(f: Callable):
         @functools.wraps(f)
@@ -117,34 +120,15 @@ def task(error: type[Exception] | None = None):
             inputs = {}
             outputs = {}
 
-            begin_task = {
-                "type": "REPORT",
-                "task": {
-                    "event": "BEGIN"
-                }
-            }
-            end_task = {
-                "type": "REPORT",
-                "task": {
-                    "event": "END",
-                    "status": "OK",
-                    "error_code": 0
-                }
-            }
-            error_task = {
-                "type": "REPORT",
-                "task": {
-                    "event": "END",
-                    "status": "NOK",
-                    "error_code": 1
-                }
-            }
+            begin_task = {"type": "REPORT", "task": {"event": "BEGIN"}}
+            end_task = {"type": "REPORT", "task": {"event": "END", "status": "OK", "error_code": 0}}
+            error_task = {"type": "REPORT", "task": {"event": "END", "status": "NOK", "error_code": 1}}
 
             if f_name == "download":
                 inputs = {
                     "source_url_string": self.path,
                     "filename_string": kwargs["filename"],
-                    "target_url_string": kwargs["dest"]
+                    "target_url_string": kwargs["dest"],
                 }
             elif f_name == "upload":
                 src_path = Path(kwargs["src"])
@@ -152,25 +136,24 @@ def task(error: type[Exception] | None = None):
                 inputs = {
                     "source_url_string": kwargs["src"],
                     "filename_string": filename,
-                    "target_url_string": self.path
+                    "target_url_string": self.path,
                 }
             name = f"dtr_worker_transfer_file_{f_name}"
-            log = {"begin": f"Beginning of file {f_name}", "end": f"End of file {f_name}", "error": lambda e: f"Error in file {f_name}: {e}"}
+            log = {
+                "begin": f"Beginning of file {f_name}",
+                "end": f"End of file {f_name}",
+                "error": lambda e: f"Error in file {f_name}: {e}",
+            }
             task = {
-                "task": {
-                    "uid": _uuid.hex,
-                    "name": name,
-                    "input": inputs,
-                    "child_of_task": self.job_uuid.hex
-                }
+                "task": {"uid": _uuid.hex, "name": name, "input": inputs, "child_of_task": self.job_uuid.hex}
             }
             begin_task = merge(begin_task, task)
             try:
-                logger.info(log["begin"], extra = begin_task)
+                logger.info(log["begin"], extra=begin_task)
                 result = f(self, *args, **kwargs)
             except Exception as e:
                 error_task = merge(error_task, task)
-                logger.error(log["error"](e), extra = error_task)
+                logger.error(log["error"](e), extra=error_task)
                 if issubclass(error, Exception):
                     raise error(e)
                 else:
@@ -178,14 +161,13 @@ def task(error: type[Exception] | None = None):
             else:
                 if f_name in ("upload", "download"):
                     outputs = {
-                        "task": {
-                            "data_volume_mega_bytes": result[0],
-                            "data_rate_mega_bytes_sec": result[1]
-                        }
+                        "task": {"data_volume_mega_bytes": result[0], "data_rate_mega_bytes_sec": result[1]}
                     }
                     end_task = merge(end_task, merge(task, outputs))
-                    logger.info(log["end"], extra = end_task)
+                    logger.info(log["end"], extra=end_task)
                     return result + (_uuid,)
                 return result, _uuid
+
         return wrapper
+
     return decorator

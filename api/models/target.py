@@ -2,9 +2,10 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING
 
-from api.dtr_common.constantes import Protocol
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 from sqlalchemy_serializer import SerializerMixin
+
+from api.dtr_common.constantes import Protocol
 
 from .base import BaseModel
 
@@ -23,6 +24,4 @@ class Target(BaseModel, SerializerMixin):
     port: Mapped[int]
     host: Mapped[str]
     credentials: Mapped[Credentials] = relationship(lazy="joined", passive_deletes=True)
-    parameters: Mapped[TargetParameters] = relationship(
-        lazy="joined", passive_deletes=True
-    )
+    parameters: Mapped[TargetParameters] = relationship(lazy="joined", passive_deletes=True)

@@ -2,15 +2,16 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING
 
-from api.dtr_common.constantes import Mode
 from sqlalchemy import ForeignKey
-from sqlalchemy.orm import Mapped, mapped_column, relationship
+from sqlalchemy.orm import Mapped, mapped_column
 from sqlalchemy_serializer import SerializerMixin
+
+from api.dtr_common.constantes import Mode
 
 from .base import BaseModel
 
 if TYPE_CHECKING:
-    from .server import NotificationServer
+    pass
 
 
 class TransferPolicyParameters(BaseModel, SerializerMixin):

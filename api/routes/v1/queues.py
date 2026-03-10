@@ -1,10 +1,16 @@
+from __future__ import annotations
+
 from flask import request
+
 from api.dtr_common.schema import QueueCreate, QueueUpdate
 from api.routes import BaseAPI
 from api.services import QueueService
+from api.utils import check_offline_mode
 
 
 class QueueAPI(BaseAPI[QueueService]):
+
+    decorators = [check_offline_mode]
 
     def get(self, id: int | None = None):
         if id is None:

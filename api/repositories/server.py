@@ -1,8 +1,12 @@
-from .base import BaseRepository
-from api.models import NotificationServer
-from sqlalchemy.orm import joinedload
+from __future__ import annotations
+
 from sqlalchemy import select
+from sqlalchemy.orm import joinedload
+
 from api.exceptions import NotFoundException
+from api.models import NotificationServer
+
+from .base import BaseRepository
 
 
 class NotificationServerRepository(BaseRepository[NotificationServer]):
@@ -22,23 +26,16 @@ class NotificationServerRepository(BaseRepository[NotificationServer]):
             raise NotFoundException(f"NotificationServer with name {name} not found")
         return obj
 
-    def get_by_type(
-        self, server_type: str, skip: int = 0, limit: int = 0
-    ) -> list[NotificationServer]:
+    def get_by_type(self, server_type: str, skip: int = 0, limit: int = 0) -> list[NotificationServer]:
         query = (
-            select(NotificationServer)
-            .where(NotificationServer.type == server_type)
-            .offset(skip)
-            .limit(limit)
+            select(NotificationServer).where(NotificationServer.type == server_type).offset(skip).limit(limit)
         )
         return list(self.session.scalars(query).all())
 
     def get_with_relations(
         self, skip: int = 0, limit: int = 100, filters: dict[str, any] | None = None
     ) -> list[NotificationServer]:
-        query = select(NotificationServer).options(
-            joinedload(NotificationServer.credentials)
-        )
+        query = select(NotificationServer).options(joinedload(NotificationServer.credentials))
         if filters:
             self.filters(query, filters)
         query = query.offset(skip).limit(limit)

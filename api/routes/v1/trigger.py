@@ -1,11 +1,15 @@
 from __future__ import annotations
+
 from flask import request
+
+from api.dtr_common.schema import TriggerCreate, TriggerUpdate
 from api.routes import BaseAPI
 from api.services import TriggerService
-from api.dtr_common.schema import TriggerCreate, TriggerUpdate
+from api.utils import check_offline_mode
 
 
 class TriggerAPI(BaseAPI[TriggerService]):
+    decorators = [check_offline_mode]
 
     def get(self, id: int | None = None):
         if id is None:
