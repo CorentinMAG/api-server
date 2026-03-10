@@ -2,15 +2,11 @@ from .base import BaseService
 from api.models import Trigger
 from api.repositories import TriggerRepository
 from dtr_common.schema import TriggerCreate, TriggerUpdate
+from api.services import GlobalParametersService
 
 
 class TriggerService(BaseService[TriggerRepository]):
-
-    def __init__(self):
-        super().__init__()
-        self.parameters = BaseService._get_or_create_repository(
-            "GlobalParametersRepository"
-        )
+    parameters: GlobalParametersService
 
     def get_by_name(self, name: str | None) -> Trigger:
         if name:

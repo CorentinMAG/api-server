@@ -19,20 +19,15 @@ from dtr_common.schema import (
     Pagination
 )
 from werkzeug.datastructures import ImmutableMultiDict
+from .targets import TargetService
+from api.services import GlobalParametersService, QueueService, NotificationServerService
 
 
 class TransferPolicyService(BaseService[TransferPolicyRepository]):
-
-    def __init__(self):
-        super().__init__()
-        self.target_repository = self._get_or_create_repository("TargetRepository")
-        self.parameters_repository = self._get_or_create_repository(
-            "GlobalParametersRepository"
-        )
-        self.server_repository = self._get_or_create_repository(
-            "NotificationServerRepository"
-        )
-        self.queue_repository = self._get_or_create_repository("QueueRepository")
+    target: TargetService
+    parameters: GlobalParametersService
+    queue: QueueService
+    server: NotificationServerService
 
     def get_by_name(self, name: str) -> TransferPolicy:
         return self.repository.get_by_name(name)
@@ -57,9 +52,9 @@ class TransferPolicyService(BaseService[TransferPolicyRepository]):
     def update(self, id: int, schema: TransferPolicyUpdate) -> TransferPolicy:
         policy = self.repository.get_with_relations(id)
         if schema.src is not None and schema.src.target is not None:
-            policy.src.target = self.target_repository.get_by_name(schema.src.target)
+            policy.src.target = self.target.get_by_name(schema.src.target)
         if schema.queue is not None:
-            policy.queue = self.queue_repository.get_by_name(schema.queue)
+            policy.queue = self.queue.get_by_name(schema.queue)
         if schema.dests is not None:
             for dest in policy.dests:
                 self.repository.delete(dest)
@@ -97,7 +92,7 @@ class TransferPolicyService(BaseService[TransferPolicyRepository]):
 
     def _build_src_policy(self, src: SourcePolicyCreate) -> SourcePolicy:
         target_name = src.target
-        target = self.target_repository.get_by_name(target_name)
+        target = self.target.get_by_name(target_name)
         src_policy = SourcePolicy(target=target, **src.model_dump(exclude={"target"}))
         return src_policy
 
@@ -108,7 +103,7 @@ class TransferPolicyService(BaseService[TransferPolicyRepository]):
         dest_policies: list[DestinationPolicy] = []
         for dest in dests:
             target_name = dest.target
-            target = self.target_repository.get_by_name(target_name)
+            target = self.target.get_by_name(target_name)
             notifications = self._build_notifications(dest.notifications)
             dest_policies.append(
                 DestinationPolicy(
@@ -127,7 +122,7 @@ class TransferPolicyService(BaseService[TransferPolicyRepository]):
         if notifications is None:
             return nnotifications
         for notification in notifications:
-            server = self.server_repository.get_by_name(notification.server)
+            server = self.server.get_by_name(notification.server)
             n = Notification(server=server)
             server_type = server.type.value
             param_class = globals().get(f"{server_type.capitalize()}Parameters")
@@ -142,7 +137,7 @@ class TransferPolicyService(BaseService[TransferPolicyRepository]):
         self,
         params: TransferPolicyParametersCreate,
     ) -> TransferPolicyParameters:
-        global_params = self.parameters_repository.get()
+        global_params = self.parameters.get()
         p = {}
         for key, value in params.model_dump().items():
             if value is None:
@@ -152,4 +147,4 @@ class TransferPolicyService(BaseService[TransferPolicyRepository]):
         return TransferPolicyParameters(**p)
 
     def _build_queue_policy(self, queue_name: str) -> Queue:
-        return self.queue_repository.get_by_name(queue_name)
+        return self.queue.get_by_name(queue_name)

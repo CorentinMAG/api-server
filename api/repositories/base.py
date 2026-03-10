@@ -1,15 +1,16 @@
-from typing import Generic, TypeVar, ClassVar
+from typing import Generic, TypeVar, ClassVar, cast
 from sqlalchemy.orm import Session
 from flask import g
 from sqlalchemy import select, func, Select, text
 from api.exception import NotFoundException
 from abc import ABC, abstractmethod
 from api.models import DTR_MODELS
+from api.models.base import Base
 from werkzeug.datastructures import ImmutableMultiDict
 from dtr_common.schema.pagination import Pagination, PaginationItem
 from api.exception import MalformatedInputException
 
-ModelType = TypeVar("ModelType")
+ModelType = TypeVar("ModelType", bound=Base)
 
 class BaseRepository(Generic[ModelType], ABC):
     """
@@ -48,7 +49,7 @@ class BaseRepository(Generic[ModelType], ABC):
 
     @property
     def session(self) -> Session:
-        return g.db_session
+        return cast(Session, g.db_session)
     
     def get_by_id(self, id: int) -> ModelType:
         """get a single record by id"""
