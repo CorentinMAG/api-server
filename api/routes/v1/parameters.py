@@ -9,6 +9,9 @@ from api.services import GlobalParametersService
 
 
 class GlobalParametersAPI(BaseAPI[GlobalParametersService]):
+
+    prefix = "parameters"
+    
     def get(self):
         params = self.service.get()
         if params:
@@ -33,8 +36,3 @@ class GlobalParametersAPI(BaseAPI[GlobalParametersService]):
         params = self.service.create(schema)
         self.service.commit()
         return params.to_dict()
-
-
-bp = GlobalParametersAPI.register(
-    "parameters", url_prefix="parameters", rules=[{"route": "/"}]
-)

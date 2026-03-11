@@ -9,6 +9,8 @@ class TargetAPI(BaseAPI[TargetService]):
 
     decorators = [check_offline_mode()]
 
+    prefix = "targets"
+
     def delete(self, id: int):
         self.service.delete(id)
         self.service.commit()
@@ -39,14 +41,3 @@ class TargetAPI(BaseAPI[TargetService]):
         target = self.service.update(id, schema)
         self.service.commit()
         return target.to_dict(), 200
-
-
-bp = TargetAPI.register(
-    "targets",
-    url_prefix="targets",
-    rules=[
-        {"route": "/", "methods": ["POST"]},
-        {"route": "/", "defaults": {"id": None}, "methods": ["GET"]},
-        {"route": "/<int:id>", "methods": ["GET", "PUT", "DELETE"]},
-    ],
-)

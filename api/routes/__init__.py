@@ -1,6 +1,9 @@
 from __future__ import annotations
 
 from .base import BaseAPI
-from .v1 import v1
+import api.routes.v1
+from flask import Blueprint
 
-__all__ = ["v1"]
+v1 = Blueprint("v1", __name__)
+BaseAPI.register(v1)
+

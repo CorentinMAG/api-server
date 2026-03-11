@@ -9,6 +9,8 @@ class QueueAPI(BaseAPI[QueueService]):
 
     decorators = [check_offline_mode()]
 
+    prefix = "queues"
+
     def get(self, id: int | None = None):
         if id is None:
             paginated = self.service.paginate(request.args)
@@ -38,14 +40,3 @@ class QueueAPI(BaseAPI[QueueService]):
         queue = self.service.create(schema)
         self.service.commit()
         return queue.to_dict()
-
-
-bp = QueueAPI.register(
-    "queues",
-    url_prefix="queues",
-    rules=[
-        {"route": "/", "methods": ["POST"]},
-        {"route": "/", "defaults": {"id": None}, "methods": ["GET"]},
-        {"route": "/<int:id>", "methods": ["GET", "PUT", "DELETE"]},
-    ],
-)

@@ -11,9 +11,11 @@ class WorkerAPI(BaseAPI[WorkerService]):
 
     decorators = [check_offline_mode()]
 
+    prefix = "workers"
+
     def get(self, id: int | None = None):
         if id is None:
-            paginated = self.service.paginate()
+            paginated = self.service.repository.paginate(request.args)
             items = [worker.to_dict() for worker in paginated.items]
             return {"pagination": paginated.pagination.model_dump(), "items": items}
         worker = self.service.get_by_id(id)
@@ -37,16 +39,6 @@ class WorkerAPI(BaseAPI[WorkerService]):
         self.service.delete(id)
         self.service.commit()
 
-
-bp = WorkerAPI.register(
-    "workers",
-    url_prefix="workers",
-    rules=[
-        {"route": "/", "methods": ["POST"]},
-        {"route": "/", "defaults": {"id": None}, "methods": ["GET"]},
-        {"route": "/<int:id>", "methods": ["GET", "PUT", "DELETE"]},
-    ],
-)
 
 
 # @bp.route("/configuration/worker", methods=["GET"])

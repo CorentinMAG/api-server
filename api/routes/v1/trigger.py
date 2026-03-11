@@ -10,9 +10,11 @@ class TriggerAPI(BaseAPI[TriggerService]):
 
     decorators = [check_offline_mode()]
 
+    prefix = "triggers"
+
     def get(self, id: int | None = None):
         if id is None:
-            paginated = self.service.paginate(request.args)
+            paginated = self.service.repository.paginate(request.args)
             items = [trigger.to_dict() for trigger in paginated.items]
             return {"pagination": paginated.pagination.model_dump(), "items": items}
         trigger = self.service.get_by_id(id)
@@ -36,16 +38,6 @@ class TriggerAPI(BaseAPI[TriggerService]):
         self.service.commit()
         return trigger.to_dict()
 
-
-bp = TriggerAPI.register(
-    "triggers",
-    url_prefix="triggers",
-    rules=[
-        {"route": "/", "methods": ["POST"]},
-        {"route": "/", "defaults": {"id": None}, "methods": ["GET"]},
-        {"route": "/<int:id>", "methods": ["GET", "PUT", "DELETE"]},
-    ],
-)
 
 
 # @check_offline_mode()

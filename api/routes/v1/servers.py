@@ -9,6 +9,8 @@ class NotificationServerAPI(BaseAPI[NotificationServerService]):
 
     decorators = [check_offline_mode()]
 
+    prefix = "servers"
+
     def get(self, id: int | None = None):
         if id is None:
             paginated = self.service.paginate(request.args)
@@ -40,14 +42,3 @@ class NotificationServerAPI(BaseAPI[NotificationServerService]):
         server = self.service.create(schema)
         self.service.commit()
         return server.to_dict()
-
-
-bp = NotificationServerAPI.register(
-    "servers",
-    url_prefix="servers",
-    rules=[
-        {"route": "/", "methods": ["POST"]},
-        {"route": "/", "defaults": {"id": None}, "methods": ["GET"]},
-        {"route": "/<int:id>", "methods": ["GET", "PUT", "DELETE"]},
-    ],
-)

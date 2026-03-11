@@ -10,6 +10,8 @@ class TransferPolicyAPI(BaseAPI[TransferPolicyService]):
 
     decorators = [check_offline_mode()]
 
+    prefix = "policies"
+
     def get(self, id: int | None = None):
 
         if id is None:
@@ -40,14 +42,3 @@ class TransferPolicyAPI(BaseAPI[TransferPolicyService]):
         self.service.delete(id)
         self.service.commit()
         return "", 200
-
-
-bp = TransferPolicyAPI.register(
-    "policies",
-    url_prefix="policies",
-    rules=[
-        {"route": "/", "methods": ["POST"]},
-        {"route": "/", "defaults": {"id": None}, "methods": ["GET"]},
-        {"route": "/<int:id>", "methods": ["GET", "PUT", "DELETE"]},
-    ],
-)

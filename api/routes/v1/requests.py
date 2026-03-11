@@ -11,9 +11,10 @@ class TransferRequestAPI(BaseAPI[TransferRequestService]):
 
     decorators = [check_offline_mode()]
 
+    prefix = "requests"
+
     def get(self, id: int | None = None):
         pass
-
     def put(self, id: int):
         pass
 
@@ -25,12 +26,8 @@ class TransferRequestAPI(BaseAPI[TransferRequestService]):
         schema = TransferRequestCreate(**data)
         request = self.service.create(schema)
         self.service.commit()
-        return request.to_dict()
+        return request.to_dict(), 201
 
-
-bp = TransferRequestAPI.register(
-    "requests", url_prefix="requests", rules = [{"route":"/", "defaults":{"id": None}}]
-)
 
 
 # @bp.route("/get-status", methods=["GET"])
