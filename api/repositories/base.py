@@ -79,9 +79,12 @@ class BaseRepository(Generic[Model], ABC):
         return list(self.session.scalars(query).all())
 
     def _filter(self, query: Select, filters: dict[str, any]) -> Select:
+        return self._model.find_by_filters(filters)
         for key, value in filters.items():
             if hasattr(self._model, key) and value is not None:
                 query = query.where(getattr(self._model, key) == value)
+            else:
+                raise MalformatedInputException(f"model {self._model.__name__} does not have key {key}")
         return query
     
     @abstractmethod
@@ -99,10 +102,9 @@ class BaseRepository(Generic[Model], ABC):
 
     def count(self, filters: dict[str, any] | None = None) -> int:
         """count records with optional filters"""
-        query = select(func.count()).select_from(self._model)
-        if filters:
-            query = self._filter(query, filters)
-        return self.session.scalar(query) or 0
+        query = self._model.find_by_filters(filters)
+        count_query = select(func.count()).select_from(query.subquery())
+        return self.session.scalar(count_query) or 0
     
     def create(self, obj: Model) -> Model:
         """create a new record"""
@@ -116,7 +118,6 @@ class BaseRepository(Generic[Model], ABC):
 
     def paginate(self, args: ImmutableMultiDict) -> Pagination[Model]:
         _args = args.to_dict()
-
         try:
             page = int(_args.pop("page", 1))
             page_size = int(_args.pop("page_size", 10))
@@ -124,7 +125,7 @@ class BaseRepository(Generic[Model], ABC):
             raise MalformatedInputException("pagination parameters page or page_size are not integer") from e
         skip = (page - 1) * page_size
         items = self.get_with_relations(skip = skip, limit = page_size, filters = _args)
-        total = self.count(filters=args.to_dict())
+        total = self.count(filters=_args)
         return Pagination(
             pagination=PaginationItem(
                         page = page, 
