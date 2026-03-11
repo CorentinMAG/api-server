@@ -25,5 +25,5 @@ class Target(Base, SerializerMixin):
 
     # with passive_deletes = True, when deleting a Target object, 
     # credentials and parameters object are not loaded (they are deleted by the database because they have ondelete=CASCADE)
-    credentials: Mapped[Credentials] = relationship(lazy="joined", passive_deletes=True)
-    parameters: Mapped[TargetParameters] = relationship(lazy="joined", passive_deletes=True)
+    credentials: Mapped[Credentials] = relationship(lazy="joined", passive_deletes=True, cascade="all,delete-orphan")
+    parameters: Mapped[TargetParameters] = relationship(lazy="joined", passive_deletes=True, cascade="all,delete-orphan")

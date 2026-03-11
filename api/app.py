@@ -2,6 +2,7 @@ from flask import Flask, g
 from api.config import Config
 from sqlalchemy import Engine, create_engine
 from sqlalchemy.orm import sessionmaker, Session, scoped_session
+from typing import cast
 
 class DTRApp(Flask):
 
@@ -34,7 +35,7 @@ class DTRApp(Flask):
             if self._session_factory is None:
                 raise RuntimeError("Database session factory is not initialized")
             g.db_session = self._session_factory()
-        return g.db_session
+        return cast(Session, g.db_session)
     
     def initialize(self) -> None:
         """initialize the application components"""
@@ -49,7 +50,7 @@ class DTRApp(Flask):
     
     def _close_session(self, exception=None) -> None:
         """close session at the end of each request"""
-        session = g.pop("db_session", None)
+        session = cast(Session | None, g.pop("db_session", None))
         if session is not None:
             session.close()
 
