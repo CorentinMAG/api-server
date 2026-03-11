@@ -32,3 +32,19 @@ def check_offline_mode(offline_response: dict | None = None, status_code: int = 
                 return {"error": "DTR is not configured yet"}, 500
         return wrapper
     return decorator
+
+
+def route(url: str, methods: dict| None = None):
+    """
+    this decorator can be used to add metadata to a method
+    The BaseAPI class will then register the route
+    """
+    if methods is None:
+        methods = ["GET"]
+    def decorator(f):
+        f._route = {
+            "path": url,
+            "methods": methods
+        }
+        return f
+    return decorator
