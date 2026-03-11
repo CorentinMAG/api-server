@@ -3,11 +3,10 @@ from api.repositories import DTR_REPOSITORIES, BaseRepository
 from typing import TypeVar, Generic, get_type_hints, cast, ClassVar
 
 
-RepositoryType = TypeVar("RepositoryType", bound=BaseRepository)
-T = TypeVar("T", bound=BaseRepository)
+Repository = TypeVar("Repository", bound=BaseRepository)
 S = TypeVar("S")
 
-class BaseService(Generic[RepositoryType]):
+class BaseService(Generic[Repository]):
     _repository_instances: ClassVar[dict[str, BaseRepository]] = {}
     _service_instances: ClassVar[dict[type, BaseService]] = {}
 
@@ -34,7 +33,7 @@ class BaseService(Generic[RepositoryType]):
                 setattr(self, attr_name, self._get_or_create_service(attr_type))
 
     @property
-    def repository(self) -> RepositoryType:
+    def repository(self) -> Repository:
         if self._repository is None:
             raise AttributeError(f"No repository found for {self.__class__.__name__}")
         return self._repository
@@ -44,7 +43,7 @@ class BaseService(Generic[RepositoryType]):
             self._repository.session.commit()
 
     @classmethod
-    def _get_or_create_repository(cls, repo_name: str) -> RepositoryType:
+    def _get_or_create_repository(cls, repo_name: str) -> Repository:
         if repo_name not in cls._repository_instances:
             repo_class = cls._resolve_repository_class(repo_name)
             if not repo_class:
@@ -53,7 +52,7 @@ class BaseService(Generic[RepositoryType]):
         return cls._repository_instances[repo_name]
 
     @staticmethod
-    def _resolve_repository_class(repo_name: str) -> RepositoryType | None:
+    def _resolve_repository_class(repo_name: str) -> Repository | None:
         return DTR_REPOSITORIES.get(repo_name)
     
     @classmethod

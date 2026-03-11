@@ -10,9 +10,9 @@ from werkzeug.datastructures import ImmutableMultiDict
 from dtr_common.schema.pagination import Pagination, PaginationItem
 from api.exception import MalformatedInputException
 
-ModelType = TypeVar("ModelType", bound=Base)
+Model = TypeVar("Model", bound=Base)
 
-class BaseRepository(Generic[ModelType], ABC):
+class BaseRepository(Generic[Model], ABC):
     """
     Base repository with common CRUD operations
     A Repository flush database operations
@@ -40,18 +40,18 @@ class BaseRepository(Generic[ModelType], ABC):
             self._model = self._resolve_model_class(model_name)
 
     @property
-    def model(self) -> ModelType:
+    def model(self) -> Model:
         return self._model
 
     @staticmethod
-    def _resolve_model_class(model_name: str) -> ModelType:
+    def _resolve_model_class(model_name: str) -> Model:
         return DTR_MODELS.get(model_name)
 
     @property
     def session(self) -> Session:
         return cast(Session, g.db_session)
     
-    def get_by_id(self, id: int) -> ModelType:
+    def get_by_id(self, id: int) -> Model:
         """get a single record by id"""
         obj = self.session.get(self._model, id)
         if not obj:
@@ -63,7 +63,7 @@ class BaseRepository(Generic[ModelType], ABC):
             skip: int = 0, 
             limit: int = 100, 
             filters: dict[str, any] | None = None
-        ) -> list[ModelType]:
+        ) -> list[Model]:
         """
         get all records with optional filters  
         All relationships are lazy loaded by default  
@@ -90,7 +90,7 @@ class BaseRepository(Generic[ModelType], ABC):
         skip: int,
         limit: int,
         filters: dict[str, any] | None = None
-    ) -> list[ModelType]:
+    ) -> list[Model]:
         """
         This method is an equivalent of the get_all method
         but subclasses are free to implement their own loading strategies
@@ -104,7 +104,7 @@ class BaseRepository(Generic[ModelType], ABC):
             query = self._filter(query, filters)
         return self.session.scalar(query) or 0
     
-    def create(self, obj: ModelType) -> ModelType:
+    def create(self, obj: Model) -> Model:
         """create a new record"""
         try:
             self.session.add(obj)
@@ -114,7 +114,7 @@ class BaseRepository(Generic[ModelType], ABC):
             self.session.rollback()
             raise
 
-    def paginate(self, args: ImmutableMultiDict) -> Pagination[ModelType]:
+    def paginate(self, args: ImmutableMultiDict) -> Pagination[Model]:
         _args = args.to_dict()
 
         try:
@@ -134,13 +134,13 @@ class BaseRepository(Generic[ModelType], ABC):
         )
 
     
-    def update(self, obj: ModelType, data: dict[str, any]) -> ModelType:
+    def update(self, obj: Model, data: dict[str, any]) -> Model:
         """update a record"""
         obj.update(data)
         self.session.flush()
         return obj
     
-    def delete(self, obj: ModelType) -> None:
+    def delete(self, obj: Model) -> None:
         """delete a record"""
         self.session.delete(obj)
         self.session.flush()
