@@ -22,23 +22,23 @@ class TransferPolicyAPI(BaseAPI[TransferPolicyService]):
                 "items": items,
             }
         policy = self.service.get_with_relations(id)
-        return policy.to_dict()
+        return policy.to_dict(), 200
 
     def post(self):
         data = request.json
         schema = TransferPolicyCreate(**data)
         policy = self.service.create(schema)
         self.service.commit()
-        return policy.to_dict()
+        return policy.to_dict(), 201
 
     def put(self, id: int):
         data = request.json
         schema = TransferPolicyUpdate(**data)
         policy = self.service.update(id, schema)
         self.service.commit()
-        return policy.to_dict()
+        return policy.to_dict(), 200
 
     def delete(self, id: int):
         self.service.delete(id)
         self.service.commit()
-        return "", 200
+        return "", 204

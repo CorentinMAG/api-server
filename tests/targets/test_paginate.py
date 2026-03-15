@@ -3,9 +3,9 @@ from unittest.mock import patch
 from api.services import TargetService
 from tests.factories.targets import (
     make_targets,
-    make_mock_targets,
-    make_mock_paginated
+    make_mock_targets
 )
+from tests.factories.common import make_mock_paginated
 import pytest
 from api.exception import MalformatedInputException
 

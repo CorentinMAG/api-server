@@ -1,12 +1,16 @@
 from __future__ import annotations
 from api.repositories import DTR_REPOSITORIES, BaseRepository
 from typing import TypeVar, Generic, get_type_hints, cast, ClassVar
+from abc import ABC, abstractmethod
+from werkzeug.datastructures import ImmutableMultiDict
+from dtr_common.schema import Pagination
 
 
 Repository = TypeVar("Repository", bound=BaseRepository)
 S = TypeVar("S")
 
-class BaseService(Generic[Repository]):
+
+class BaseService(Generic[Repository], ABC):
     _repository_instances: ClassVar[dict[str, BaseRepository]] = {}
     _service_instances: ClassVar[dict[type, BaseService]] = {}
 
@@ -14,22 +18,28 @@ class BaseService(Generic[Repository]):
         super().__init_subclass__(**kwargs)
         service_name = cls.__name__
         cls._repository_name = (
-            service_name.replace("Service", "Repository") 
-            if service_name.endswith("Service") 
+            service_name.replace("Service", "Repository")
+            if service_name.endswith("Service")
             else None
         )
 
     def __init__(self):
         repo_name = getattr(self.__class__, "_repository_name", None)
-        self._repository = self._get_or_create_repository(repo_name) if repo_name else None
+        self._repository = (
+            self._get_or_create_repository(repo_name) if repo_name else None
+        )
 
         try:
             hints = get_type_hints(self.__class__)
         except Exception:
             hints = self.__class__.__annotations__
-        
+
         for attr_name, attr_type in hints.items():
-            if (isinstance(attr_type, type) and issubclass(attr_type, BaseService) and attr_type is not BaseService):
+            if (
+                isinstance(attr_type, type)
+                and issubclass(attr_type, BaseService)
+                and attr_type is not BaseService
+            ):
                 setattr(self, attr_name, self._get_or_create_service(attr_type))
 
     @property
@@ -54,10 +64,33 @@ class BaseService(Generic[Repository]):
     @staticmethod
     def _resolve_repository_class(repo_name: str) -> Repository | None:
         return DTR_REPOSITORIES.get(repo_name)
-    
+
     @classmethod
     def _get_or_create_service(cls, service_class: type[S]) -> S:
         if service_class not in cls._service_instances:
             cls._service_instances[service_class] = service_class()
         return cast(S, cls._service_instances[service_class])
 
+    @abstractmethod
+    def get_by_id(self, id: int):
+        pass
+
+    @abstractmethod
+    def get_by_name(self, name: str):
+        pass
+
+    @abstractmethod
+    def paginate(self, args: ImmutableMultiDict) -> Pagination:
+        pass
+
+    @abstractmethod
+    def create(self, data):
+        pass
+
+    @abstractmethod
+    def update(self, id: int, data):
+        pass
+
+    @abstractmethod
+    def delete(self, id: int) -> None:
+        pass

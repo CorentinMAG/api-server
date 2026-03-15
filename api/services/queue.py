@@ -13,14 +13,6 @@ class QueueService(BaseService[QueueRepository]):
     def get_by_id(self, id: int) -> Queue:
         return self.repository.get_by_id(id)
 
-    def get(
-        self, skip: int = 0, limit: int = 100, filters: dict[str, any] | None = None
-    ) -> list[Queue]:
-        return self.repository.get_all(skip, limit, filters)
-
-    def count(self, filters: dict[str, any] | None = None) -> int:
-        return self.repository.count(filters)
-
     def paginate(self, args: ImmutableMultiDict) -> Pagination[Queue]:
         return self.repository.paginate(args)
 

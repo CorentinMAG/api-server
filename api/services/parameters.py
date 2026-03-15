@@ -6,6 +6,9 @@ from dtr_common.schema import (
     GlobalParametersCreate,
     GlobalParametersUpdate,
 )
+from werkzeug.datastructures import ImmutableMultiDict
+from dtr_common.schema import Pagination
+
 
 class GlobalParametersService(BaseService[GlobalParametersRepository]):
 
@@ -13,9 +16,7 @@ class GlobalParametersService(BaseService[GlobalParametersRepository]):
         return self.repository.get()
 
     def delete(self) -> None:
-        params = self.get()
-        if params:
-            self.repository.delete(params)
+        self.repository.delete()
 
     def create(self, schema: GlobalParametersCreate) -> GlobalParameters:
         params = GlobalParameters(**schema.model_dump())
@@ -25,6 +26,13 @@ class GlobalParametersService(BaseService[GlobalParametersRepository]):
         return self.repository.update(schema.model_dump(exclude_none=True))
 
     def switch(self, mode: Mode) -> GlobalParameters | None:
-        parameters = self.repository.get()
-        if parameters:
-            return self.repository.update({"mode": mode})
+        return self.repository.update({"mode": mode})
+
+    def get_by_id(self, id: int) -> GlobalParameters:
+        return self.repository.get_by_id(id)
+
+    def get_by_name(self, name: str) -> GlobalParameters:
+        return self.repository.get_by_name(name)
+
+    def paginate(self, args: ImmutableMultiDict) -> Pagination[GlobalParameters]:
+        return self.repository.paginate(args, eager=None)

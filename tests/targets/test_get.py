@@ -20,6 +20,10 @@ class TestListTarget:
         assert response.status_code == 200
         assert response.json["id"] == 12
 
+        data = response.json
+        del data["id"]
+        assert data == payload
+
     def test_get_nonexisting_target(self, client):
         with patch.object(TargetService, "get_by_id", side_effect=NotFoundException("Not Found Target")):
             response = client.get(f"{BASE_URL}/999")

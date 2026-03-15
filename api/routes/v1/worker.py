@@ -19,26 +19,26 @@ class WorkerAPI(BaseAPI[WorkerService]):
             items = [worker.to_dict() for worker in paginated.items]
             return {"pagination": paginated.pagination.model_dump(), "items": items}
         worker = self.service.get_by_id(id)
-        return worker.to_dict()
+        return worker.to_dict(), 200
 
     def put(self, id: int):
         data = request.json
         schema = WorkerUpdate(**data)
         worker = self.service.update(id, schema)
         self.service.commit()
-        return worker.to_dict()
+        return worker.to_dict(), 200
 
     def post(self):
         data = request.json
         schema = WorkerCreate(**data)
         worker = self.service.create(schema)
         self.service.commit()
-        return worker.to_dict()
+        return worker.to_dict(), 201
 
     def delete(self, id: int):
         self.service.delete(id)
         self.service.commit()
-
+        return "", 204
 
 
 # @bp.route("/configuration/worker", methods=["GET"])

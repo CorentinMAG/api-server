@@ -14,20 +14,20 @@ class TransferRequestAPI(BaseAPI[TransferRequestService]):
     prefix = "requests"
 
     def get(self, id: int | None = None):
-        pass
+        return {"Hello": "World"}
+
     def put(self, id: int):
         pass
 
     def delete(self, id: int):
-        pass
+        return "", 204
 
     def post(self):
         data = request.json
         schema = TransferRequestCreate(**data)
-        request = self.service.create(schema)
+        requests = self.service.create(schema)
         self.service.commit()
-        return request.to_dict(), 201
-
+        return [r.uid.hex for r in requests], 201
 
 
 # @bp.route("/get-status", methods=["GET"])

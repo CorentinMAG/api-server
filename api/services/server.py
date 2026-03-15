@@ -34,7 +34,5 @@ class NotificationServerService(BaseService[NotificationServerRepository]):
         return self.repository.create(server)
 
     def delete(self, id: int):
-        print(id)
         server = self.repository.get_by_id(id)
-        print(server)
         self.repository.delete(server)

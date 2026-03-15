@@ -2,9 +2,10 @@ from .base import Base
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 from .policies import TransferPolicy
 from sqlalchemy_serializer import SerializerMixin
+from .mixin import ParametersConfigMixin
 
 
-class Trigger(Base, SerializerMixin):
+class Trigger(Base, SerializerMixin, ParametersConfigMixin):
     __tablename__ = "triggers"
 
     serialize_only = (

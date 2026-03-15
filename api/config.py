@@ -69,7 +69,8 @@ class TestConfiguration(Config):
         "pool_timeout": 30,
         "echo": True
     }
-    DATABASE_URL = "sqlite+pysqlite:///dtr.db"
+    DATABASE_URL = "sqlite+pysqlite:///dtr_test.db"
+    CREATE_DB=True
 
 CONFIG = {
     "development": DevelopmentConfig,

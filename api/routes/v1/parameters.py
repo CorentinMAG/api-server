@@ -11,11 +11,13 @@ from api.services import GlobalParametersService
 class GlobalParametersAPI(BaseAPI[GlobalParametersService]):
 
     prefix = "parameters"
-    
+
+    ROUTES = [{"rule": "/", "methods": ["GET", "POST", "PUT", "DELETE"]}]
+
     def get(self):
         params = self.service.get()
         if params:
-            return params.to_dict()
+            return params.to_dict(), 200
         return "", 404
 
     def put(self):
@@ -23,16 +25,16 @@ class GlobalParametersAPI(BaseAPI[GlobalParametersService]):
         schema = GlobalParametersUpdate(**data)
         params = self.service.update(schema)
         self.service.commit()
-        return params.to_dict()
+        return params.to_dict(), 200
 
     def delete(self):
         self.service.delete()
         self.service.commit()
-        return "", 200
+        return "", 204
 
     def post(self):
         data = request.json
         schema = GlobalParametersCreate(**data)
         params = self.service.create(schema)
         self.service.commit()
-        return params.to_dict()
+        return params.to_dict(), 201

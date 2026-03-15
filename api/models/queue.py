@@ -7,21 +7,31 @@ from sqlalchemy_serializer import SerializerMixin
 from typing import TYPE_CHECKING
 from .base import Base
 from .association import association_table
+from .mixin import ParametersConfigMixin
 
 if TYPE_CHECKING:
     from .worker import Worker
 
 
-class Queue(Base, SerializerMixin):
+class Queue(Base, SerializerMixin, ParametersConfigMixin):
     __tablename__ = "queues"
 
-    serialize_only = ("name", "uid", "priority", "queue_timeout", "queue_limit", "queue_threshold")
+    serialize_only = (
+        "name",
+        "uid",
+        "priority",
+        "queue_timeout",
+        "queue_limit",
+        "queue_threshold",
+    )
 
     name: Mapped[str] = mapped_column(unique=True, index=True)
     uid: Mapped[uuid.UUID] = mapped_column(default=uuid.uuid4, unique=True)
     priority: Mapped[int] = mapped_column(index=True)
-    queue_timeout: Mapped[int | None] = mapped_column(default=86400)
-    queue_limit: Mapped[int | None] = mapped_column(default=100)
-    queue_threshold: Mapped[int | None] = mapped_column(default=80)
+    queue_timeout: Mapped[int] = mapped_column()
+    queue_limit: Mapped[int] = mapped_column()
+    queue_threshold: Mapped[int] = mapped_column()
 
-    workers: Mapped[list[Worker]] = relationship(secondary=association_table, back_populates="queues")
+    workers: Mapped[list[Worker]] = relationship(
+        secondary=association_table, back_populates="queues", passive_deletes=True
+    )

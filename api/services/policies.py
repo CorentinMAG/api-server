@@ -7,6 +7,7 @@ from api.models import (
     KafkaParameters,
     Notification,
     Queue,
+    Trigger,
 )
 from .base import BaseService
 from dtr_common.schema import (
@@ -16,11 +17,17 @@ from dtr_common.schema import (
     TransferPolicyParametersCreate,
     ServerParametersCreate,
     TransferPolicyUpdate,
-    Pagination
+    Pagination,
 )
 from werkzeug.datastructures import ImmutableMultiDict
 from .targets import TargetService
-from api.services import GlobalParametersService, QueueService, NotificationServerService
+from api.services import (
+    GlobalParametersService,
+    QueueService,
+    NotificationServerService,
+    TriggerService,
+)
+from sqlalchemy.orm import selectinload
 
 
 class TransferPolicyService(BaseService[TransferPolicyRepository]):
@@ -28,6 +35,7 @@ class TransferPolicyService(BaseService[TransferPolicyRepository]):
     parameters: GlobalParametersService
     queue: QueueService
     server: NotificationServerService
+    trigger: TriggerService
 
     def get_by_name(self, name: str) -> TransferPolicy:
         return self.repository.get_by_name(name)
@@ -38,32 +46,30 @@ class TransferPolicyService(BaseService[TransferPolicyRepository]):
     def paginate(self, args: ImmutableMultiDict) -> Pagination[TransferPolicy]:
         return self.repository.paginate(args)
 
-    def get_with_relations(self, id: int) -> TransferPolicy:
-        return self.repository.get_with_relations(id)
-
-    def count(self, filters: dict[str, any] | None = None) -> int:
-        return self.repository.count(filters)
-
-    def get(
-        self, skip: int = 0, limit: int = 100, filters: dict[str, any] | None = None
-    ) -> list[TransferPolicy]:
-        return self.repository.get(skip, limit, filters)
-
     def update(self, id: int, schema: TransferPolicyUpdate) -> TransferPolicy:
-        policy = self.repository.get_with_relations(id)
+        policy = self.repository.get_by_id(
+            id,
+            eager=[selectinload(TransferPolicy.dests)],
+        )
         if schema.src is not None and schema.src.target is not None:
+            # WARNING: when updating a policy, we can only update the target in
+            # the source policy section, the other fields are ignored
             policy.src.target = self.target.get_by_name(schema.src.target)
         if schema.queue is not None:
             policy.queue = self.queue.get_by_name(schema.queue)
         if schema.dests is not None:
+            # WARNING: when updating a transfer policy, we actually
+            # delete all related destination policies and recreate them
             for dest in policy.dests:
                 self.repository.delete(dest)
             dests_policy = self._build_dests_policy(schema.dests)
             policy.dests = dests_policy
+        if schema.trigger is not None:
+            policy.trigger = self.trigger.get_by_name(schema.trigger)
         return self.repository.update(
             policy,
             schema.model_dump(
-                exclude_none=True, exclude={"src.target", "queue", "dests"}
+                exclude_none=True, exclude={"src.target", "queue", "dests", "trigger"}
             ),
         )
 
@@ -76,12 +82,16 @@ class TransferPolicyService(BaseService[TransferPolicyRepository]):
         dests_policy = self._build_dests_policy(schema.dests)
         queue = self._build_queue_policy(schema.queue)
         parameters = self._build_parameters_policy(schema.parameters)
+        trigger = self._build_trigger_policy(schema.trigger)
         policy = TransferPolicy(
             src=src_policy,
             dests=dests_policy,
             parameters=parameters,
             queue=queue,
-            **schema.model_dump(exclude={"src", "dests", "parameters", "queue"}),
+            trigger=trigger,
+            **schema.model_dump(
+                exclude={"src", "dests", "parameters", "queue", "trigger"}
+            ),
         )
         return self.repository.create(policy)
 
@@ -95,6 +105,11 @@ class TransferPolicyService(BaseService[TransferPolicyRepository]):
         target = self.target.get_by_name(target_name)
         src_policy = SourcePolicy(target=target, **src.model_dump(exclude={"target"}))
         return src_policy
+
+    def _build_trigger_policy(self, name: str | None) -> Trigger | None:
+        if name is None:
+            return
+        return self.trigger.get_by_name(name)
 
     def _build_dests_policy(
         self,

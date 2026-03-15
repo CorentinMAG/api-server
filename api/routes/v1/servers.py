@@ -22,23 +22,23 @@ class NotificationServerAPI(BaseAPI[NotificationServerService]):
                 "items": items,
             }
         server = self.service.get_by_id(id)
-        return server.to_dict()
+        return server.to_dict(), 200
 
     def put(self, id: int):
         data = request.json
         schema = ServerUpdate(**data)
         server = self.service.update(id, schema)
         self.service.commit()
-        return server.to_dict()
+        return server.to_dict(), 200
 
     def delete(self, id: int):
         self.service.delete(id)
         self.service.commit()
-        return "", 200
+        return "", 204
 
     def post(self):
         data = request.json
         schema = ServerCreate(**data)
         server = self.service.create(schema)
         self.service.commit()
-        return server.to_dict()
+        return server.to_dict(), 201

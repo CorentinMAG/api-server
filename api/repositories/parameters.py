@@ -1,28 +1,21 @@
 from api.models import GlobalParameters
 from .base import BaseRepository
-from sqlalchemy import select
+from api.exception import NotConfiguredException
+
 
 class GlobalParametersRepository(BaseRepository[GlobalParameters]):
 
     def get(self) -> GlobalParameters | None:
-        query = select(GlobalParameters).limit(1)
+        query = self.base_query().limit(1)
         return self.session.scalar(query)
-    
-    def update(self, data: dict[str, any]) -> GlobalParameters | None:
+
+    def update(self, data: dict[str, any]) -> GlobalParameters:
         params = self.get()
         if params:
             updated_params = super().update(params, data)
             return updated_params
+        raise NotConfiguredException("Global parameters not configured yet")
 
-    def get_with_relations(
-            self,
-            skip: int = 0,
-            limit: int = 100,
-            filters: dict[str, any] | None = None
-    ) -> list[GlobalParameters]:
-        params = self.get()
-        return [params] if params else []
-    
     def create(self, parameters: GlobalParameters) -> GlobalParameters:
         """
         we only have 1 globalParameters.
@@ -34,3 +27,9 @@ class GlobalParametersRepository(BaseRepository[GlobalParameters]):
         self.session.add(parameters)
         self.session.flush()
         return parameters
+
+    def delete(self) -> None:
+        params = self.get()
+        if params:
+            self.session.delete(params)
+            self.session.flush()

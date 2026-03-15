@@ -20,23 +20,23 @@ class QueueAPI(BaseAPI[QueueService]):
                 "items": items,
             }
         queue = self.service.get_by_id(id)
-        return queue.to_dict()
+        return queue.to_dict(), 200
 
     def delete(self, id: int):
         self.service.delete(id)
         self.service.commit()
-        return "", 200
+        return "", 204
 
     def put(self, id: int):
         data = request.json
         schema = QueueUpdate(**data)
         queue = self.service.update(id, schema)
         self.service.commit()
-        return queue.to_dict()
+        return queue.to_dict(), 200
 
     def post(self):
         data = request.json
         schema = QueueCreate(**data)
         queue = self.service.create(schema)
         self.service.commit()
-        return queue.to_dict()
+        return queue.to_dict(), 201

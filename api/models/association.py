@@ -5,6 +5,6 @@ from .base import Base
 association_table = Table(
     "worker_queues",
     Base.metadata,
-    Column("worker_id", ForeignKey("workers.id"), primary_key=True),
-    Column("queue_id", ForeignKey("queues.id"), primary_key=True)
+    Column("worker_id", ForeignKey("workers.id", ondelete="CASCADE"), primary_key=True),
+    Column("queue_id", ForeignKey("queues.id", ondelete="CASCADE"), primary_key=True),
 )

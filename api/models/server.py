@@ -4,6 +4,7 @@ from typing import TYPE_CHECKING
 
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 from sqlalchemy_serializer import SerializerMixin
+from dtr_common.constantes import ServerType
 
 from .base import Base
 
@@ -18,7 +19,7 @@ class NotificationServer(Base, SerializerMixin):
     serialize_only = ("name", "type", "host", "port", "credentials", "timeout")
 
     name: Mapped[str] = mapped_column(unique=True, index=True)
-    type: Mapped[str]
+    type: Mapped[ServerType]
     host: Mapped[str]
     port: Mapped[int]
     timeout: Mapped[int] = mapped_column(default=40)

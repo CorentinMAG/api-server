@@ -10,6 +10,7 @@ import inspect
 
 Service = TypeVar("Service", bound=BaseService)
 
+
 class BaseAPI(MethodView, ABC, Generic[Service]):
     init_every_request = False
 
@@ -18,6 +19,9 @@ class BaseAPI(MethodView, ABC, Generic[Service]):
 
     # prefix used in the path uri
     prefix: ClassVar[str | None] = None
+
+    # If defined, the default routes (/, /<id>) will not be registered and only the custom routes defined in ROUTES (and eventually @route) will be registered
+    ROUTES: ClassVar[list[dict]] = []
 
     def __init_subclass__(cls, **kwargs):
         super().__init_subclass__(**kwargs)
@@ -28,9 +32,7 @@ class BaseAPI(MethodView, ABC, Generic[Service]):
     def __init__(self):
         service_name = getattr(self.__class__, "_service_name")
         self._service = BaseService._get_or_create_service(
-            self._resolve_service_class(service_name) 
-            if service_name else 
-            None
+            self._resolve_service_class(service_name) if service_name else None
         )
 
         # automatically inject required Service based on type annotations
@@ -40,7 +42,11 @@ class BaseAPI(MethodView, ABC, Generic[Service]):
             hints = self.__class__.__annotations__
 
         for attr_name, attr_type in hints.items():
-            if (isinstance(attr_type, type) and issubclass(attr_type, BaseService) and attr_type is not BaseService):
+            if (
+                isinstance(attr_type, type)
+                and issubclass(attr_type, BaseService)
+                and attr_type is not BaseService
+            ):
                 setattr(self, attr_name, BaseService._get_or_create_service(attr_type))
 
     @classmethod
@@ -50,7 +56,7 @@ class BaseAPI(MethodView, ABC, Generic[Service]):
 
         regular methods get ,delete, put and post add automatically
         added to the router
-        
+
         the @route(url, methods) decorator can be used to add
         custom routes
         """
@@ -58,7 +64,7 @@ class BaseAPI(MethodView, ABC, Generic[Service]):
         cls.router = Blueprint(prefix, __name__, url_prefix=prefix)
 
         # add custom routes to the router
-        for name, method  in inspect.getmembers(cls, inspect.isfunction):
+        for name, method in inspect.getmembers(cls, inspect.isfunction):
             route_info = getattr(method, "_route", None)
             if not route_info:
                 continue
@@ -71,14 +77,29 @@ class BaseAPI(MethodView, ABC, Generic[Service]):
                     instance = cls()
                     handler = getattr(instance, method_name)
                     return handler(*args, **kwargs)
+
                 return view
-            cls.router.add_url_rule(url, view_func=make_view(name), methods = methods)
+
+            cls.router.add_url_rule(url, view_func=make_view(name), methods=methods)
         view = cls.as_view(prefix)
 
-        # regular route registration
-        cls.router.add_url_rule("/", view_func=view, methods = ["GET", "POST"], strict_slashes=False)
-        cls.router.add_url_rule("/<int:id>", view_func=view, methods=["GET", "PUT", "DELETE"])
+        if cls.ROUTES:
+            for route in cls.ROUTES:
+                cls.router.add_url_rule(
+                    route["rule"],
+                    view_func=view,
+                    methods=route["methods"],
+                    strict_slashes=False,
+                )
+        else:
 
+            # regular route registration
+            cls.router.add_url_rule(
+                "/", view_func=view, methods=["GET", "POST"], strict_slashes=False
+            )
+            cls.router.add_url_rule(
+                "/<int:id>", view_func=view, methods=["GET", "PUT", "DELETE"]
+            )
 
     @property
     def service(self) -> Service:

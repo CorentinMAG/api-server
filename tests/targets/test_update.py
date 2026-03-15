@@ -30,7 +30,7 @@ class TestPutTarget:
         with patch.object(TargetService, "update", return_value=target):
             response = client.put(f"{BASE_URL}/1", json=data)
         assert response.status_code == 200
-        assert response.json["host"] == "1.1.1.1"
+        assert response.json["host"] == data["host"]
 
     @pytest.mark.parametrize("error,status_code", [
         (

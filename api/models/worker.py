@@ -8,12 +8,12 @@ from .association import association_table
 class Worker(Base, SerializerMixin):
     __tablename__ = "workers"
 
-    serialize_only = (
-        "id",
-        "created_at",
-        "updated_at",
-        "name"
-    )
+    serialize_only = ("id", "created_at", "updated_at", "name", "queues")
 
-    name: Mapped[str] = mapped_column(unique=True, index = True)
-    queues: Mapped[list[Queue]] = relationship(secondary=association_table)
+    name: Mapped[str] = mapped_column(unique=True, index=True)
+    queues: Mapped[list[Queue]] = relationship(
+        secondary=association_table,
+        lazy="selectin",
+        back_populates="workers",
+        passive_deletes=True,
+    )

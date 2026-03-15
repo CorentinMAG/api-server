@@ -18,25 +18,26 @@ class TriggerAPI(BaseAPI[TriggerService]):
             items = [trigger.to_dict() for trigger in paginated.items]
             return {"pagination": paginated.pagination.model_dump(), "items": items}
         trigger = self.service.get_by_id(id)
-        return trigger.to_dict()
+        return trigger.to_dict(), 200
 
     def delete(self, id: int):
         self.service.delete(id)
         self.service.commit()
+        return "", 204
 
     def put(self, id: int):
         data = request.json
         schema = TriggerUpdate(**data)
         trigger = self.service.update(id, schema)
         self.service.commit()
-        return trigger.to_dict()
+        return trigger.to_dict(), 200
 
     def post(self):
         data = request.json
         schema = TriggerCreate(**data)
         trigger = self.service.create(schema)
         self.service.commit()
-        return trigger.to_dict()
+        return trigger.to_dict(), 201
 
 
 
