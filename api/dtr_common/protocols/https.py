@@ -38,14 +38,21 @@ class HTTPProtocol(BaseProtocol):
         self.client = requests.Session()
 
         # Configure retries
-        retry_strategy = Retry(total=3, backoff_factor=1, status_forcelist=[500, 502, 503, 504])
+        retry_strategy = Retry(
+            total=3, backoff_factor=1, status_forcelist=[500, 502, 503, 504]
+        )
         adapter = HTTPAdapter(max_retries=retry_strategy)
         self.client.mount("http://", adapter)
         self.client.mount("https://", adapter)
 
         if self.credentials:
-            self.client.auth = (self.credentials["login"], self.credentials["password"].get_secret_value())
-        self.client.verify = self.parameters["verify"] if self.parameters["use_ssl"] else False
+            self.client.auth = (
+                self.credentials["login"],
+                self.credentials["password"].get_secret_value(),
+            )
+        self.client.verify = (
+            self.parameters["verify"] if self.parameters["use_ssl"] else False
+        )
 
     @task()
     def disconnect(self) -> None:
@@ -57,23 +64,35 @@ class HTTPProtocol(BaseProtocol):
         pattern = convert_datetime_regex(pattern)
         url = f"{self.root_url}/{self._build_path(pattern)}"
 
-        response = self.client.get(url, timeout=self.timeouts)
+        # HEAD methods is used because we don't want to download the file,
+        # just check if it exists and get its metadata (size, last modified
+        # date, filename, filtype)
+        response = self.client.head(url, timeout=self.timeouts)
         response.raise_for_status()  # Raise exception for 4xx/5xx status codes
 
-        if response.status_code == 200:
-            filename = pattern
-            size = float(response.headers.get("Content-length", 0)) / 1e6
+        filesize = response.headers.get("Content-length")
+        if filesize is not None:
+            filesize = int(filesize)
+        modified_at = response.headers.get("Last-Modified")
+        if modified_at is not None:
             modified_at = datetime.datetime.strptime(
-                response.headers.get(
-                    "Last-Modified", datetime.datetime.now().strftime("%a, %d %b %Y %H:%M:%S GMT")
-                ),
-                "%a, %d %b %Y %H:%M:%S GMT",
+                modified_at, "%a, %d %b %Y %H:%M:%S GMT"
             ).timestamp()
-            return [{"filename": filename, "size": size, "modified_at": modified_at}]
-        return []
+        filename = None
+        cd = response.headers.get("Content-Disposition")
+        if cd:
+            match = re.findall('filename="?([^"]+)"?', cd)
+            if match:
+                filename = match[0]
+        if not filename:
+            filename = Path(pattern).name
+
+        return [{"filename": filename, "size": size, "modified_at": modified_at}]
 
     @task(error=DownloadError)
-    def download(self, filename: str, dest: str, size: float | None = None) -> tuple[float, float, float]:
+    def download(
+        self, filename: str, dest: str, size: float | None = None
+    ) -> tuple[float, float, float]:
         url = f"{self.root_url}/{self._build_path(filename)}"
         start = time.time()
         downloaded_bytes = 0
@@ -85,7 +104,9 @@ class HTTPProtocol(BaseProtocol):
             total_size_bytes = float(response.headers.get("Content-length", 0))
             if size is None:
                 size = total_size_bytes / 1e6  # Convert to MB if not provided
-            elif total_size_bytes == 0:  # If size was provided but Content-length is 0, use provided size
+            elif (
+                total_size_bytes == 0
+            ):  # If size was provided but Content-length is 0, use provided size
                 total_size_bytes = size * 1e6
 
             with open(dest, "wb") as f:
