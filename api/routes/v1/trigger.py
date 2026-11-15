@@ -10,6 +10,7 @@ from api.utils import check_offline_mode
 
 class TriggerAPI(BaseAPI[TriggerService]):
     decorators = [check_offline_mode]
+    prefix = "triggers"
 
     def get(self, id: int | None = None):
         if id is None:
@@ -38,33 +39,23 @@ class TriggerAPI(BaseAPI[TriggerService]):
         return trigger.to_dict()
 
 
-bp = TriggerAPI.register(
-    "triggers",
-    url_prefix="triggers",
-    rules=[
-        {"route": "/", "defaults": {"id": None}, "methods": ["GET", "POST"]},
-        {"route": "/<int:id>", "methods": ["GET", "PUT", "DELETE"]},
-    ],
-)
+# @check_offline_mode()
+# @bp.route("/configuration/trigger", methods=["GET"])
+# def trigger():
+#     """
+#     Get trigger configuration - all activated periodical transfer policies.
 
+#     Query parameters:
+#     - id: str - Trigger identifier
+#     - page: int - Page number for pagination (default: 1)
+#     - page_size: int - Items per page (default: 10)
+#     """
+#     trigger_id = request.args.get("id", type=str, default=None)
+#     page = request.args.get("page", type=int, default=1)
+#     page_size = request.args.get("page_size", type=int, default=10)
 
-@check_offline_mode()
-@bp.route("/configuration/trigger", methods=["GET"])
-def trigger():
-    """
-    Get trigger configuration - all activated periodical transfer policies.
+#     app = custom_app()
 
-    Query parameters:
-    - id: str - Trigger identifier
-    - page: int - Page number for pagination (default: 1)
-    - page_size: int - Items per page (default: 10)
-    """
-    trigger_id = request.args.get("id", type=str, default=None)
-    page = request.args.get("page", type=int, default=1)
-    page_size = request.args.get("page_size", type=int, default=10)
+#     trigger = app.services.triggers.get_by_name(trigger_id)
 
-    app = custom_app()
-
-    trigger = app.services.triggers.get_by_name(trigger_id)
-
-    return {"configuration": trigger.to_dict(), "pagination": {}, "policies": []}
+#     return {"configuration": trigger.to_dict(), "pagination": {}, "policies": []}

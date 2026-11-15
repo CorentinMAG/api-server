@@ -15,6 +15,7 @@ from .states import State
 from .target import Target
 from .trigger import Trigger
 from .worker import Worker
+from .base import Base
 
 __all__ = [
     "NotificationServer",

@@ -49,13 +49,3 @@ class TargetAPI(BaseAPI[TargetService]):
         target = self.service.update(id, schema)
         self.service.commit()
         return target.to_dict()
-
-
-bp = TargetAPI.register(
-    "targets",
-    url_prefix="targets",
-    rules=[
-        {"route": "/", "defaults": {"id": None}, "methods": ["GET", "POST"]},
-        {"route": "/<int:id>", "methods": ["GET", "PUT", "DELETE"]},
-    ],
-)

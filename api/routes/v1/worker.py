@@ -10,6 +10,7 @@ from api.utils import check_offline_mode
 
 class WorkerAPI(BaseAPI[WorkerService]):
     decorators = [check_offline_mode]
+    prefix = "workers"
 
     def get(self, id: int | None = None):
         if id is None:
@@ -36,16 +37,6 @@ class WorkerAPI(BaseAPI[WorkerService]):
     def delete(self, id: int):
         self.service.delete(id)
         self.service.commit()
-
-
-WorkerAPI.register(
-    "workers",
-    url_prefix="workers",
-    rules=[
-        {"route": "/", "defaults": {"id": None}, "methods": ["GET", "POST"]},
-        {"route": "/<int:id>", "methods": ["GET", "PUT", "DELETE"]},
-    ],
-)
 
 
 # @bp.route("/configuration/worker", methods=["GET"])

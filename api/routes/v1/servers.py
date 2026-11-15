@@ -11,6 +11,7 @@ from api.utils import check_offline_mode
 class NotificationServerAPI(BaseAPI[NotificationServerService]):
 
     decorators = [check_offline_mode]
+    prefix = "servers"
 
     def get(self, id: int | None = None):
         if id is None:
@@ -43,13 +44,3 @@ class NotificationServerAPI(BaseAPI[NotificationServerService]):
         server = self.service.create(schema)
         self.service.commit()
         return server.to_dict()
-
-
-bp = NotificationServerAPI.register(
-    "servers",
-    url_prefix="servers",
-    rules=[
-        {"route": "/", "defaults": {"id": None}, "methods": ["GET", "POST"]},
-        {"route": "/<int:id>", "methods": ["GET", "PUT", "DELETE"]},
-    ],
-)

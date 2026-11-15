@@ -7,10 +7,14 @@ from api.dtr_common.schema import (
     GlobalParametersUpdate,
 )
 from api.routes import BaseAPI
-from api.services import GlobalParameterService
+from api.services import GlobalParametersService
 
 
-class GlobalParameterAPI(BaseAPI[GlobalParameterService]):
+class GlobalParameterAPI(BaseAPI[GlobalParametersService]):
+
+    prefix = "parameters"
+    ROUTES = [{"rule": "/", "methods": ["GET", "POST", "PUT", "DELETE"]}]
+
     def get(self):
         params = self.service.get()
         if params:
@@ -35,6 +39,3 @@ class GlobalParameterAPI(BaseAPI[GlobalParameterService]):
         params = self.service.create(schema)
         self.service.commit()
         return params.to_dict()
-
-
-bp = GlobalParameterAPI.register("parameters", url_prefix="parameters", rules=[{"route": "/"}])

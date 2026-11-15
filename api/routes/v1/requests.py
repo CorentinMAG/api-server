@@ -10,6 +10,7 @@ from api.utils import check_offline_mode
 class TransferRequestAPI(BaseAPI[TransferRequestService]):
 
     decorators = [check_offline_mode]
+    prefix = "requests"
 
     def get(self, id: int | None = None):
         pass
@@ -26,17 +27,6 @@ class TransferRequestAPI(BaseAPI[TransferRequestService]):
         request = self.service.create(schema)
         self.service.commit()
         return request.to_dict()
-
-
-bp = TransferRequestAPI.register(
-    "requests",
-    url_prefix="requests",
-    rules=[
-        {"route": "/", "methods": ["POST"]},
-        {"route": "/", "defaults": {"id": None}, "methods": ["GET"]},
-        {"route": "/<int:id>", "methods": ["GET", "PUT", "DELETE"]},
-    ],
-)
 
 
 # @bp.route("/get-status", methods=["GET"])
